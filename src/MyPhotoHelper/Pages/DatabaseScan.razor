@@ -698,15 +698,26 @@
                         // Try to construct full file path using settings from outer scope
                         string fullPath;
                         
+                        // Load scan directory if needed
+                        if (image.ScanDirectory == null)
+                        {
+                            var scanDir = await DbContext.tbl_scan_directory
+                                .FirstOrDefaultAsync(sd => sd.ScanDirectoryId == image.ScanDirectoryId);
+                            if (scanDir != null)
+                            {
+                                image.ScanDirectory = scanDir;
+                            }
+                        }
+                        
                         // First try: If image has an absolute path already
                         if (Path.IsPathRooted(image.RelativePath))
                         {
                             fullPath = image.RelativePath;
                         }
-                        // Second try: Use PhotoDirectory from settings
-                        else if (settings != null && !string.IsNullOrWhiteSpace(settings.PhotoDirectory))
+                        // Second try: Use scan directory
+                        else if (image.ScanDirectory != null)
                         {
-                            fullPath = Path.Combine(settings.PhotoDirectory, image.RelativePath);
+                            fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, image.RelativePath);
                         }
                         // Third try: Use default Pictures folder
                         else

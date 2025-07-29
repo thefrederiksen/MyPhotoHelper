@@ -26,25 +26,45 @@ public class ImagesController : ControllerBase
         try
         {
             var image = await _context.tbl_images
+                .Include(img => img.ScanDirectory)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(img => img.ImageId == id && img.IsDeleted == 0 && img.FileExists == 1);
 
             if (image == null)
             {
+                Logger.Error($"Image not found with ID: {id}");
                 return NotFound();
             }
 
-            var settings = await _context.tbl_app_settings.FirstOrDefaultAsync();
-            if (settings?.PhotoDirectory == null)
+            if (image.ScanDirectory == null)
             {
-                return NotFound("Photo directory not configured");
+                Logger.Error($"Scan directory not loaded for image {id}");
+                return NotFound("Scan directory not found");
             }
 
-            var fullPath = Path.Combine(settings.PhotoDirectory, image.RelativePath);
+            // Normalize the path to handle any path separator issues
+            var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+            
+            Logger.Info($"Thumbnail - Image {id}:");
+            Logger.Info($"  ScanDir: '{image.ScanDirectory.DirectoryPath}'");
+            Logger.Info($"  RelativePath: '{image.RelativePath}'");
+            Logger.Info($"  NormalizedRelativePath: '{normalizedRelativePath}'");
+            Logger.Info($"  FullPath: '{fullPath}'");
+            Logger.Info($"  Path.DirectorySeparatorChar: '{Path.DirectorySeparatorChar}'");
             
             if (!System.IO.File.Exists(fullPath))
             {
-                return NotFound();
+                Logger.Error($"File not found at path: {fullPath}");
+                // Return a detailed error response for debugging
+                return NotFound(new 
+                { 
+                    error = "File not found",
+                    scanDirectory = image.ScanDirectory.DirectoryPath,
+                    relativePath = image.RelativePath,
+                    fullPath = fullPath,
+                    fileExists = System.IO.File.Exists(fullPath)
+                });
             }
 
             // Create thumbnail
@@ -89,6 +109,7 @@ public class ImagesController : ControllerBase
         try
         {
             var image = await _context.tbl_images
+                .Include(img => img.ScanDirectory)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(img => img.ImageId == id && img.IsDeleted == 0 && img.FileExists == 1);
 
@@ -97,13 +118,14 @@ public class ImagesController : ControllerBase
                 return NotFound();
             }
 
-            var settings = await _context.tbl_app_settings.FirstOrDefaultAsync();
-            if (settings?.PhotoDirectory == null)
+            if (image.ScanDirectory == null)
             {
-                return NotFound("Photo directory not configured");
+                return NotFound("Scan directory not found");
             }
 
-            var fullPath = Path.Combine(settings.PhotoDirectory, image.RelativePath);
+            // Normalize the path to handle any path separator issues
+            var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
             
             if (!System.IO.File.Exists(fullPath))
             {

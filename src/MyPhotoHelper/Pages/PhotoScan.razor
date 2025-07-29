@@ -33,16 +33,58 @@
                     <h5 class="mb-0"><span class="oi oi-magnifying-glass" aria-hidden="true"></span> Scan Configuration</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Directory to Scan</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" @bind="scanDirectory" placeholder="Enter directory path...">
-                            <button class="btn btn-outline-secondary" type="button" @onclick="BrowseForDirectory">
-                                <span class="oi oi-folder" aria-hidden="true"></span> Browse
-                            </button>
+                    @if (scanDirectories == null || !scanDirectories.Any())
+                    {
+                        <div class="alert alert-warning mb-3">
+                            <span class="oi oi-warning" aria-hidden="true"></span>
+                            <strong>No scan directories configured!</strong>
+                            <br />
+                            Please complete the <a href="/startup-wizard" class="alert-link">setup wizard</a> to add directories to scan.
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Directories to Scan</label>
+                            <div class="list-group">
+                                @foreach (var dir in scanDirectories)
+                                {
+                                    <div class="list-group-item">
+                                        <span class="text-break">@dir.DirectoryPath</span>
+                                        @if (Directory.Exists(dir.DirectoryPath))
+                                        {
+                                            <span class="badge bg-success float-end">Exists</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger float-end">Not Found</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="form-text">
+                                <span class="oi oi-info" aria-hidden="true"></span>
+                                @scanDirectories.Count @(scanDirectories.Count == 1 ? "directory" : "directories") will be scanned.
+                                <a href="/settings">Manage directories</a>
+                            </div>
+                        </div>
+                    }
                     
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" @onclick="StartScan" 
+                                disabled="@(isScanning || scanDirectories == null || !scanDirectories.Any())">
+                            @if (isScanning)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <text>Scanning...</text>
+                            }
+                            else
+                            {
+                                <span class="oi oi-media-play me-2" aria-hidden="true"></span>
+                                <text>Scan All Directories</text>
+                            }
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -133,6 +175,10 @@
                                         <div class="d-flex align-items-center">
                                             <div class="spinner-grow spinner-grow-sm text-primary me-2" role="status"></div>
                                             <div class="text-truncate">
+                                                @if (!string.IsNullOrEmpty(currentDirectory))
+                                                {
+                                                    <small class="text-muted">Directory: @Path.GetFileName(currentDirectory)</small><br>
+                                                }
                                                 <small class="text-muted">Processing:</small><br>
                                                 <strong>@Path.GetFileName(currentFile)</strong>
                                             </div>
@@ -188,12 +234,12 @@
                             <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
                         </button>
                         <button class="btn btn-primary" @onclick="StartScan" 
-                                disabled="@(isScanning || string.IsNullOrWhiteSpace(scanDirectory))">
+                                disabled="@(isScanning || scanDirectories == null || !scanDirectories.Any())">
                             @if (isScanning)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                             }
-                            <span class="oi oi-magnifying-glass" aria-hidden="true"></span> Scan
+                            <span class="oi oi-magnifying-glass" aria-hidden="true"></span> Scan All
                         </button>
                     </div>
                 </div>
@@ -248,7 +294,7 @@
 </div>
 
 @code {
-    private string scanDirectory = "";
+    private List<tbl_scan_directory>? scanDirectories;
     private readonly string[] supportedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif" };
     
     private bool isScanning = false;
@@ -256,6 +302,7 @@
     private bool scanSuccessful = false;
     private string currentStatus = "";
     private string currentFile = "";
+    private string currentDirectory = "";
     private int processedFiles = 0;
     private int totalFiles = 0;
     private int newImagesAdded = 0;
@@ -273,19 +320,21 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadDatabaseStats();
-        
-        // Set default scan directory to user's Pictures folder
+        await LoadScanDirectories();
+    }
+
+    private async Task LoadScanDirectories()
+    {
         try
         {
-            var picturesPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            if (Directory.Exists(picturesPath))
-            {
-                scanDirectory = picturesPath;
-            }
+            scanDirectories = await DbContext.tbl_scan_directory
+                .OrderBy(d => d.DirectoryPath)
+                .ToListAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Could not determine Pictures folder path");
+            Logger.LogError(ex, "Error loading scan directories");
+            scanDirectories = new List<tbl_scan_directory>();
         }
     }
 
@@ -303,18 +352,12 @@
         }
     }
 
-    private void BrowseForDirectory()
-    {
-        // For now, just show a message - would need JavaScript integration for folder picker
-        scanError = "Use the text box to enter a directory path manually. Example: C:\\Users\\YourName\\Pictures";
-        StateHasChanged();
-    }
 
     private async Task StartScan()
     {
-        if (string.IsNullOrWhiteSpace(scanDirectory) || !Directory.Exists(scanDirectory))
+        if (scanDirectories == null || !scanDirectories.Any())
         {
-            scanError = "Please enter a valid directory path.";
+            scanError = "No scan directories configured.";
             StateHasChanged();
             return;
         }
@@ -333,6 +376,7 @@
             errorsCount = 0;
             currentStatus = "Starting scan...";
             currentFile = "";
+            currentDirectory = "";
             scanStartTime = DateTime.Now;
             scanSpeed = 0;
             
@@ -354,32 +398,58 @@
                         StateHasChanged();
                     });
 
-                    // Get all image files (always include subdirectories)
-                    var searchOption = SearchOption.AllDirectories;
+                    // Scan each configured directory
                     var allFiles = new List<string>();
+                    var searchOption = SearchOption.AllDirectories;
                     
-                    foreach (var ext in supportedExtensions)
+                    foreach (var scanDir in scanDirectories)
                     {
                         if (cancellationTokenSource.Token.IsCancellationRequested)
                             break;
                             
-                        try
+                        // Skip non-existent directories
+                        if (!Directory.Exists(scanDir.DirectoryPath))
                         {
-                            var files = Directory.GetFiles(scanDirectory, $"*{ext}", searchOption);
-                            allFiles.AddRange(files);
-                            
-                            // Update UI as we find files
-                            await InvokeAsync(() =>
-                            {
-                                currentStatus = $"Found {allFiles.Count} files...";
-                                StateHasChanged();
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogWarning(ex, "Could not search for files with extension {Extension}", ext);
+                            Logger.LogWarning("Scan directory does not exist: {Path}", scanDir.DirectoryPath);
                             errorsCount++;
+                            continue;
                         }
+                        
+                        await InvokeAsync(() =>
+                        {
+                            currentDirectory = scanDir.DirectoryPath;
+                            currentStatus = $"Scanning: {Path.GetFileName(scanDir.DirectoryPath)}...";
+                            StateHasChanged();
+                        });
+                        
+                        // Get all image files from this directory
+                        var dirFiles = new List<string>();
+                        
+                        foreach (var ext in supportedExtensions)
+                        {
+                            if (cancellationTokenSource.Token.IsCancellationRequested)
+                                break;
+                                
+                            try
+                            {
+                                var files = Directory.GetFiles(scanDir.DirectoryPath, $"*{ext}", searchOption);
+                                dirFiles.AddRange(files);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogWarning(ex, "Could not search for files with extension {Extension} in {Directory}", ext, scanDir.DirectoryPath);
+                                errorsCount++;
+                            }
+                        }
+                        
+                        allFiles.AddRange(dirFiles);
+                        
+                        // Update UI as we find files
+                        await InvokeAsync(() =>
+                        {
+                            currentStatus = $"Found {allFiles.Count} total files...";
+                            StateHasChanged();
+                        });
                     }
 
                     totalFiles = allFiles.Count;
@@ -395,6 +465,37 @@
                         });
                         return;
                     }
+
+                    // Create a dictionary to map file paths to their scan directories
+                    var fileToScanDirMap = new Dictionary<string, tbl_scan_directory>();
+                    
+                    // Build the mapping
+                    foreach (var scanDir in scanDirectories)
+                    {
+                        if (!Directory.Exists(scanDir.DirectoryPath))
+                            continue;
+                            
+                        foreach (var file in allFiles)
+                        {
+                            // Check if this file belongs to this scan directory
+                            if (file.StartsWith(scanDir.DirectoryPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                fileToScanDirMap[file] = scanDir;
+                            }
+                        }
+                    }
+                    
+                    // Update app settings with last scan date
+                    await InvokeAsync(async () =>
+                    {
+                        var settings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
+                        if (settings != null)
+                        {
+                            settings.LastScanDate = DateTime.UtcNow;
+                            settings.DateModified = DateTime.UtcNow;
+                            await DbContext.SaveChangesAsync();
+                        }
+                    });
 
                     await InvokeAsync(() =>
                     {
@@ -415,17 +516,26 @@
 
                         var filePath = allFiles[i];
                         
+                        // Find which scan directory this file belongs to
+                        if (!fileToScanDirMap.TryGetValue(filePath, out var scanDirRecord))
+                        {
+                            Logger.LogWarning("Could not determine scan directory for file: {FilePath}", filePath);
+                            errorsCount++;
+                            continue;
+                        }
+                        
                         try
                         {
                             // Update UI before processing each file
                             await InvokeAsync(() =>
                             {
                                 currentFile = filePath;
+                                currentDirectory = scanDirRecord.DirectoryPath;
                                 currentStatus = $"Processing: {Path.GetFileName(filePath)}";
                                 StateHasChanged();
                             });
                             
-                            var wasNewImage = await ProcessImageFile(filePath);
+                            var wasNewImage = await ProcessImageFile(filePath, scanDirRecord.ScanDirectoryId, scanDirRecord.DirectoryPath);
                             
                             processedFiles++;
                             
@@ -494,7 +604,7 @@
         }
     }
 
-    private async Task<bool> ProcessImageFile(string filePath)
+    private async Task<bool> ProcessImageFile(string filePath, int scanDirectoryId, string scanDirectoryPath)
     {
         try
         {
@@ -503,24 +613,24 @@
                 return false;
 
             // Calculate relative path from scan directory
-            var relativePath = Path.GetRelativePath(scanDirectory, filePath);
+            var relativePath = Path.GetRelativePath(scanDirectoryPath, filePath);
             
-            // Check if image already exists in database
+            // Check if image already exists in database with this scan directory
             var existingImage = await DbContext.tbl_images
-                .FirstOrDefaultAsync(i => i.RelativePath == relativePath);
+                .FirstOrDefaultAsync(i => i.RelativePath == relativePath && i.ScanDirectoryId == scanDirectoryId);
 
             if (existingImage != null)
             {
-                // File already exists, skip
+                // File already exists in this scan directory, skip
                 return false;
             }
 
             // Calculate file hash
             var fileHash = await CalculateFileHash(filePath);
             
-            // Check for duplicates by hash
+            // Check for duplicates by hash within the same scan directory
             var duplicateByHash = await DbContext.tbl_images
-                .FirstOrDefaultAsync(i => i.FileHash == fileHash);
+                .FirstOrDefaultAsync(i => i.FileHash == fileHash && i.ScanDirectoryId == scanDirectoryId);
 
             if (duplicateByHash != null)
             {
@@ -530,17 +640,20 @@
                 return false;
             }
 
-            // Create new image record
+
+            // Create new image record with scan directory ID
             var newImage = new tbl_images
             {
                 RelativePath = relativePath,
                 FileName = fileInfo.Name,
+                FileExtension = fileInfo.Extension,
                 FileHash = fileHash,
                 FileSizeBytes = (int)Math.Min(fileInfo.Length, int.MaxValue), // Cap at int.MaxValue
                 DateCreated = DateTime.UtcNow,
                 DateModified = fileInfo.LastWriteTimeUtc,
                 FileExists = 1, // SQLite uses 1/0 for boolean
-                IsDeleted = 0   // SQLite uses 1/0 for boolean
+                IsDeleted = 0,   // SQLite uses 1/0 for boolean
+                ScanDirectoryId = scanDirectoryId
             };
 
             DbContext.tbl_images.Add(newImage);

@@ -1,8 +1,13 @@
 @page "/memories"
 @using MyPhotoHelper.Services
 @using MyPhotoHelper.Models
+@using MyPhotoHelper.Components.Shared
+@using MyPhotoHelper.Data
+@using Microsoft.EntityFrameworkCore
 @inject IMemoryService MemoryService
 @inject IJSRuntime JSRuntime
+@inject MyPhotoHelperDbContext DbContext
+@inject NavigationManager Navigation
 
 <PageTitle>Memories - MyPhotoHelper</PageTitle>
 
@@ -62,36 +67,7 @@
                     <div class="row g-2">
                         @foreach (var photo in yearGroup.Photos.Take(20))
                         {
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="card h-100 shadow-sm">
-                                    <div class="position-relative">
-                                        <img src="/api/images/@photo.ImageId/thumbnail" 
-                                             class="card-img-top object-fit-cover" 
-                                             style="height: 150px; cursor: pointer;" 
-                                             alt="@photo.FileName"
-                                             @onclick="() => ShowPhotoDetails(photo)" />
-                                        @if (photo.tbl_image_metadata?.DateTaken != null)
-                                        {
-                                            <div class="position-absolute bottom-0 start-0 p-1">
-                                                <small class="badge bg-dark bg-opacity-75">
-                                                    @photo.tbl_image_metadata.DateTaken.Value.ToString("MMM d, yyyy")
-                                                </small>
-                                            </div>
-                                        }
-                                    </div>
-                                    <div class="card-body p-2">
-                                        <small class="card-text text-muted text-truncate d-block">
-                                            @photo.FileName
-                                        </small>
-                                        @if (!string.IsNullOrEmpty(photo.tbl_image_analysis?.AIDescription))
-                                        {
-                                            <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                                @photo.tbl_image_analysis.AIDescription.Substring(0, Math.Min(50, photo.tbl_image_analysis.AIDescription.Length))@(photo.tbl_image_analysis.AIDescription.Length > 50 ? "..." : "")
-                                            </small>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
+                            <ImageViewer Photo="photo" ShowTime="true" OnImageClick="HandleImageClick" />
                         }
                     </div>
                     @if (yearGroup.PhotoCount > 20)
@@ -134,6 +110,16 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check if any scan directories are configured
+        var hasScanDirectories = await DbContext.tbl_scan_directory.AnyAsync();
+        
+        if (!hasScanDirectories)
+        {
+            // No directories configured, redirect to startup wizard
+            Navigation.NavigateTo("/startup-wizard", replace: true);
+            return;
+        }
+        
         await LoadMemories();
     }
 
@@ -177,10 +163,10 @@
         await LoadMemories();
     }
 
-    private async Task ShowPhotoDetails(tbl_images photo)
+    private void HandleImageClick(tbl_images photo)
     {
-        // TODO: Implement photo detail modal or navigation
-        await JSRuntime.InvokeVoidAsync("alert", $"Photo: {photo.FileName}");
+        // Image viewer handles the click internally, this is just for tracking
+        Console.WriteLine($"Image clicked: {photo.FileName}");
     }
 
     private async Task ShowAllPhotosForYear(int year)

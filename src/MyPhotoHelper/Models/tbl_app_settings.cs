@@ -11,8 +11,6 @@ public partial class tbl_app_settings
 
     public int? EnableAIImageAnalysis { get; set; }
 
-    public string? PhotoDirectory { get; set; }
-
     public int? AutoScanOnStartup { get; set; }
 
     public int? ScanSubdirectories { get; set; }

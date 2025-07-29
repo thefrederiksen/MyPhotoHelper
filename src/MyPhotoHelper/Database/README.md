@@ -29,7 +29,7 @@ python database_manager.py
 6. Paste this command and press Enter:
 
 ```powershell
-Scaffold-DbContext "Data Source=Database\dev_facevault.db" Microsoft.EntityFrameworkCore.Sqlite -OutputDir Models -ContextDir Data -Context FaceVaultDbContext -Force -NoPluralize -UseDatabaseNames
+Scaffold-DbContext "Data Source=Database\dev_facevault.db" Microsoft.EntityFrameworkCore.Sqlite -OutputDir Models -ContextDir Data -Context MyPhotoHelperDbContext -Force -NoPluralize -UseDatabaseNames -NoOnConfiguring
 ```
 
 **⚠️ Console Location**: The Package Manager Console automatically uses the project root as working directory. You don't need to `cd` anywhere.
@@ -37,7 +37,7 @@ Scaffold-DbContext "Data Source=Database\dev_facevault.db" Microsoft.EntityFrame
 **Method 2: Command Line (if you have dotnet-ef installed)**
 ```bash
 # Run from the FaceVault project root directory
-dotnet ef dbcontext scaffold "Data Source=Database\dev_facevault.db" Microsoft.EntityFrameworkCore.Sqlite --output-dir Models --context-dir Data --context FaceVaultDbContext --force --no-pluralize --use-database-names
+dotnet ef dbcontext scaffold "Data Source=Database\dev_facevault.db" Microsoft.EntityFrameworkCore.Sqlite --output-dir Models --context-dir Data --context MyPhotoHelperDbContext --force --no-pluralize --use-database-names --no-onconfiguring
 ```
 
 ## Database Versioning System

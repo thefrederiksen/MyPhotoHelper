@@ -1,0 +1,228 @@
+@using MyPhotoHelper.Models
+@using MyPhotoHelper.Services
+@using MyPhotoHelper.Data
+@using Microsoft.EntityFrameworkCore
+@inject MyPhotoHelperDbContext DbContext
+
+@if (IsVisible && Image != null)
+{
+    <div class="modal-backdrop fade show" @onclick="Close"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Image Properties</h5>
+                    <button type="button" class="btn-close" @onclick="Close" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <!-- Thumbnail preview -->
+                            <img src="/api/images/@Image.ImageId/thumbnail" class="img-fluid rounded mb-3" alt="@Image.FileName" style="max-height: 300px;" />
+                        </div>
+                        <div class="col-md-8">
+                            <!-- Properties table -->
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr class="table-light">
+                                        <th colspan="2">File Information</th>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>File Name:</strong></td>
+                                        <td>@Image.FileName</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Relative Path:</strong></td>
+                                        <td class="text-break small">@Image.RelativePath</td>
+                                    </tr>
+                                    <tr class="@(!fileExists ? "table-danger" : "")">
+                                        <td><strong>Full Path:</strong></td>
+                                        <td class="text-break small">
+                                            @fullPath
+                                            @if (!string.IsNullOrEmpty(fullPath))
+                                            {
+                                                <br/>
+                                                @if (fileExists)
+                                                {
+                                                    <span class="badge bg-success">File Exists</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">File Not Found</span>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                    @if (!string.IsNullOrEmpty(scanDirectory))
+                                    {
+                                        <tr>
+                                            <td><strong>Scan Directory:</strong></td>
+                                            <td class="text-break small">@scanDirectory</td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td><strong>File Size:</strong></td>
+                                        <td>@FormatFileSize(Image.FileSizeBytes)</td>
+                                    </tr>
+                                    @if (Image.tbl_image_metadata != null)
+                                    {
+                                        <tr>
+                                            <td><strong>Dimensions:</strong></td>
+                                            <td>@Image.tbl_image_metadata.Width × @Image.tbl_image_metadata.Height pixels</td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td><strong>File Type:</strong></td>
+                                        <td>@(Image.FileExtension?.ToUpper() ?? "Unknown")</td>
+                                    </tr>
+                                    
+                                    @if (Image.tbl_image_analysis != null)
+                                    {
+                                        <tr class="table-light">
+                                            <th colspan="2">AI Analysis</th>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Category:</strong></td>
+                                            <td>@(Image.tbl_image_analysis.ImageCategory ?? "Not analyzed")</td>
+                                        </tr>
+                                        @if (!string.IsNullOrEmpty(Image.tbl_image_analysis.AIDescription))
+                                        {
+                                            <tr>
+                                                <td><strong>Description:</strong></td>
+                                                <td>@Image.tbl_image_analysis.AIDescription</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(Image.tbl_image_analysis.AIKeywords))
+                                        {
+                                            <tr>
+                                                <td><strong>Keywords:</strong></td>
+                                                <td>@Image.tbl_image_analysis.AIKeywords</td>
+                                            </tr>
+                                        }
+                                    }
+                                    
+                                    <tr class="table-light">
+                                        <th colspan="2">Date Information</th>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date Taken:</strong></td>
+                                        <td>@(Image.tbl_image_metadata?.DateTaken?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Unknown")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date Created:</strong></td>
+                                        <td>@Image.DateCreated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date Modified:</strong></td>
+                                        <td>@Image.DateModified.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    </tr>
+                                    
+                                    <tr class="table-light">
+                                        <th colspan="2">Technical Details</th>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Database ID:</strong></td>
+                                        <td>@Image.ImageId</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>API Thumbnail URL:</strong></td>
+                                        <td class="text-break small">
+                                            <code>/api/images/@Image.ImageId/thumbnail</code>
+                                            <br/>
+                                            <a href="/api/images/@Image.ImageId/thumbnail" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                                Test API
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>File Hash:</strong></td>
+                                        <td class="text-break small font-monospace">@Image.FileHash</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public tbl_images? Image { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string fullPath = "";
+    private string scanDirectory = "";
+    private bool fileExists = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Image != null && IsVisible)
+        {
+            await CalculateFullPath();
+        }
+    }
+
+    private async Task CalculateFullPath()
+    {
+        try
+        {
+            // Load the scan directory if not already loaded
+            if (Image!.ScanDirectory == null)
+            {
+                var scanDir = await DbContext.tbl_scan_directory
+                    .FirstOrDefaultAsync(sd => sd.ScanDirectoryId == Image.ScanDirectoryId);
+                if (scanDir != null)
+                {
+                    Image.ScanDirectory = scanDir;
+                }
+            }
+
+            if (Image.ScanDirectory != null)
+            {
+                scanDirectory = Image.ScanDirectory.DirectoryPath;
+                // Normalize the path to handle any path separator issues
+                var normalizedRelativePath = Image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+                fullPath = Path.Combine(Image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+                fileExists = System.IO.File.Exists(fullPath);
+            }
+            else
+            {
+                scanDirectory = "NOT FOUND IN DATABASE";
+                fullPath = $"Cannot construct - ScanDirectory not found. RelativePath: {Image.RelativePath}";
+                fileExists = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            fullPath = $"Error: {ex.Message}";
+            fileExists = false;
+        }
+    }
+
+    private async Task Close()
+    {
+        fullPath = "";
+        scanDirectory = "";
+        fileExists = false;
+        await OnClose.InvokeAsync();
+    }
+
+    private string FormatFileSize(int bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

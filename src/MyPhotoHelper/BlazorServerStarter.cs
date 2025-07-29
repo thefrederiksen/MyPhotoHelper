@@ -190,6 +190,7 @@ namespace MyPhotoHelper
             builder.Services.AddSingleton<SystemTrayService>();
             builder.Services.AddHostedService<BackgroundTaskService>();
             builder.Services.AddScoped<IMemoryService, MemoryService>();
+            builder.Services.AddScoped<IPhotoPathService, PhotoPathService>();
             
             // Add Blazor services
             builder.Services.AddRazorPages();

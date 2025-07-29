@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(del DatabaseVersion_002.sql DatabaseVersion_001_with_scandirectory.sql)",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(dotnet run:*)",
+      "Bash(python:*)"
     ],
     "deny": []
   }

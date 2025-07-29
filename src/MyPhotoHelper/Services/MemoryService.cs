@@ -35,6 +35,7 @@ public class MemoryService : IMemoryService
                 .AsNoTracking()
                 .Include(img => img.tbl_image_metadata)
                 .Include(img => img.tbl_image_analysis)
+                .Include(img => img.ScanDirectory)
                 .Where(img => img.IsDeleted == 0 && 
                              img.FileExists == 1 &&
                              img.tbl_image_metadata != null &&

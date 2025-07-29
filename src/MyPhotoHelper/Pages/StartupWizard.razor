@@ -1,0 +1,363 @@
+@page "/startup-wizard"
+@using MyPhotoHelper.Data
+@using MyPhotoHelper.Models
+@using MyPhotoHelper.Services
+@using Microsoft.EntityFrameworkCore
+@inject MyPhotoHelperDbContext DbContext
+@inject NavigationManager Navigation
+@inject ILogger<StartupWizard> Logger
+
+<PageTitle>Welcome to MyPhotoHelper</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <span class="oi oi-star" aria-hidden="true"></span>
+                        Welcome to MyPhotoHelper!
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Let's set up your photo management system. This will only take a minute.</p>
+                    
+                    <!-- Step Indicator -->
+                    <div class="d-flex justify-content-between mb-4">
+                        <div class="text-center flex-fill">
+                            <div class="rounded-circle bg-@(currentStep >= 1 ? "primary" : "secondary") text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">1</div>
+                            <div class="small mt-1">Directories</div>
+                        </div>
+                        <div class="text-center flex-fill">
+                            <div class="rounded-circle bg-@(currentStep >= 2 ? "primary" : "secondary") text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">2</div>
+                            <div class="small mt-1">AI Setup</div>
+                        </div>
+                        <div class="text-center flex-fill">
+                            <div class="rounded-circle bg-@(currentStep >= 3 ? "primary" : "secondary") text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">3</div>
+                            <div class="small mt-1">Finish</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step Content -->
+                    @if (currentStep == 1)
+                    {
+                        <!-- Step 1: Scan Directories -->
+                        <h4>Step 1: Add Photo Directories</h4>
+                        <p>Add directories where your photos are stored. You can add multiple directories.</p>
+                        
+                        @if (scanDirectories.Any())
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Added Directories:</label>
+                                <div class="list-group">
+                                    @foreach (var dir in scanDirectories)
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>@dir.DirectoryPath</span>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => RemoveDirectory(dir)">
+                                                <span class="oi oi-trash" aria-hidden="true"></span>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Add Directory:</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" @bind="newDirectoryPath" 
+                                       placeholder="C:\Users\YourName\Pictures" />
+                                <button class="btn btn-primary" @onclick="AddDirectory" 
+                                        disabled="@(string.IsNullOrWhiteSpace(newDirectoryPath))">
+                                    <span class="oi oi-plus" aria-hidden="true"></span> Add
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(directoryError))
+                            {
+                                <div class="text-danger mt-1">@directoryError</div>
+                            }
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <span class="oi oi-info" aria-hidden="true"></span>
+                            Common photo locations:
+                            <ul class="mb-0 mt-1">
+                                <li>@Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)</li>
+                                <li>@Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Pictures")</li>
+                                <li>@Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Google Drive", "Photos")</li>
+                            </ul>
+                        </div>
+                    }
+                    else if (currentStep == 2)
+                    {
+                        <!-- Step 2: AI Configuration -->
+                        <h4>Step 2: Configure AI (Optional)</h4>
+                        <p>AI can automatically analyze and categorize your photos. You can skip this for now and configure it later in Settings.</p>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableAI" 
+                                   checked="@enableAI" @onchange="@((e) => enableAI = (bool)e.Value!)">
+                            <label class="form-check-label" for="enableAI">
+                                Enable AI Image Analysis
+                            </label>
+                        </div>
+                        
+                        @if (enableAI)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">AI Provider</label>
+                                <select class="form-select" @bind="aiProvider">
+                                    <option value="">Select a provider...</option>
+                                    <option value="OpenAI">OpenAI (GPT-4 Vision)</option>
+                                    <option value="Azure">Azure Computer Vision</option>
+                                    <option value="Google">Google Cloud Vision</option>
+                                    <option value="AWS">AWS Rekognition</option>
+                                    <option value="Local">Local Model (Ollama/LM Studio)</option>
+                                </select>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(aiProvider))
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">API Key</label>
+                                    <input type="password" class="form-control" @bind="aiApiKey" 
+                                           placeholder="Enter your API key" />
+                                    <div class="form-text">Your API key is encrypted and stored securely.</div>
+                                </div>
+                            }
+                        }
+                        
+                        <div class="alert alert-info">
+                            <span class="oi oi-info" aria-hidden="true"></span>
+                            AI analysis can help you:
+                            <ul class="mb-0 mt-1">
+                                <li>Automatically categorize photos (People, Landscapes, Documents, etc.)</li>
+                                <li>Generate searchable descriptions</li>
+                                <li>Detect and filter screenshots</li>
+                            </ul>
+                        </div>
+                    }
+                    else if (currentStep == 3)
+                    {
+                        <!-- Step 3: Finish -->
+                        <h4>Step 3: Ready to Go!</h4>
+                        <div class="text-center">
+                            <div class="mb-4">
+                                <span class="oi oi-check-circle text-success" style="font-size: 4rem;"></span>
+                            </div>
+                            <p class="lead">Your initial setup is complete!</p>
+                            
+                            <div class="alert alert-success">
+                                <strong>What's next?</strong>
+                                <ul class="text-start mb-0 mt-2">
+                                    <li>Click "Start Scanning" to scan your photos</li>
+                                    <li>View your memories on the home page</li>
+                                    <li>Adjust settings anytime from the Settings page</li>
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Navigation Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button class="btn btn-secondary" @onclick="PreviousStep" 
+                                disabled="@(currentStep == 1)">
+                            <span class="oi oi-arrow-left" aria-hidden="true"></span> Previous
+                        </button>
+                        
+                        @if (currentStep < 3)
+                        {
+                            <button class="btn btn-primary" @onclick="NextStep" 
+                                    disabled="@(currentStep == 1 && !scanDirectories.Any())">
+                                Next <span class="oi oi-arrow-right" aria-hidden="true"></span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-success" @onclick="FinishSetup">
+                                <span class="oi oi-media-play" aria-hidden="true"></span> Start Scanning
+                            </button>
+                        }
+                    </div>
+                    
+                    @if (currentStep > 1)
+                    {
+                        <div class="text-center mt-2">
+                            <a href="#" @onclick="SkipSetup" @onclick:preventDefault="true" class="text-muted">
+                                Skip remaining setup
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int currentStep = 1;
+    private List<tbl_scan_directory> scanDirectories = new();
+    private string newDirectoryPath = string.Empty;
+    private string directoryError = string.Empty;
+    
+    private bool enableAI = false;
+    private string aiProvider = "";
+    private string aiApiKey = "";
+    
+    private tbl_app_settings? settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load existing settings
+        settings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
+        if (settings == null)
+        {
+            settings = new tbl_app_settings
+            {
+                Id = 1,
+                DateCreated = DateTime.UtcNow,
+                DateModified = DateTime.UtcNow
+            };
+            DbContext.tbl_app_settings.Add(settings);
+            await DbContext.SaveChangesAsync();
+        }
+        
+        // Load existing scan directories
+        scanDirectories = await DbContext.tbl_scan_directory.ToListAsync();
+        
+        // Set default directory if none exist
+        if (!scanDirectories.Any())
+        {
+            var picturesPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            if (Directory.Exists(picturesPath))
+            {
+                newDirectoryPath = picturesPath;
+            }
+        }
+    }
+
+    private async Task AddDirectory()
+    {
+        directoryError = string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(newDirectoryPath))
+        {
+            directoryError = "Please enter a directory path";
+            return;
+        }
+
+        var normalizedPath = Path.GetFullPath(newDirectoryPath.Trim());
+        
+        if (!Directory.Exists(normalizedPath))
+        {
+            directoryError = "Directory does not exist";
+            return;
+        }
+
+        if (scanDirectories.Any(d => d.DirectoryPath.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            directoryError = "This directory is already added";
+            return;
+        }
+
+        try
+        {
+            var scanDir = new tbl_scan_directory
+            {
+                DirectoryPath = normalizedPath,
+                DateCreated = DateTime.UtcNow
+            };
+
+            DbContext.tbl_scan_directory.Add(scanDir);
+            await DbContext.SaveChangesAsync();
+            
+            scanDirectories.Add(scanDir);
+            newDirectoryPath = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding scan directory");
+            directoryError = "Failed to add directory: " + ex.Message;
+        }
+    }
+
+    private async Task RemoveDirectory(tbl_scan_directory dir)
+    {
+        try
+        {
+            DbContext.tbl_scan_directory.Remove(dir);
+            await DbContext.SaveChangesAsync();
+            scanDirectories.Remove(dir);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error removing scan directory");
+        }
+    }
+
+    private void NextStep()
+    {
+        if (currentStep < 3)
+            currentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 1)
+            currentStep--;
+    }
+
+    private async Task FinishSetup()
+    {
+        await SaveSettings();
+        Navigation.NavigateTo("/photo-scan");
+    }
+
+    private async Task SkipSetup()
+    {
+        await SaveSettings();
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task SaveSettings()
+    {
+        if (settings != null)
+        {
+            settings.EnableAIImageAnalysis = enableAI ? 1 : 0;
+            if (enableAI && !string.IsNullOrEmpty(aiProvider))
+            {
+                settings.AIProvider = aiProvider;
+                settings.AIApiKey = aiApiKey;
+                
+                // Set default values based on provider
+                switch (aiProvider)
+                {
+                    case "OpenAI":
+                        settings.AIApiEndpoint = "https://api.openai.com/v1";
+                        settings.AIModel = "gpt-4o-mini";
+                        break;
+                    case "Azure":
+                        settings.AIApiEndpoint = "https://YOUR-RESOURCE-NAME.cognitiveservices.azure.com/";
+                        settings.AIModel = "gpt-4";
+                        break;
+                    case "Google":
+                        settings.AIApiEndpoint = "https://vision.googleapis.com/v1";
+                        settings.AIModel = "gemini-pro-vision";
+                        break;
+                    case "AWS":
+                        settings.AIApiEndpoint = "https://rekognition.us-east-1.amazonaws.com";
+                        settings.AIModel = "rekognition-v1";
+                        break;
+                    case "Local":
+                        settings.AIApiEndpoint = "http://localhost:1234/v1";
+                        settings.AIModel = "llava-v1.5-7b";
+                        break;
+                }
+            }
+            
+            settings.DateModified = DateTime.UtcNow;
+            await DbContext.SaveChangesAsync();
+        }
+    }
+}

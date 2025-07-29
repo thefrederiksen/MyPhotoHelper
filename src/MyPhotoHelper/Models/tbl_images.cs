@@ -27,6 +27,10 @@ public partial class tbl_images
 
     public DateTime? DateDeleted { get; set; }
 
+    public int ScanDirectoryId { get; set; }
+
+    public virtual tbl_scan_directory ScanDirectory { get; set; } = null!;
+
     public virtual tbl_image_analysis? tbl_image_analysis { get; set; }
 
     public virtual tbl_image_metadata? tbl_image_metadata { get; set; }

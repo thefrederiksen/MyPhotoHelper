@@ -5,9 +5,13 @@ using MyPhotoHelper.Models;
 
 namespace MyPhotoHelper.Data;
 
-public partial class MyPhotoHelperDbContext : DbContext
+public partial class FaceVaultDbContext : DbContext
 {
-    public MyPhotoHelperDbContext(DbContextOptions<MyPhotoHelperDbContext> options)
+    public FaceVaultDbContext()
+    {
+    }
+
+    public FaceVaultDbContext(DbContextOptions<FaceVaultDbContext> options)
         : base(options)
     {
     }

@@ -1,6 +1,6 @@
--- FaceVault Database Schema
--- Version: 001
--- Description: Initial database creation with modular table structure
+-- MyPhotoHelper Database Schema
+-- Version: 001 (Complete schema with Scan Directory support)
+-- Description: Initial database creation with scan directory management
 -- Date: 2025-01-29
 
 -- Create Version table for tracking database version
@@ -10,6 +10,16 @@ CREATE TABLE IF NOT EXISTS tbl_version (
 
 -- Insert initial version
 INSERT INTO tbl_version (Version) VALUES (1);
+
+-- Create ScanDirectory table - Must be created before Images due to foreign key
+CREATE TABLE IF NOT EXISTS tbl_scan_directory (
+    ScanDirectoryId INTEGER PRIMARY KEY AUTOINCREMENT,
+    DirectoryPath TEXT NOT NULL UNIQUE,
+    DateCreated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for ScanDirectory
+CREATE INDEX IF NOT EXISTS IX_tbl_scan_directory_DirectoryPath ON tbl_scan_directory (DirectoryPath);
 
 -- Create Images table - Only file system information (no file opening required)
 CREATE TABLE IF NOT EXISTS tbl_images (
@@ -25,14 +35,20 @@ CREATE TABLE IF NOT EXISTS tbl_images (
     -- File Status
     IsDeleted INTEGER NOT NULL DEFAULT 0,
     FileExists INTEGER NOT NULL DEFAULT 1,
-    DateDeleted DATETIME
+    DateDeleted DATETIME,
+    
+    -- Scan Directory Reference
+    ScanDirectoryId INTEGER NOT NULL,
+    
+    FOREIGN KEY (ScanDirectoryId) REFERENCES tbl_scan_directory(ScanDirectoryId) ON DELETE CASCADE,
+    CONSTRAINT UK_tbl_images_RelativePath_ScanDirectoryId UNIQUE (RelativePath, ScanDirectoryId)
 );
 
 -- Create indexes for Images table
-CREATE UNIQUE INDEX IF NOT EXISTS IX_tbl_images_RelativePath ON tbl_images (RelativePath);
 CREATE INDEX IF NOT EXISTS IX_tbl_images_FileHash ON tbl_images (FileHash);
 CREATE INDEX IF NOT EXISTS IX_tbl_images_DateCreated ON tbl_images (DateCreated);
 CREATE INDEX IF NOT EXISTS IX_tbl_images_IsDeleted ON tbl_images (IsDeleted);
+CREATE INDEX IF NOT EXISTS IX_tbl_images_ScanDirectoryId ON tbl_images (ScanDirectoryId);
 
 -- Create ImageMetadata table - Information that requires opening the file
 -- Uses same primary key as Images table (one-to-one relationship)
@@ -71,8 +87,7 @@ CREATE TABLE IF NOT EXISTS tbl_app_settings (
     EnableDuplicateDetection INTEGER,
     EnableAIImageAnalysis INTEGER,
     
-    -- Directory Settings
-    PhotoDirectory TEXT,
+    -- Directory Settings (PhotoDirectory removed - now using tbl_scan_directory)
     AutoScanOnStartup INTEGER,
     ScanSubdirectories INTEGER,
     
