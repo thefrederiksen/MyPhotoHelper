@@ -3,34 +3,29 @@
 @using MyPhotoHelper.Models
 @using MyPhotoHelper.Services
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Hosting
 @implements IDisposable
 @inject MyPhotoHelperDbContext DbContext
-@inject IPathService PathService
+@inject MyPhotoHelper.Services.IScanStatusService ScanStatusService
+@inject IServiceProvider ServiceProvider
 @inject NavigationManager Navigation
 @inject ILogger<PhotoScan> Logger
 
-<PageTitle>Photo Scanner - FaceVault</PageTitle>
+<PageTitle>Photo Scanner - MyPhotoHelper</PageTitle>
 
 <div class="container-fluid">
     <h1 class="display-4">Photo Scanner</h1>
-    <p class="lead">Hash calculation and duplicate detection</p>
+    <p class="lead">Monitor and control photo scanning operations</p>
     
-    <div class="alert alert-info" role="alert">
-        <h4 class="alert-heading">📝 Current Functionality</h4>
-        <p>This scanner focuses on:</p>
-        <ul class="mb-0">
-            <li>File hash calculation for duplicate detection</li>
-            <li>Basic file metadata collection</li>
-            <li>Database storage using new EF models</li>
-        </ul>
-    </div>
-
     <div class="row">
         <div class="col-md-8">
-            <!-- Scanner Configuration -->
+            <!-- Scanner Status -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><span class="oi oi-magnifying-glass" aria-hidden="true"></span> Scan Configuration</h5>
+                    <h5 class="mb-0">
+                        <span class="oi oi-magnifying-glass" aria-hidden="true"></span> 
+                        Scanner Status
+                    </h5>
                 </div>
                 <div class="card-body">
                     @if (scanDirectories == null || !scanDirectories.Any())
@@ -45,7 +40,7 @@
                     else
                     {
                         <div class="mb-3">
-                            <label class="form-label">Directories to Scan</label>
+                            <label class="form-label">Configured Directories</label>
                             <div class="list-group">
                                 @foreach (var dir in scanDirectories)
                                 {
@@ -62,26 +57,36 @@
                                     </div>
                                 }
                             </div>
-                            <div class="form-text">
-                                <span class="oi oi-info" aria-hidden="true"></span>
-                                @scanDirectories.Count @(scanDirectories.Count == 1 ? "directory" : "directories") will be scanned.
-                                <a href="/settings">Manage directories</a>
-                            </div>
                         </div>
+                        
+                        @if (ScanStatusService.IsScanning)
+                        {
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border text-primary me-3" role="status">
+                                        <span class="visually-hidden">Scanning...</span>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Background scan in progress...</h6>
+                                        <small>The scanner is running in the background. You can navigate away from this page.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     }
                     
                     <div class="d-grid gap-2">
                         <button class="btn btn-primary btn-lg" @onclick="StartScan" 
-                                disabled="@(isScanning || scanDirectories == null || !scanDirectories.Any())">
-                            @if (isScanning)
+                                disabled="@(ScanStatusService.IsScanning || scanDirectories == null || !scanDirectories.Any())">
+                            @if (ScanStatusService.IsScanning)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                <text>Scanning...</text>
+                                <text>Scanning in Progress...</text>
                             }
                             else
                             {
                                 <span class="oi oi-media-play me-2" aria-hidden="true"></span>
-                                <text>Scan All Directories</text>
+                                <text>Start Manual Scan</text>
                             }
                         </button>
                     </div>
@@ -89,139 +94,91 @@
             </div>
 
             <!-- Scan Progress -->
-            @if (isScanning || scanCompleted)
+            @if (ScanStatusService.IsScanning && ScanStatusService.CurrentProgress != null)
             {
-                <div class="card mb-4 @(isScanning ? "border-primary" : "")">
-                    <div class="card-header d-flex justify-content-between align-items-center @(isScanning ? "bg-primary text-white" : "")">
+                var progress = ScanStatusService.CurrentProgress;
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
-                            @if (isScanning)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                            }
-                            else
-                            {
-                                <span class="oi oi-check me-2" aria-hidden="true"></span>
-                            }
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                             Scan Progress
                         </h5>
-                        @if (isScanning)
-                        {
-                            <button class="btn btn-outline-light btn-sm" @onclick="CancelScan">
-                                <span class="oi oi-media-stop" aria-hidden="true"></span> Cancel
-                            </button>
-                        }
                     </div>
                     <div class="card-body">
-                        @if (isScanning)
-                        {
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="fw-bold">@currentStatus</span>
-                                    @if (totalFiles > 0)
-                                    {
-                                        <span>
-                                            <strong class="text-primary">@processedFiles</strong> / @totalFiles files
-                                            @if (scanSpeed > 0)
-                                            {
-                                                <span class="text-muted ms-2">(@(scanSpeed.ToString("F1")) files/sec)</span>
-                                            }
-                                        </span>
-                                    }
-                                </div>
-                                <div class="progress mb-3" style="height: 30px;">
-                                    @if (totalFiles > 0)
-                                    {
-                                        var percent = (double)processedFiles / totalFiles * 100;
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                             style="width: @(percent)%" 
-                                             role="progressbar">
-                                            <span class="fs-6 fw-bold">@(percent.ToString("F1"))%</span>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
-                                             style="width: 100%" role="progressbar">
-                                            <span class="fs-6">Discovering files...</span>
-                                        </div>
-                                    }
-                                </div>
-                                
-                                <!-- Live Statistics -->
-                                <div class="row text-center mb-3">
-                                    <div class="col-4">
-                                        <div class="border rounded p-2 @(newImagesAdded > 0 ? "border-success bg-success bg-opacity-10" : "")">
-                                            <h5 class="mb-0 @(newImagesAdded > 0 ? "text-success" : "")">@newImagesAdded</h5>
-                                            <small class="text-muted">New Images</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="border rounded p-2 @(duplicatesFound > 0 ? "border-warning bg-warning bg-opacity-10" : "")">
-                                            <h5 class="mb-0 @(duplicatesFound > 0 ? "text-warning" : "")">@duplicatesFound</h5>
-                                            <small class="text-muted">Duplicates</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="border rounded p-2 @(errorsCount > 0 ? "border-danger bg-danger bg-opacity-10" : "")">
-                                            <h5 class="mb-0 @(errorsCount > 0 ? "text-danger" : "")">@errorsCount</h5>
-                                            <small class="text-muted">Errors</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                @if (!string.IsNullOrEmpty(currentFile))
-                                {
-                                    <div class="alert alert-light border">
-                                        <div class="d-flex align-items-center">
-                                            <div class="spinner-grow spinner-grow-sm text-primary me-2" role="status"></div>
-                                            <div class="text-truncate">
-                                                @if (!string.IsNullOrEmpty(currentDirectory))
-                                                {
-                                                    <small class="text-muted">Directory: @Path.GetFileName(currentDirectory)</small><br>
-                                                }
-                                                <small class="text-muted">Processing:</small><br>
-                                                <strong>@Path.GetFileName(currentFile)</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold">Processing photos...</span>
+                                <span>
+                                    <strong class="text-primary">@progress.ProcessedFiles</strong> / @progress.TotalFiles files
+                                </span>
                             </div>
-                        }
+                            <div class="progress mb-3" style="height: 30px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     style="width: @(progress.PercentComplete)%" 
+                                     role="progressbar">
+                                    <span class="fs-6 fw-bold">@(progress.PercentComplete.ToString("F1"))%</span>
+                                </div>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(progress.CurrentFile))
+                            {
+                                <div class="alert alert-light border">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-grow spinner-grow-sm text-primary me-2" role="status"></div>
+                                        <div class="text-truncate">
+                                            <small class="text-muted">Directory: @Path.GetFileName(progress.CurrentDirectory)</small><br>
+                                            <strong>@Path.GetFileName(progress.CurrentFile)</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
 
-                        @if (scanCompleted && !isScanning)
-                        {
-                            <div class="alert alert-@(scanSuccessful ? "success" : "danger")" role="alert">
-                                <h6 class="alert-heading">
-                                    <span class="oi oi-@(scanSuccessful ? "check" : "x")" aria-hidden="true"></span>
-                                    Scan @(scanSuccessful ? "Completed Successfully" : "Failed")
-                                </h6>
-                                <hr>
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <strong>@totalFiles</strong><br>
-                                        <small>Files Found</small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>@newImagesAdded</strong><br>
-                                        <small>New Images</small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>@duplicatesFound</strong><br>
-                                        <small>Duplicates</small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>@errorsCount</strong><br>
-                                        <small>Errors</small>
-                                    </div>
+            @if (ScanStatusService.LastScanResult != null)
+            {
+                var result = ScanStatusService.LastScanResult;
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <span class="oi oi-check me-2" aria-hidden="true"></span>
+                            Last Scan Results
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-@(result.Success ? "success" : "danger")" role="alert">
+                            <h6 class="alert-heading">
+                                <span class="oi oi-@(result.Success ? "check" : "x")" aria-hidden="true"></span>
+                                @(result.Success ? "Scan Completed Successfully" : "Scan Failed")
+                            </h6>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>@result.TotalFilesProcessed</strong><br>
+                                    <small>Files Processed</small>
                                 </div>
-                                
-                                @if (!string.IsNullOrEmpty(scanError))
-                                {
-                                    <hr>
-                                    <p class="mb-0 text-danger"><strong>Error:</strong> @scanError</p>
-                                }
+                                <div class="col-md-3">
+                                    <strong>@result.NewFilesAdded</strong><br>
+                                    <small>New Photos</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>@result.ErrorCount</strong><br>
+                                    <small>Errors</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>@result.Duration.TotalMinutes.ToString("F1") min</strong><br>
+                                    <small>Duration</small>
+                                </div>
                             </div>
-                        }
+                            
+                            @if (!string.IsNullOrEmpty(result.ErrorMessage))
+                            {
+                                <hr>
+                                <p class="mb-0 text-danger"><strong>Error:</strong> @result.ErrorMessage</p>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -233,13 +190,8 @@
                         <button class="btn btn-outline-secondary" @onclick="GoBack">
                             <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
                         </button>
-                        <button class="btn btn-primary" @onclick="StartScan" 
-                                disabled="@(isScanning || scanDirectories == null || !scanDirectories.Any())">
-                            @if (isScanning)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                            }
-                            <span class="oi oi-magnifying-glass" aria-hidden="true"></span> Scan All
+                        <button class="btn btn-outline-primary" @onclick="RefreshStats">
+                            <span class="oi oi-reload" aria-hidden="true"></span> Refresh
                         </button>
                     </div>
                 </div>
@@ -253,20 +205,19 @@
                     <h5 class="mb-0"><span class="oi oi-info" aria-hidden="true"></span> Scan Information</h5>
                 </div>
                 <div class="card-body">
-                    <h6>Supported File Types:</h6>
-                    <div class="d-flex flex-wrap mb-3">
-                        @foreach (var ext in supportedExtensions)
-                        {
-                            <span class="badge bg-secondary me-1 mb-1">@ext.ToUpper()</span>
-                        }
-                    </div>
-
-                    <h6>What This Scanner Does:</h6>
+                    <h6>Background Scanning:</h6>
+                    <p class="small">
+                        Photos are automatically scanned in the background when the application starts 
+                        and every hour thereafter. You can also trigger a manual scan using the button above.
+                    </p>
+                    
+                    <h6>What the Scanner Does:</h6>
                     <ul class="small">
-                        <li>Calculates SHA-256 file hashes</li>
-                        <li>Detects duplicate images</li>
-                        <li>Stores basic file metadata</li>
-                        <li>Updates database with new findings</li>
+                        <li>Discovers new photo files</li>
+                        <li>Reads image metadata</li>
+                        <li>Identifies photo dates and locations</li>
+                        <li>Builds your photo timeline</li>
+                        <li>Updates the memories feature</li>
                     </ul>
                 </div>
             </div>
@@ -280,11 +231,11 @@
                     <div class="row text-center">
                         <div class="col-6">
                             <strong>@totalImagesInDb</strong><br>
-                            <small class="text-muted">Total Images</small>
+                            <small class="text-muted">Total Photos</small>
                         </div>
                         <div class="col-6">
-                            <strong>@imagesWithHashes</strong><br>
-                            <small class="text-muted">With Hashes</small>
+                            <strong>@(ScanStatusService.LastScanTime?.ToString("g") ?? "Never")</strong><br>
+                            <small class="text-muted">Last Scan</small>
                         </div>
                     </div>
                 </div>
@@ -295,32 +246,18 @@
 
 @code {
     private List<tbl_scan_directory>? scanDirectories;
-    private readonly string[] supportedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif" };
-    
-    private bool isScanning = false;
-    private bool scanCompleted = false;
-    private bool scanSuccessful = false;
-    private string currentStatus = "";
-    private string currentFile = "";
-    private string currentDirectory = "";
-    private int processedFiles = 0;
-    private int totalFiles = 0;
-    private int newImagesAdded = 0;
-    private int duplicatesFound = 0;
-    private int errorsCount = 0;
-    private string scanError = "";
-    
     private int totalImagesInDb = 0;
-    private int imagesWithHashes = 0;
-    
-    private CancellationTokenSource? cancellationTokenSource;
-    private DateTime scanStartTime;
-    private double scanSpeed = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDatabaseStats();
+        ScanStatusService.StatusChanged += OnScanStatusChanged;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
         await LoadScanDirectories();
+        await LoadDatabaseStats();
     }
 
     private async Task LoadScanDirectories()
@@ -343,7 +280,6 @@
         try
         {
             totalImagesInDb = await DbContext.tbl_images.CountAsync();
-            imagesWithHashes = await DbContext.tbl_images.CountAsync(i => !string.IsNullOrEmpty(i.FileHash));
             StateHasChanged();
         }
         catch (Exception ex)
@@ -352,347 +288,34 @@
         }
     }
 
-
-    private async Task StartScan()
-    {
-        if (scanDirectories == null || !scanDirectories.Any())
-        {
-            scanError = "No scan directories configured.";
-            StateHasChanged();
-            return;
-        }
-
-        try
-        {
-            // Immediately update UI to show scanning has started
-            isScanning = true;
-            scanCompleted = false;
-            scanSuccessful = false;
-            scanError = "";
-            processedFiles = 0;
-            totalFiles = 0;
-            newImagesAdded = 0;
-            duplicatesFound = 0;
-            errorsCount = 0;
-            currentStatus = "Starting scan...";
-            currentFile = "";
-            currentDirectory = "";
-            scanStartTime = DateTime.Now;
-            scanSpeed = 0;
-            
-            cancellationTokenSource = new CancellationTokenSource();
-            
-            // Force immediate UI update
-            StateHasChanged();
-            await Task.Delay(10); // Small delay to ensure UI updates
-            
-            // Run the actual scanning in a background task
-            await Task.Run(async () =>
-            {
-                try
-                {
-                    // Update status on UI thread
-                    await InvokeAsync(() =>
-                    {
-                        currentStatus = "Discovering files...";
-                        StateHasChanged();
-                    });
-
-                    // Scan each configured directory
-                    var allFiles = new List<string>();
-                    var searchOption = SearchOption.AllDirectories;
-                    
-                    foreach (var scanDir in scanDirectories)
-                    {
-                        if (cancellationTokenSource.Token.IsCancellationRequested)
-                            break;
-                            
-                        // Skip non-existent directories
-                        if (!Directory.Exists(scanDir.DirectoryPath))
-                        {
-                            Logger.LogWarning("Scan directory does not exist: {Path}", scanDir.DirectoryPath);
-                            errorsCount++;
-                            continue;
-                        }
-                        
-                        await InvokeAsync(() =>
-                        {
-                            currentDirectory = scanDir.DirectoryPath;
-                            currentStatus = $"Scanning: {Path.GetFileName(scanDir.DirectoryPath)}...";
-                            StateHasChanged();
-                        });
-                        
-                        // Get all image files from this directory
-                        var dirFiles = new List<string>();
-                        
-                        foreach (var ext in supportedExtensions)
-                        {
-                            if (cancellationTokenSource.Token.IsCancellationRequested)
-                                break;
-                                
-                            try
-                            {
-                                var files = Directory.GetFiles(scanDir.DirectoryPath, $"*{ext}", searchOption);
-                                dirFiles.AddRange(files);
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.LogWarning(ex, "Could not search for files with extension {Extension} in {Directory}", ext, scanDir.DirectoryPath);
-                                errorsCount++;
-                            }
-                        }
-                        
-                        allFiles.AddRange(dirFiles);
-                        
-                        // Update UI as we find files
-                        await InvokeAsync(() =>
-                        {
-                            currentStatus = $"Found {allFiles.Count} total files...";
-                            StateHasChanged();
-                        });
-                    }
-
-                    totalFiles = allFiles.Count;
-                    
-                    if (totalFiles == 0)
-                    {
-                        await InvokeAsync(() =>
-                        {
-                            currentStatus = "No image files found in the specified directory.";
-                            scanCompleted = true;
-                            scanSuccessful = true;
-                            StateHasChanged();
-                        });
-                        return;
-                    }
-
-                    // Create a dictionary to map file paths to their scan directories
-                    var fileToScanDirMap = new Dictionary<string, tbl_scan_directory>();
-                    
-                    // Build the mapping
-                    foreach (var scanDir in scanDirectories)
-                    {
-                        if (!Directory.Exists(scanDir.DirectoryPath))
-                            continue;
-                            
-                        foreach (var file in allFiles)
-                        {
-                            // Check if this file belongs to this scan directory
-                            if (file.StartsWith(scanDir.DirectoryPath, StringComparison.OrdinalIgnoreCase))
-                            {
-                                fileToScanDirMap[file] = scanDir;
-                            }
-                        }
-                    }
-                    
-                    // Update app settings with last scan date
-                    await InvokeAsync(async () =>
-                    {
-                        var settings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
-                        if (settings != null)
-                        {
-                            settings.LastScanDate = DateTime.UtcNow;
-                            settings.DateModified = DateTime.UtcNow;
-                            await DbContext.SaveChangesAsync();
-                        }
-                    });
-
-                    await InvokeAsync(() =>
-                    {
-                        currentStatus = $"Processing {totalFiles} files...";
-                        StateHasChanged();
-                    });
-
-                    // Process each file
-                    var lastUpdateTime = DateTime.Now;
-                    
-                    for (int i = 0; i < allFiles.Count; i++)
-                    {
-                        if (cancellationTokenSource.Token.IsCancellationRequested)
-                        {
-                            scanError = "Scan was cancelled by user.";
-                            break;
-                        }
-
-                        var filePath = allFiles[i];
-                        
-                        // Find which scan directory this file belongs to
-                        if (!fileToScanDirMap.TryGetValue(filePath, out var scanDirRecord))
-                        {
-                            Logger.LogWarning("Could not determine scan directory for file: {FilePath}", filePath);
-                            errorsCount++;
-                            continue;
-                        }
-                        
-                        try
-                        {
-                            // Update UI before processing each file
-                            await InvokeAsync(() =>
-                            {
-                                currentFile = filePath;
-                                currentDirectory = scanDirRecord.DirectoryPath;
-                                currentStatus = $"Processing: {Path.GetFileName(filePath)}";
-                                StateHasChanged();
-                            });
-                            
-                            var wasNewImage = await ProcessImageFile(filePath, scanDirRecord.ScanDirectoryId, scanDirRecord.DirectoryPath);
-                            
-                            processedFiles++;
-                            
-                            // Calculate scan speed
-                            var elapsed = (DateTime.Now - scanStartTime).TotalSeconds;
-                            if (elapsed > 0)
-                            {
-                                scanSpeed = processedFiles / elapsed;
-                            }
-                            
-                            // Update UI immediately when a new image is added
-                            if (wasNewImage || (DateTime.Now - lastUpdateTime).TotalMilliseconds > 100)
-                            {
-                                lastUpdateTime = DateTime.Now;
-                                await InvokeAsync(() =>
-                                {
-                                    StateHasChanged();
-                                });
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "Error processing file: {FilePath}", filePath);
-                            errorsCount++;
-                        }
-                    }
-
-                    scanSuccessful = string.IsNullOrEmpty(scanError);
-                    
-                    await InvokeAsync(async () =>
-                    {
-                        scanCompleted = true;
-                        currentStatus = scanSuccessful ? "Scan completed successfully!" : "Scan completed with errors.";
-                        currentFile = "";
-                        await LoadDatabaseStats(); // Refresh stats
-                        StateHasChanged();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Scan failed: {Message}", ex.Message);
-                    
-                    await InvokeAsync(() =>
-                    {
-                        scanError = ex.Message;
-                        scanSuccessful = false;
-                        scanCompleted = true;
-                        currentStatus = "Scan failed!";
-                        StateHasChanged();
-                    });
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to start scan: {Message}", ex.Message);
-            scanError = ex.Message;
-            scanSuccessful = false;
-            scanCompleted = true;
-            currentStatus = "Failed to start scan!";
-        }
-        finally
-        {
-            isScanning = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task<bool> ProcessImageFile(string filePath, int scanDirectoryId, string scanDirectoryPath)
+    private void StartScan()
     {
         try
         {
-            var fileInfo = new FileInfo(filePath);
-            if (!fileInfo.Exists)
-                return false;
-
-            // Calculate relative path from scan directory
-            var relativePath = Path.GetRelativePath(scanDirectoryPath, filePath);
+            using var scope = ServiceProvider.CreateScope();
+            var hostedServices = scope.ServiceProvider.GetServices<IHostedService>();
+            var backgroundService = hostedServices.OfType<BackgroundTaskService>().FirstOrDefault();
             
-            // Check if image already exists in database with this scan directory
-            var existingImage = await DbContext.tbl_images
-                .FirstOrDefaultAsync(i => i.RelativePath == relativePath && i.ScanDirectoryId == scanDirectoryId);
-
-            if (existingImage != null)
+            if (backgroundService != null)
             {
-                // File already exists in this scan directory, skip
-                return false;
+                // Trigger scan in background
+                _ = Task.Run(async () => await backgroundService.TriggerScanAsync());
             }
-
-            // Calculate file hash
-            var fileHash = await CalculateFileHash(filePath);
-            
-            // Check for duplicates by hash within the same scan directory
-            var duplicateByHash = await DbContext.tbl_images
-                .FirstOrDefaultAsync(i => i.FileHash == fileHash && i.ScanDirectoryId == scanDirectoryId);
-
-            if (duplicateByHash != null)
-            {
-                duplicatesFound++;
-                Logger.LogDebug("Duplicate found: {FilePath} matches {ExistingPath}", 
-                    filePath, duplicateByHash.RelativePath);
-                return false;
-            }
-
-
-            // Create new image record with scan directory ID
-            var newImage = new tbl_images
-            {
-                RelativePath = relativePath,
-                FileName = fileInfo.Name,
-                FileExtension = fileInfo.Extension,
-                FileHash = fileHash,
-                FileSizeBytes = (int)Math.Min(fileInfo.Length, int.MaxValue), // Cap at int.MaxValue
-                DateCreated = DateTime.UtcNow,
-                DateModified = fileInfo.LastWriteTimeUtc,
-                FileExists = 1, // SQLite uses 1/0 for boolean
-                IsDeleted = 0,   // SQLite uses 1/0 for boolean
-                ScanDirectoryId = scanDirectoryId
-            };
-
-            DbContext.tbl_images.Add(newImage);
-            await DbContext.SaveChangesAsync();
-            
-            // Also create basic metadata record
-            var metadata = new tbl_image_metadata
-            {
-                ImageId = newImage.ImageId,
-                DateTaken = fileInfo.CreationTimeUtc // Placeholder - would need EXIF parsing for real date
-            };
-            
-            DbContext.tbl_image_metadata.Add(metadata);
-            await DbContext.SaveChangesAsync();
-
-            newImagesAdded++;
-            return true; // New image was added
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error processing image file: {FilePath}", filePath);
-            errorsCount++;
-            throw;
+            Logger.LogError(ex, "Error starting scan");
         }
     }
 
-    private async Task<string> CalculateFileHash(string filePath)
+    private async Task RefreshStats()
     {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        using var stream = File.OpenRead(filePath);
-        var hashBytes = await Task.Run(() => sha256.ComputeHash(stream));
-        return Convert.ToHexString(hashBytes);
+        await LoadDatabaseStats();
     }
 
-    private void CancelScan()
+    private void OnScanStatusChanged(object? sender, EventArgs e)
     {
-        cancellationTokenSource?.Cancel();
-        currentStatus = "Cancelling scan...";
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
     }
 
     private void GoBack()
@@ -702,29 +325,6 @@
 
     public void Dispose()
     {
-        // Cancel any ongoing operations IMMEDIATELY
-        try
-        {
-            cancellationTokenSource?.Cancel();
-            isScanning = false;
-            
-            // Try to update state one last time if possible
-            try
-            {
-                StateHasChanged();
-            }
-            catch
-            {
-                // Ignore state update errors during disposal
-            }
-        }
-        catch
-        {
-            // Ignore cancellation errors during disposal
-        }
-        finally
-        {
-            cancellationTokenSource?.Dispose();
-        }
+        ScanStatusService.StatusChanged -= OnScanStatusChanged;
     }
 }

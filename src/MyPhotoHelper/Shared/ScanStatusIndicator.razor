@@ -1,0 +1,86 @@
+@using MyPhotoHelper.Services
+@inject IScanStatusService ScanStatusService
+@implements IDisposable
+
+@if (ScanStatusService.IsScanning && ScanStatusService.CurrentProgress != null)
+{
+    <div class="scan-status-indicator">
+        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+            <span class="visually-hidden">Scanning...</span>
+        </div>
+        <span class="scan-text">
+            Scanning: @ScanStatusService.CurrentProgress.ProcessedFiles / @ScanStatusService.CurrentProgress.TotalFiles photos
+            (@ScanStatusService.CurrentProgress.PercentComplete.ToString("F0")%)
+        </span>
+    </div>
+}
+else if (ScanStatusService.LastScanResult != null)
+{
+    <div class="scan-status-indicator">
+        <span class="scan-text text-muted">
+            Last scan: @GetLastScanText()
+        </span>
+    </div>
+}
+
+<style>
+    .scan-status-indicator {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+    }
+    
+    .scan-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ScanStatusService.StatusChanged += OnStatusChanged;
+    }
+    
+    private void OnStatusChanged(object? sender, EventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private string GetLastScanText()
+    {
+        if (ScanStatusService.LastScanTime == null || ScanStatusService.LastScanResult == null)
+            return "No scans yet";
+            
+        var timeAgo = DateTime.UtcNow - ScanStatusService.LastScanTime.Value;
+        string timeText;
+        
+        if (timeAgo.TotalMinutes < 1)
+            timeText = "just now";
+        else if (timeAgo.TotalMinutes < 60)
+            timeText = $"{(int)timeAgo.TotalMinutes} minutes ago";
+        else if (timeAgo.TotalHours < 24)
+            timeText = $"{(int)timeAgo.TotalHours} hours ago";
+        else
+            timeText = $"{(int)timeAgo.TotalDays} days ago";
+            
+        var result = ScanStatusService.LastScanResult;
+        if (result.Success)
+        {
+            return $"{timeText} - {result.NewFilesAdded} new photos";
+        }
+        else
+        {
+            return $"{timeText} - Failed";
+        }
+    }
+    
+    public void Dispose()
+    {
+        ScanStatusService.StatusChanged -= OnStatusChanged;
+    }
+}

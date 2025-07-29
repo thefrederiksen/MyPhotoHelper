@@ -1,205 +1,579 @@
 @page "/startup-wizard"
+@layout WizardLayout
 @using MyPhotoHelper.Data
 @using MyPhotoHelper.Models
 @using MyPhotoHelper.Services
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Hosting
 @inject MyPhotoHelperDbContext DbContext
 @inject NavigationManager Navigation
 @inject ILogger<StartupWizard> Logger
+@inject IJSRuntime JSRuntime
+@inject IFolderDialogService FolderDialog
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>Welcome to MyPhotoHelper</PageTitle>
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-lg mt-5">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">
-                        <span class="oi oi-star" aria-hidden="true"></span>
-                        Welcome to MyPhotoHelper!
-                    </h3>
+<div class="wizard-container">
+    <div class="wizard-card">
+        @if (currentStep == 1)
+        {
+            <!-- Step 1: Choose Photo Locations -->
+            <div class="text-center mb-4">
+                <div class="wizard-icon mb-3">
+                    <span class="oi oi-folder" style="font-size: 3rem;"></span>
                 </div>
-                <div class="card-body">
-                    <p class="lead">Let's set up your photo management system. This will only take a minute.</p>
-                    
-                    <!-- Step Indicator -->
-                    <div class="d-flex justify-content-between mb-4">
-                        <div class="text-center flex-fill">
-                            <div class="rounded-circle bg-@(currentStep >= 1 ? "primary" : "secondary") text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">1</div>
-                            <div class="small mt-1">Directories</div>
+                <h2 class="wizard-title">Welcome to MyPhotoHelper!</h2>
+                <p class="wizard-subtitle">Let's find your photos</p>
+            </div>
+
+            <!-- My Pictures folder option -->
+            <div class="directory-option mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="myPicturesCheck" 
+                           checked="@useDefaultDirectory" 
+                           disabled="@(!defaultPicturesExists || isScanningDefault)"
+                           @onchange="@((e) => ToggleDefaultDirectory((bool)e.Value!))">
+                    <label class="form-check-label d-flex align-items-center w-100" for="myPicturesCheck">
+                        <div class="flex-grow-1">
+                            <strong>My Pictures</strong>
+                            <div class="text-muted small">@defaultPicturesPath</div>
                         </div>
-                        <div class="text-center flex-fill">
-                            <div class="rounded-circle bg-@(currentStep >= 2 ? "primary" : "secondary") text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">2</div>
-                            <div class="small mt-1">AI Setup</div>
-                        </div>
-                        <div class="text-center flex-fill">
-                            <div class="rounded-circle bg-@(currentStep >= 3 ? "primary" : "secondary") text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">3</div>
-                            <div class="small mt-1">Finish</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Step Content -->
-                    @if (currentStep == 1)
-                    {
-                        <!-- Step 1: Scan Directories -->
-                        <h4>Step 1: Add Photo Directories</h4>
-                        <p>Add directories where your photos are stored. You can add multiple directories.</p>
-                        
-                        @if (scanDirectories.Any())
+                        @if (defaultPicturesExists)
                         {
-                            <div class="mb-3">
-                                <label class="form-label">Added Directories:</label>
-                                <div class="list-group">
-                                    @foreach (var dir in scanDirectories)
+                            @if (isScanningDefault)
+                            {
+                                <div class="ms-3 d-flex align-items-center">
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span class="text-muted small">Scanning...</span>
+                                </div>
+                            }
+                            else if (defaultPicturesScanResult != null)
+                            {
+                                <div class="ms-3 d-flex align-items-center gap-3">
+                                    @if (!string.IsNullOrEmpty(defaultPicturesScanResult.LatestImagePath))
                                     {
-                                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                                            <span>@dir.DirectoryPath</span>
-                                            <button class="btn btn-sm btn-danger" @onclick="() => RemoveDirectory(dir)">
-                                                <span class="oi oi-trash" aria-hidden="true"></span>
-                                            </button>
+                                        <div class="folder-thumbnail">
+                                            <img src="@GetThumbnailUrl(defaultPicturesScanResult.LatestImagePath)" 
+                                                 alt="Latest photo" 
+                                                 class="img-thumbnail" />
                                         </div>
                                     }
+                                    <span class="badge bg-success">@defaultPicturesScanResult.TotalFiles photos</span>
                                 </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="ms-3">
+                                <span class="text-danger small">Does not exist</span>
                             </div>
                         }
-                        
+                    </label>
+                </div>
+            </div>
+
+            <!-- Additional folders -->
+            @if (customDirectories.Any())
+            {
+                <div class="mb-4">
+                    <h5 class="mb-3">Additional Folders</h5>
+                    @foreach (var dir in customDirectories)
+                    {
+                        <div class="directory-option mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="dir-@dir.Path.GetHashCode()" 
+                                       checked="@dir.IsSelected" 
+                                       @onchange="@((e) => dir.IsSelected = (bool)e.Value!)">
+                                <label class="form-check-label d-flex align-items-center w-100" for="dir-@dir.Path.GetHashCode()">
+                                    <div class="flex-grow-1">
+                                        <strong>@Path.GetFileName(dir.Path)</strong>
+                                        <div class="text-muted small">@dir.Path</div>
+                                    </div>
+                                    <div class="ms-3 d-flex align-items-center gap-3">
+                                        @if (!string.IsNullOrEmpty(dir.LatestImagePath))
+                                        {
+                                            <div class="folder-thumbnail">
+                                                <img src="@GetThumbnailUrl(dir.LatestImagePath)" 
+                                                     alt="Latest photo" 
+                                                     class="img-thumbnail" />
+                                            </div>
+                                        }
+                                        <span class="badge bg-success">@dir.FileCount photos</span>
+                                        <button class="btn btn-sm btn-link text-danger p-0" 
+                                                @onclick="() => RemoveDirectory(dir)" 
+                                                @onclick:stopPropagation="true">
+                                            <span class="oi oi-x"></span>
+                                        </button>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            
+            <div class="text-center">
+                <button class="btn btn-outline-primary" @onclick="ShowAddDirectoryModal">
+                    <span class="oi oi-folder-open me-2"></span>
+                    Browse for folders
+                </button>
+            </div>
+
+            <div class="wizard-actions mt-4">
+                <button class="btn btn-primary btn-lg w-100" @onclick="NextStep" 
+                        disabled="@(!CanProceed())">
+                    Continue <span class="oi oi-arrow-right ms-2"></span>
+                </button>
+            </div>
+        }
+        else if (currentStep == 2)
+        {
+            <!-- Step 2: AI Configuration -->
+            <div class="text-center mb-4">
+                <div class="wizard-icon mb-3">
+                    <span class="oi oi-beaker" style="font-size: 3rem;"></span>
+                </div>
+                <h2 class="wizard-title">Smart Photo Analysis</h2>
+                <p class="wizard-subtitle">AI can help organize and search your photos</p>
+            </div>
+
+            <div class="ai-benefits mb-4">
+                <div class="benefit-item">
+                    <span class="oi oi-tag text-primary me-2"></span>
+                    <span>Automatic categorization (People, Nature, Events)</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="oi oi-magnifying-glass text-primary me-2"></span>
+                    <span>Search photos by content</span>
+                </div>
+                <div class="benefit-item">
+                    <span class="oi oi-ban text-primary me-2"></span>
+                    <span>Filter out screenshots automatically</span>
+                </div>
+            </div>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="enableAI" 
+                       checked="@enableAI" @onchange="@((e) => enableAI = (bool)e.Value!)">
+                <label class="form-check-label" for="enableAI">
+                    Enable AI features
+                </label>
+            </div>
+
+            @if (enableAI)
+            {
+                <div class="ai-setup">
+                    <div class="mb-3">
+                        <label class="form-label">Choose AI Provider</label>
+                        <select class="form-select" @bind="aiProvider">
+                            <option value="">Select provider...</option>
+                            <option value="OpenAI">OpenAI (Recommended)</option>
+                            <option value="Local">Local AI (Free, runs on your computer)</option>
+                            <option value="Azure">Microsoft Azure</option>
+                            <option value="Google">Google Cloud</option>
+                        </select>
+                    </div>
+
+                    @if (aiProvider == "OpenAI" || aiProvider == "Azure" || aiProvider == "Google")
+                    {
                         <div class="mb-3">
-                            <label class="form-label">Add Directory:</label>
+                            <label class="form-label">API Key</label>
+                            <input type="password" class="form-control" @bind="aiApiKey" 
+                                   placeholder="Paste your API key here" />
+                            <div class="form-text">
+                                <a href="@GetProviderSignupUrl()" target="_blank">Get an API key</a>
+                            </div>
+                        </div>
+                    }
+                    else if (aiProvider == "Local")
+                    {
+                        <div class="alert alert-info">
+                            <span class="oi oi-info"></span>
+                            Local AI requires Ollama or LM Studio running on your computer.
+                            <a href="https://ollama.ai" target="_blank">Learn more</a>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="wizard-actions mt-4">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary" @onclick="PreviousStep">
+                        <span class="oi oi-arrow-left me-2"></span> Back
+                    </button>
+                    <button class="btn btn-primary flex-fill" @onclick="NextStep">
+                        @(enableAI ? "Continue" : "Skip AI Setup") <span class="oi oi-arrow-right ms-2"></span>
+                    </button>
+                </div>
+            </div>
+        }
+        else if (currentStep == 3)
+        {
+            <!-- Step 3: Ready to scan -->
+            <div class="text-center">
+                <div class="wizard-icon mb-3 text-success">
+                    <span class="oi oi-check-circle" style="font-size: 4rem;"></span>
+                </div>
+                <h2 class="wizard-title">All Set!</h2>
+                <p class="wizard-subtitle">Ready to scan your photos</p>
+
+                <div class="summary my-4">
+                    <div class="summary-item">
+                        <strong>Folders to scan:</strong> @GetTotalDirectoryCount()
+                    </div>
+                    @if (GetEstimatedPhotoCount() > 0)
+                    {
+                        <div class="summary-item">
+                            <strong>Estimated photos:</strong> @GetEstimatedPhotoCount()
+                        </div>
+                    }
+                    <div class="summary-item">
+                        <strong>AI Analysis:</strong> @(enableAI ? "Enabled" : "Disabled")
+                    </div>
+                </div>
+
+                <button class="btn btn-success btn-lg w-100" @onclick="StartScanning">
+                    <span class="oi oi-media-play me-2"></span> Start Scanning Photos
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- Folder Preview Modal -->
+    @if (showFolderPreview && folderPreviewData != null)
+    {
+        <div class="modal-backdrop show"></div>
+        <div class="modal show d-block">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Folder Preview</h5>
+                        <button type="button" class="btn-close" @onclick="CancelFolderPreview"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (isScanningFolder)
+                        {
+                            <div class="text-center p-5">
+                                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                                <h4>Scanning folder...</h4>
+                                <p class="text-muted">Counting photos in @folderPreviewData.FolderName</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center mb-4">
+                                @if (!string.IsNullOrEmpty(folderPreviewData.LatestImagePath))
+                                {
+                                    <div class="preview-image mb-3">
+                                        <img src="@GetThumbnailUrl(folderPreviewData.LatestImagePath)" 
+                                             alt="Latest photo from folder" 
+                                             class="img-fluid rounded" 
+                                             style="max-height: 300px;" />
+                                    </div>
+                                }
+                                <h4>@folderPreviewData.FolderName</h4>
+                                <p class="text-muted">@folderPreviewData.FullPath</p>
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        <h3 class="text-primary">@folderPreviewData.TotalFiles</h3>
+                                        <p class="text-muted mb-0">Total Photos</p>
+                                    </div>
+                                </div>
+                                @if (folderPreviewData.FilesByType.Any())
+                                {
+                                    @foreach (var type in folderPreviewData.FilesByType.Take(2))
+                                    {
+                                        <div class="col-md-4">
+                                            <div class="stat-card">
+                                                <h3 class="text-success">@type.Value</h3>
+                                                <p class="text-muted mb-0">@type.Key.ToUpper() files</p>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            
+                            @if (folderPreviewData.FilesByType.Count > 2)
+                            {
+                                <div class="text-center mt-3">
+                                    <small class="text-muted">
+                                        Also contains: @string.Join(", ", folderPreviewData.FilesByType.Skip(2).Select(t => $"{t.Value} {t.Key.ToUpper()}"))
+                                    </small>
+                                </div>
+                            }
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelFolderPreview" disabled="@isScanningFolder">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="ConfirmFolderPreview" disabled="@isScanningFolder">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- Directory Selection Modal -->
+    @if (showDirectoryModal)
+    {
+        <div class="modal-backdrop show"></div>
+        <div class="modal show d-block">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Photo Folder</h5>
+                        <button type="button" class="btn-close" @onclick="CloseDirectoryModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Folder Path</label>
                             <div class="input-group">
                                 <input type="text" class="form-control" @bind="newDirectoryPath" 
                                        placeholder="C:\Users\YourName\Pictures" />
-                                <button class="btn btn-primary" @onclick="AddDirectory" 
-                                        disabled="@(string.IsNullOrWhiteSpace(newDirectoryPath))">
-                                    <span class="oi oi-plus" aria-hidden="true"></span> Add
+                                <button type="button" class="btn btn-outline-secondary" @onclick="BrowseFromModal">
+                                    <span class="oi oi-folder"></span> Browse
                                 </button>
                             </div>
                             @if (!string.IsNullOrEmpty(directoryError))
                             {
-                                <div class="text-danger mt-1">@directoryError</div>
+                                <div class="text-danger mt-2">@directoryError</div>
                             }
                         </div>
-                        
-                        <div class="alert alert-info">
-                            <span class="oi oi-info" aria-hidden="true"></span>
-                            Common photo locations:
-                            <ul class="mb-0 mt-1">
-                                <li>@Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)</li>
-                                <li>@Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "OneDrive", "Pictures")</li>
-                                <li>@Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Google Drive", "Photos")</li>
-                            </ul>
-                        </div>
-                    }
-                    else if (currentStep == 2)
-                    {
-                        <!-- Step 2: AI Configuration -->
-                        <h4>Step 2: Configure AI (Optional)</h4>
-                        <p>AI can automatically analyze and categorize your photos. You can skip this for now and configure it later in Settings.</p>
-                        
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" id="enableAI" 
-                                   checked="@enableAI" @onchange="@((e) => enableAI = (bool)e.Value!)">
-                            <label class="form-check-label" for="enableAI">
-                                Enable AI Image Analysis
-                            </label>
-                        </div>
-                        
-                        @if (enableAI)
+
+                        @if (isAnalyzingDirectory)
                         {
-                            <div class="mb-3">
-                                <label class="form-label">AI Provider</label>
-                                <select class="form-select" @bind="aiProvider">
-                                    <option value="">Select a provider...</option>
-                                    <option value="OpenAI">OpenAI (GPT-4 Vision)</option>
-                                    <option value="Azure">Azure Computer Vision</option>
-                                    <option value="Google">Google Cloud Vision</option>
-                                    <option value="AWS">AWS Rekognition</option>
-                                    <option value="Local">Local Model (Ollama/LM Studio)</option>
-                                </select>
+                            <div class="text-center p-3">
+                                <div class="spinner-border text-primary mb-2"></div>
+                                <p>Analyzing folder...</p>
                             </div>
-                            
-                            @if (!string.IsNullOrEmpty(aiProvider))
-                            {
-                                <div class="mb-3">
-                                    <label class="form-label">API Key</label>
-                                    <input type="password" class="form-control" @bind="aiApiKey" 
-                                           placeholder="Enter your API key" />
-                                    <div class="form-text">Your API key is encrypted and stored securely.</div>
+                        }
+                        else if (directoryPreview != null)
+                        {
+                            <div class="directory-preview">
+                                <h6>Preview</h6>
+                                <div class="preview-stats">
+                                    <div class="stat-item">
+                                        <strong>@directoryPreview.TotalFiles</strong>
+                                        <span>Total photos</span>
+                                    </div>
+                                    @if (directoryPreview.FilesByType.Any())
+                                    {
+                                        @foreach (var type in directoryPreview.FilesByType)
+                                        {
+                                            <div class="stat-item">
+                                                <strong>@type.Value</strong>
+                                                <span>@type.Key.ToUpper()</span>
+                                            </div>
+                                        }
+                                    }
                                 </div>
-                            }
-                        }
-                        
-                        <div class="alert alert-info">
-                            <span class="oi oi-info" aria-hidden="true"></span>
-                            AI analysis can help you:
-                            <ul class="mb-0 mt-1">
-                                <li>Automatically categorize photos (People, Landscapes, Documents, etc.)</li>
-                                <li>Generate searchable descriptions</li>
-                                <li>Detect and filter screenshots</li>
-                            </ul>
-                        </div>
-                    }
-                    else if (currentStep == 3)
-                    {
-                        <!-- Step 3: Finish -->
-                        <h4>Step 3: Ready to Go!</h4>
-                        <div class="text-center">
-                            <div class="mb-4">
-                                <span class="oi oi-check-circle text-success" style="font-size: 4rem;"></span>
                             </div>
-                            <p class="lead">Your initial setup is complete!</p>
-                            
-                            <div class="alert alert-success">
-                                <strong>What's next?</strong>
-                                <ul class="text-start mb-0 mt-2">
-                                    <li>Click "Start Scanning" to scan your photos</li>
-                                    <li>View your memories on the home page</li>
-                                    <li>Adjust settings anytime from the Settings page</li>
-                                </ul>
-                            </div>
-                        </div>
-                    }
-                    
-                    <!-- Navigation Buttons -->
-                    <div class="d-flex justify-content-between mt-4">
-                        <button class="btn btn-secondary" @onclick="PreviousStep" 
-                                disabled="@(currentStep == 1)">
-                            <span class="oi oi-arrow-left" aria-hidden="true"></span> Previous
-                        </button>
-                        
-                        @if (currentStep < 3)
-                        {
-                            <button class="btn btn-primary" @onclick="NextStep" 
-                                    disabled="@(currentStep == 1 && !scanDirectories.Any())">
-                                Next <span class="oi oi-arrow-right" aria-hidden="true"></span>
-                            </button>
-                        }
-                        else
-                        {
-                            <button class="btn btn-success" @onclick="FinishSetup">
-                                <span class="oi oi-media-play" aria-hidden="true"></span> Start Scanning
-                            </button>
                         }
                     </div>
-                    
-                    @if (currentStep > 1)
-                    {
-                        <div class="text-center mt-2">
-                            <a href="#" @onclick="SkipSetup" @onclick:preventDefault="true" class="text-muted">
-                                Skip remaining setup
-                            </a>
-                        </div>
-                    }
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDirectoryModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="AnalyzeDirectory" 
+                                disabled="@(string.IsNullOrWhiteSpace(newDirectoryPath) || isAnalyzingDirectory)">
+                            @if (directoryPreview == null)
+                            {
+                                <text>Analyze Folder</text>
+                            }
+                            else
+                            {
+                                <text>Add This Folder</text>
+                            }
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 </div>
+
+<style>
+    .wizard-container {
+        width: 100%;
+        max-width: 900px;
+    }
+
+    .wizard-card {
+        background: white;
+        border-radius: 20px;
+        padding: 4rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .wizard-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background: #f0f0f0;
+        border-radius: 50%;
+        color: #667eea;
+    }
+
+    .wizard-title {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .wizard-subtitle {
+        color: #666;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+    }
+
+    .directory-option {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        min-height: 120px;
+    }
+    
+    .directory-option:hover {
+        border-color: #e0e0e0;
+    }
+    
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.25rem;
+        cursor: pointer;
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+        padding-left: 0.5rem;
+    }
+
+    .directory-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
+
+    .directory-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .benefit-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
+
+    .summary-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .directory-preview {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .preview-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-item strong {
+        display: block;
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+
+    .stat-item span {
+        display: block;
+        font-size: 0.875rem;
+        color: #666;
+    }
+    
+    .folder-thumbnail {
+        width: 80px;
+        height: 80px;
+        overflow: hidden;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+    }
+    
+    .folder-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .stat-card {
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card h3 {
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    .preview-image img {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+</style>
 
 @code {
     private int currentStep = 1;
-    private List<tbl_scan_directory> scanDirectories = new();
-    private string newDirectoryPath = string.Empty;
-    private string directoryError = string.Empty;
+    private bool useDefaultDirectory = false;
+    private string defaultPicturesPath = "";
+    private bool defaultPicturesExists = false;
+    private bool hasExistingDirectories = false;
+    private bool isScanningDefault = false;
+    private DirectoryPreview? defaultPicturesScanResult = null;
+    
+    private List<DirectoryInfo> customDirectories = new();
+    private bool showFolderPreview = false;
+    private FolderPreviewData? folderPreviewData = null;
+    private bool isScanningFolder = false;
+    private bool showDirectoryModal = false;
+    private string newDirectoryPath = "";
+    private string directoryError = "";
+    private bool isAnalyzingDirectory = false;
+    private DirectoryPreview? directoryPreview = null;
     
     private bool enableAI = false;
     private string aiProvider = "";
@@ -207,9 +581,28 @@
     
     private tbl_app_settings? settings;
 
+    private class DirectoryInfo
+    {
+        public string Path { get; set; } = "";
+        public int FileCount { get; set; }
+        public bool IsScanning { get; set; }
+        public bool IsSelected { get; set; } = true;
+        public string? LatestImagePath { get; set; }
+        public DateTime? LatestImageDate { get; set; }
+        public tbl_scan_directory? DbRecord { get; set; }
+    }
+
+    private class DirectoryPreview
+    {
+        public int TotalFiles { get; set; }
+        public Dictionary<string, int> FilesByType { get; set; } = new();
+        public string? LatestImagePath { get; set; }
+        public DateTime? LatestImageDate { get; set; }
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        // Load existing settings
+        // Load settings
         settings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
         if (settings == null)
         {
@@ -223,27 +616,406 @@
             await DbContext.SaveChangesAsync();
         }
         
-        // Load existing scan directories
-        scanDirectories = await DbContext.tbl_scan_directory.ToListAsync();
+        // Check for existing scan directories
+        var existingDirs = await DbContext.tbl_scan_directory.ToListAsync();
+        hasExistingDirectories = existingDirs.Any();
         
-        // Set default directory if none exist
-        if (!scanDirectories.Any())
+        if (hasExistingDirectories)
         {
-            var picturesPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            if (Directory.Exists(picturesPath))
+            foreach (var dir in existingDirs)
             {
-                newDirectoryPath = picturesPath;
+                customDirectories.Add(new DirectoryInfo 
+                { 
+                    Path = dir.DirectoryPath, 
+                    DbRecord = dir 
+                });
             }
+        }
+        
+        // Get default Pictures folder
+        defaultPicturesPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+        defaultPicturesExists = Directory.Exists(defaultPicturesPath);
+        
+        // If My Pictures exists and no existing directories, check it by default and scan it
+        if (defaultPicturesExists && !hasExistingDirectories)
+        {
+            useDefaultDirectory = true;
+            _ = Task.Run(() => ScanDefaultPicturesFolder());
         }
     }
 
-    private async Task AddDirectory()
+    private async Task ScanDefaultPicturesFolder()
     {
-        directoryError = string.Empty;
+        if (!defaultPicturesExists || isScanningDefault)
+            return;
+            
+        await InvokeAsync(() =>
+        {
+            isScanningDefault = true;
+            StateHasChanged();
+        });
+        
+        try
+        {
+            var preview = new DirectoryPreview();
+            var extensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+            
+            await Task.Run(() =>
+            {
+                DateTime? latestDate = null;
+                string? latestPath = null;
+                
+                foreach (var ext in extensions)
+                {
+                    try
+                    {
+                        var files = Directory.GetFiles(defaultPicturesPath, $"*{ext}", SearchOption.AllDirectories);
+                        if (files.Length > 0)
+                        {
+                            preview.FilesByType[ext.TrimStart('.')] = files.Length;
+                            preview.TotalFiles += files.Length;
+                            
+                            // Find the latest image
+                            foreach (var file in files.Take(100)) // Check first 100 files for performance
+                            {
+                                var fileInfo = new FileInfo(file);
+                                if (!latestDate.HasValue || fileInfo.LastWriteTime > latestDate)
+                                {
+                                    latestDate = fileInfo.LastWriteTime;
+                                    latestPath = file;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                
+                if (latestPath != null)
+                    preview.LatestImagePath = latestPath;
+                if (latestDate != null)
+                    preview.LatestImageDate = latestDate;
+            });
+            
+            await InvokeAsync(() =>
+            {
+                defaultPicturesScanResult = preview;
+                isScanningDefault = false;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error scanning My Pictures folder");
+            await InvokeAsync(() =>
+            {
+                isScanningDefault = false;
+                StateHasChanged();
+            });
+        }
+    }
+    
+    private void ToggleDefaultDirectory(bool isChecked)
+    {
+        useDefaultDirectory = isChecked;
+        
+        // If checking and we haven't scanned yet, start scanning
+        if (isChecked && defaultPicturesExists && defaultPicturesScanResult == null && !isScanningDefault)
+        {
+            _ = Task.Run(() => ScanDefaultPicturesFolder());
+        }
+    }
+
+    private async Task ShowAddDirectoryModal()
+    {
+        try
+        {
+            // Use Windows Forms folder dialog
+            var selectedPath = await FolderDialog.OpenFolderDialogAsync();
+            
+            if (!string.IsNullOrEmpty(selectedPath))
+            {
+                // Immediately scan the selected directory
+                await ScanAndPreviewDirectory(selectedPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening folder dialog");
+            // Fallback to manual input
+            showDirectoryModal = true;
+            newDirectoryPath = "";
+            directoryError = "Unable to open folder browser. Please enter the path manually:";
+            directoryPreview = null;
+        }
+    }
+    
+    private async Task ScanAndPreviewDirectory(string directoryPath)
+    {
+        try
+        {
+            var normalizedPath = Path.GetFullPath(directoryPath);
+            
+            if (!Directory.Exists(normalizedPath))
+            {
+                // Show error
+                showDirectoryModal = true;
+                newDirectoryPath = normalizedPath;
+                directoryError = "This folder doesn't exist";
+                return;
+            }
+            
+            if (customDirectories.Any(d => d.Path.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)) ||
+                (useDefaultDirectory && normalizedPath.Equals(defaultPicturesPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Already added - show message
+                showDirectoryModal = true;
+                newDirectoryPath = normalizedPath;
+                directoryError = "This folder has already been added";
+                return;
+            }
+            
+            // Check for parent/child folder conflicts
+            var allPaths = new List<string>();
+            if (useDefaultDirectory && defaultPicturesExists)
+                allPaths.Add(defaultPicturesPath);
+            allPaths.AddRange(customDirectories.Select(d => d.Path));
+            
+            foreach (var existingPath in allPaths)
+            {
+                // Check if new path is a parent of existing path
+                if (IsParentPath(normalizedPath, existingPath))
+                {
+                    showDirectoryModal = true;
+                    newDirectoryPath = normalizedPath;
+                    directoryError = $"Cannot add this folder because it contains an already selected folder: {Path.GetFileName(existingPath)}";
+                    return;
+                }
+                
+                // Check if new path is a child of existing path
+                if (IsParentPath(existingPath, normalizedPath))
+                {
+                    showDirectoryModal = true;
+                    newDirectoryPath = normalizedPath;
+                    directoryError = $"Cannot add this folder because it's inside an already selected folder: {Path.GetFileName(existingPath)}";
+                    return;
+                }
+            }
+            
+            // Show preview modal while scanning
+            folderPreviewData = new FolderPreviewData
+            {
+                FolderName = Path.GetFileName(normalizedPath),
+                FullPath = normalizedPath,
+                TotalFiles = 0
+            };
+            showFolderPreview = true;
+            isScanningFolder = true;
+            StateHasChanged();
+            
+            // Scan the directory
+            await Task.Run(async () =>
+            {
+                var preview = new DirectoryPreview();
+                var extensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+                DateTime? latestDate = null;
+                string? latestPath = null;
+                
+                foreach (var ext in extensions)
+                {
+                    try
+                    {
+                        var files = Directory.GetFiles(normalizedPath, $"*{ext}", SearchOption.AllDirectories);
+                        if (files.Length > 0)
+                        {
+                            preview.FilesByType[ext.TrimStart('.')] = files.Length;
+                            preview.TotalFiles += files.Length;
+                            
+                            // Find the latest image
+                            foreach (var file in files.Take(50))
+                            {
+                                var fileInfo = new FileInfo(file);
+                                if (!latestDate.HasValue || fileInfo.LastWriteTime > latestDate)
+                                {
+                                    latestDate = fileInfo.LastWriteTime;
+                                    latestPath = file;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                
+                await InvokeAsync(() =>
+                {
+                    if (folderPreviewData != null)
+                    {
+                        folderPreviewData.TotalFiles = preview.TotalFiles;
+                        folderPreviewData.FilesByType = preview.FilesByType;
+                        folderPreviewData.LatestImagePath = latestPath;
+                        folderPreviewData.LatestImageDate = latestDate;
+                        isScanningFolder = false;
+                        StateHasChanged();
+                    }
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error scanning directory");
+            showFolderPreview = false;
+            isScanningFolder = false;
+            showDirectoryModal = true;
+            directoryError = "Error scanning folder";
+        }
+    }
+    
+    private class FolderPreviewData
+    {
+        public string FolderName { get; set; } = "";
+        public string FullPath { get; set; } = "";
+        public int TotalFiles { get; set; }
+        public Dictionary<string, int> FilesByType { get; set; } = new();
+        public string? LatestImagePath { get; set; }
+        public DateTime? LatestImageDate { get; set; }
+    }
+    
+    private async Task AnalyzeAndAddDirectory()
+    {
+        if (string.IsNullOrWhiteSpace(newDirectoryPath))
+            return;
+            
+        var normalizedPath = Path.GetFullPath(newDirectoryPath.Trim());
+        
+        if (!Directory.Exists(normalizedPath))
+        {
+            directoryError = "This folder doesn't exist";
+            return;
+        }
+
+        if (customDirectories.Any(d => d.Path.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)) ||
+            (useDefaultDirectory && normalizedPath.Equals(defaultPicturesPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Already added, just return
+            return;
+        }
+
+        // Show progress while analyzing
+        var tempDir = new DirectoryInfo 
+        { 
+            Path = normalizedPath,
+            IsScanning = true
+        };
+        customDirectories.Add(tempDir);
+        StateHasChanged();
+
+        try
+        {
+            await Task.Run(async () =>
+            {
+                var preview = new DirectoryPreview();
+                var extensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+                DateTime? latestDate = null;
+                string? latestPath = null;
+                
+                foreach (var ext in extensions)
+                {
+                    try
+                    {
+                        var files = Directory.GetFiles(normalizedPath, $"*{ext}", SearchOption.AllDirectories);
+                        if (files.Length > 0)
+                        {
+                            preview.FilesByType[ext.TrimStart('.')] = files.Length;
+                            preview.TotalFiles += files.Length;
+                            
+                            // Find the latest image
+                            foreach (var file in files.Take(50)) // Check first 50 files for performance
+                            {
+                                var fileInfo = new FileInfo(file);
+                                if (!latestDate.HasValue || fileInfo.LastWriteTime > latestDate)
+                                {
+                                    latestDate = fileInfo.LastWriteTime;
+                                    latestPath = file;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                
+                if (latestPath != null)
+                    preview.LatestImagePath = latestPath;
+                if (latestDate != null)
+                    preview.LatestImageDate = latestDate;
+
+                await InvokeAsync(() =>
+                {
+                    customDirectories.Remove(tempDir);
+                    
+                    if (preview.TotalFiles > 0)
+                    {
+                        // Just add to the list - don't save to database until finish
+                        customDirectories.Add(new DirectoryInfo 
+                        { 
+                            Path = normalizedPath, 
+                            FileCount = preview.TotalFiles,
+                            LatestImagePath = preview.LatestImagePath,
+                            LatestImageDate = preview.LatestImageDate,
+                            DbRecord = null // No database record yet
+                        });
+                    }
+                    
+                    StateHasChanged();
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error analyzing directory");
+            customDirectories.Remove(tempDir);
+            StateHasChanged();
+        }
+    }
+
+    private void CloseDirectoryModal()
+    {
+        showDirectoryModal = false;
+        directoryPreview = null;
+        newDirectoryPath = "";
+        directoryError = "";
+    }
+    
+    private async Task BrowseFromModal()
+    {
+        try
+        {
+            // Close the manual input modal
+            showDirectoryModal = false;
+            StateHasChanged();
+            
+            // Open the folder dialog
+            await ShowAddDirectoryModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening folder browser from modal");
+            directoryError = "Unable to open folder browser";
+        }
+    }
+
+    private async Task AnalyzeDirectory()
+    {
+        if (directoryPreview != null)
+        {
+            // Already analyzed, add it
+            AddDirectory();
+            return;
+        }
+
+        directoryError = "";
         
         if (string.IsNullOrWhiteSpace(newDirectoryPath))
         {
-            directoryError = "Please enter a directory path";
+            directoryError = "Please enter a folder path";
             return;
         }
 
@@ -251,113 +1023,283 @@
         
         if (!Directory.Exists(normalizedPath))
         {
-            directoryError = "Directory does not exist";
+            directoryError = "This folder doesn't exist";
             return;
         }
 
-        if (scanDirectories.Any(d => d.DirectoryPath.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
+        if (customDirectories.Any(d => d.Path.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)) ||
+            (useDefaultDirectory && normalizedPath.Equals(defaultPicturesPath, StringComparison.OrdinalIgnoreCase)))
         {
-            directoryError = "This directory is already added";
+            directoryError = "This folder is already added";
             return;
         }
+
+        isAnalyzingDirectory = true;
+        StateHasChanged();
 
         try
         {
-            var scanDir = new tbl_scan_directory
+            await Task.Run(() =>
             {
-                DirectoryPath = normalizedPath,
-                DateCreated = DateTime.UtcNow
-            };
+                var preview = new DirectoryPreview();
+                var extensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+                
+                foreach (var ext in extensions)
+                {
+                    try
+                    {
+                        var files = Directory.GetFiles(normalizedPath, $"*{ext}", SearchOption.AllDirectories);
+                        if (files.Length > 0)
+                        {
+                            preview.FilesByType[ext.TrimStart('.')] = files.Length;
+                            preview.TotalFiles += files.Length;
+                        }
+                    }
+                    catch { }
+                }
 
-            DbContext.tbl_scan_directory.Add(scanDir);
-            await DbContext.SaveChangesAsync();
-            
-            scanDirectories.Add(scanDir);
-            newDirectoryPath = string.Empty;
+                directoryPreview = preview;
+            });
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error adding scan directory");
-            directoryError = "Failed to add directory: " + ex.Message;
+            directoryError = "Error analyzing folder: " + ex.Message;
+        }
+        finally
+        {
+            isAnalyzingDirectory = false;
+            StateHasChanged();
         }
     }
 
-    private async Task RemoveDirectory(tbl_scan_directory dir)
+    private void AddDirectory()
     {
+        if (directoryPreview == null || directoryPreview.TotalFiles == 0)
+        {
+            directoryError = "No photos found in this folder";
+            return;
+        }
+
+        var normalizedPath = Path.GetFullPath(newDirectoryPath.Trim());
+
         try
         {
-            DbContext.tbl_scan_directory.Remove(dir);
-            await DbContext.SaveChangesAsync();
-            scanDirectories.Remove(dir);
+            // Just add to the list - don't save to database until finish
+            customDirectories.Add(new DirectoryInfo 
+            { 
+                Path = normalizedPath, 
+                FileCount = directoryPreview.TotalFiles,
+                DbRecord = null // No database record yet
+            });
+
+            CloseDirectoryModal();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error removing scan directory");
+            Logger.LogError(ex, "Error adding directory");
+            directoryError = "Failed to add folder";
         }
+    }
+
+    private void RemoveDirectory(DirectoryInfo dir)
+    {
+        customDirectories.Remove(dir);
+        // No database operations until finish is clicked
+    }
+
+    private bool CanProceed()
+    {
+        return (useDefaultDirectory && defaultPicturesExists) || customDirectories.Any();
+    }
+
+    private int GetTotalDirectoryCount()
+    {
+        var count = customDirectories.Count;
+        if (useDefaultDirectory && defaultPicturesExists)
+            count++;
+        return count;
+    }
+
+    private int GetEstimatedPhotoCount()
+    {
+        var count = customDirectories.Sum(d => d.FileCount);
+        if (useDefaultDirectory && defaultPicturesScanResult != null)
+            count += defaultPicturesScanResult.TotalFiles;
+        return count;
     }
 
     private void NextStep()
     {
-        if (currentStep < 3)
-            currentStep++;
+        // Don't save anything until finish - just move to next step
+        currentStep++;
     }
 
     private void PreviousStep()
     {
-        if (currentStep > 1)
-            currentStep--;
+        currentStep--;
     }
 
-    private async Task FinishSetup()
+    private string GetProviderSignupUrl()
     {
-        await SaveSettings();
-        Navigation.NavigateTo("/photo-scan");
-    }
-
-    private async Task SkipSetup()
-    {
-        await SaveSettings();
-        Navigation.NavigateTo("/");
-    }
-
-    private async Task SaveSettings()
-    {
-        if (settings != null)
+        return aiProvider switch
         {
-            settings.EnableAIImageAnalysis = enableAI ? 1 : 0;
-            if (enableAI && !string.IsNullOrEmpty(aiProvider))
+            "OpenAI" => "https://platform.openai.com/api-keys",
+            "Azure" => "https://azure.microsoft.com/services/cognitive-services/",
+            "Google" => "https://cloud.google.com/vision",
+            _ => "#"
+        };
+    }
+
+    private async Task StartScanning()
+    {
+        try
+        {
+            // Save all settings when finish is clicked
+            
+            // 1. Save My Pictures directory if selected
+            if (useDefaultDirectory && defaultPicturesExists)
             {
-                settings.AIProvider = aiProvider;
-                settings.AIApiKey = aiApiKey;
-                
-                // Set default values based on provider
-                switch (aiProvider)
+                var existing = await DbContext.tbl_scan_directory
+                    .FirstOrDefaultAsync(d => d.DirectoryPath == defaultPicturesPath);
+                    
+                if (existing == null)
                 {
-                    case "OpenAI":
-                        settings.AIApiEndpoint = "https://api.openai.com/v1";
-                        settings.AIModel = "gpt-4o-mini";
-                        break;
-                    case "Azure":
-                        settings.AIApiEndpoint = "https://YOUR-RESOURCE-NAME.cognitiveservices.azure.com/";
-                        settings.AIModel = "gpt-4";
-                        break;
-                    case "Google":
-                        settings.AIApiEndpoint = "https://vision.googleapis.com/v1";
-                        settings.AIModel = "gemini-pro-vision";
-                        break;
-                    case "AWS":
-                        settings.AIApiEndpoint = "https://rekognition.us-east-1.amazonaws.com";
-                        settings.AIModel = "rekognition-v1";
-                        break;
-                    case "Local":
-                        settings.AIApiEndpoint = "http://localhost:1234/v1";
-                        settings.AIModel = "llava-v1.5-7b";
-                        break;
+                    var scanDir = new tbl_scan_directory
+                    {
+                        DirectoryPath = defaultPicturesPath,
+                        DateCreated = DateTime.UtcNow
+                    };
+
+                    DbContext.tbl_scan_directory.Add(scanDir);
                 }
             }
             
-            settings.DateModified = DateTime.UtcNow;
+            // 2. Save custom directories
+            foreach (var dir in customDirectories.Where(d => d.DbRecord == null))
+            {
+                var scanDir = new tbl_scan_directory
+                {
+                    DirectoryPath = dir.Path,
+                    DateCreated = DateTime.UtcNow
+                };
+                DbContext.tbl_scan_directory.Add(scanDir);
+            }
+            
+            // 3. Save AI settings
+            if (settings != null)
+            {
+                settings.EnableAIImageAnalysis = enableAI ? 1 : 0;
+                if (enableAI && !string.IsNullOrEmpty(aiProvider))
+                {
+                    settings.AIProvider = aiProvider;
+                    settings.AIApiKey = aiApiKey;
+                    
+                    // Set defaults based on provider
+                    switch (aiProvider)
+                    {
+                        case "OpenAI":
+                            settings.AIApiEndpoint = "https://api.openai.com/v1";
+                            settings.AIModel = "gpt-4o-mini";
+                            break;
+                        case "Local":
+                            settings.AIApiEndpoint = "http://localhost:1234/v1";
+                            settings.AIModel = "llava-v1.5-7b";
+                            break;
+                    }
+                }
+                
+                settings.DateModified = DateTime.UtcNow;
+            }
+            
+            // Save all changes
             await DbContext.SaveChangesAsync();
+            
+            // Trigger background scan
+            var backgroundService = GetBackgroundTaskService();
+            if (backgroundService != null)
+            {
+                _ = Task.Run(async () => await backgroundService.TriggerScanAsync());
+            }
+
+            // Navigate to photo scan
+            Navigation.NavigateTo("/photo-scan");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error starting scanning");
+            // TODO: Show error to user
+        }
+    }
+    
+    private string GetThumbnailUrl(string imagePath)
+    {
+        // For absolute paths, we'll pass them directly to the API
+        // The API will handle finding the file properly
+        return $"/api/images/thumbnail/{Uri.EscapeDataString(imagePath)}";
+    }
+    
+    private void CancelFolderPreview()
+    {
+        showFolderPreview = false;
+        isScanningFolder = false;
+        showDirectoryModal = false;
+        folderPreviewData = null;
+        newDirectoryPath = "";
+        StateHasChanged();
+    }
+    
+    private void ConfirmFolderPreview()
+    {
+        if (folderPreviewData != null)
+        {
+            showFolderPreview = false;
+            
+            // Just add to the list - don't save to database until finish
+            customDirectories.Add(new DirectoryInfo 
+            { 
+                Path = folderPreviewData.FullPath, 
+                FileCount = folderPreviewData.TotalFiles,
+                LatestImagePath = folderPreviewData.LatestImagePath,
+                LatestImageDate = folderPreviewData.LatestImageDate,
+                DbRecord = null // No database record yet
+            });
+            
+            folderPreviewData = null;
+            StateHasChanged();
+        }
+    }
+    
+    private bool IsParentPath(string parentPath, string childPath)
+    {
+        try
+        {
+            var parent = new System.IO.DirectoryInfo(parentPath).FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var child = new System.IO.DirectoryInfo(childPath).FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            
+            if (parent.Equals(child, StringComparison.OrdinalIgnoreCase))
+                return false;
+                
+            return child.StartsWith(parent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private BackgroundTaskService? GetBackgroundTaskService()
+    {
+        try
+        {
+            using var scope = ServiceProvider.CreateScope();
+            var hostedServices = scope.ServiceProvider.GetServices<IHostedService>();
+            var backgroundService = hostedServices.OfType<BackgroundTaskService>().FirstOrDefault();
+            return backgroundService;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting background task service");
+            return null;
         }
     }
 }

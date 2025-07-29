@@ -160,6 +160,11 @@ namespace MyPhotoHelper.Services
                 logsMenuItem.Click += (s, e) => OpenLogFile();
                 contextMenu.Items.Add(logsMenuItem);
                 
+                // Open Data Directory - Opens file explorer in app data directory
+                var dataMenuItem = new ToolStripMenuItem("Open Data Directory");
+                dataMenuItem.Click += (s, e) => OpenDataDirectory();
+                contextMenu.Items.Add(dataMenuItem);
+                
                 contextMenu.Items.Add(new ToolStripSeparator());
                 
                 // Exit application
@@ -222,28 +227,62 @@ namespace MyPhotoHelper.Services
         {
             try
             {
-                // Open the log file in default text editor
-                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MyPhotoHelper", "Logs");
-                var latestLog = Directory.GetFiles(logDir, "*.log")
-                    .OrderByDescending(f => File.GetLastWriteTime(f))
-                    .FirstOrDefault();
-                    
-                if (!string.IsNullOrEmpty(latestLog))
+                // Open the log file in default text editor (logs are in AppData, not LocalAppData)
+                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MyPhotoHelper", "Logs");
+                
+                if (Directory.Exists(logDir))
                 {
-                    Process.Start(new ProcessStartInfo
+                    var latestLog = Directory.GetFiles(logDir, "*.log")
+                        .OrderByDescending(f => File.GetLastWriteTime(f))
+                        .FirstOrDefault();
+                        
+                    if (!string.IsNullOrEmpty(latestLog))
                     {
-                        FileName = latestLog,
-                        UseShellExecute = true
-                    });
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = latestLog,
+                            UseShellExecute = true
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No log files found");
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning("No log files found");
+                    _logger.LogWarning($"Log directory not found: {logDir}");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error opening log file");
+            }
+        }
+
+        private void OpenDataDirectory()
+        {
+            try
+            {
+                // Open the application data directory in File Explorer (where database is stored)
+                var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MyPhotoHelper");
+                
+                // Ensure directory exists
+                Directory.CreateDirectory(dataDir);
+                
+                // Open in File Explorer
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = dataDir,
+                    UseShellExecute = true
+                });
+                
+                _logger.LogInformation($"Opened data directory: {dataDir}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error opening data directory");
             }
         }
 

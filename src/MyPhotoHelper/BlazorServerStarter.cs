@@ -191,6 +191,10 @@ namespace MyPhotoHelper
             builder.Services.AddHostedService<BackgroundTaskService>();
             builder.Services.AddScoped<IMemoryService, MemoryService>();
             builder.Services.AddScoped<IPhotoPathService, PhotoPathService>();
+            builder.Services.AddScoped<IFolderDialogService, FolderDialogService>();
+            builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
+            builder.Services.AddScoped<IPhotoScanService, PhotoScanService>();
+            builder.Services.AddSingleton<IScanStatusService, ScanStatusService>();
             
             // Add Blazor services
             builder.Services.AddRazorPages();
@@ -210,6 +214,52 @@ namespace MyPhotoHelper
             app.MapControllers();
             app.MapBlazorHub();
             app.MapFallbackToPage("/_Host");
+            
+            // Map thumbnail API endpoint
+            app.MapGet("/api/images/thumbnail/{**path}", async (string path, IThumbnailService thumbnailService) =>
+            {
+                try
+                {
+                    var decodedPath = Uri.UnescapeDataString(path);
+                    
+                    // Try to find the full path by checking scan directories
+                    string fullPath = decodedPath;
+                    if (!Path.IsPathRooted(decodedPath))
+                    {
+                        using var scope = app.Services.CreateScope();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                        var scanDirs = dbContext.tbl_scan_directory.ToList();
+                        
+                        foreach (var dir in scanDirs)
+                        {
+                            var testPath = Path.Combine(dir.DirectoryPath, decodedPath);
+                            if (File.Exists(testPath))
+                            {
+                                fullPath = testPath;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!File.Exists(fullPath))
+                    {
+                        return Results.NotFound();
+                    }
+                    
+                    var thumbnailBytes = await thumbnailService.GetThumbnailAsync(fullPath);
+                    if (thumbnailBytes.Length == 0)
+                    {
+                        return Results.NotFound();
+                    }
+                    
+                    return Results.File(thumbnailBytes, "image/jpeg");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex, "Error serving thumbnail");
+                    return Results.StatusCode(500);
+                }
+            });
         }
         
         private async Task InitializePython(WebApplication app)
