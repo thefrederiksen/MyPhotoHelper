@@ -1,0 +1,191 @@
+@page "/memories"
+@using MyPhotoHelper.Services
+@using MyPhotoHelper.Models
+@inject IMemoryService MemoryService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Memories - MyPhotoHelper</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-5">📸 Memories</h1>
+            <p class="lead text-muted">Photos from @DateTime.Today.ToString("MMMM d") in previous years</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" @onclick="PreviousDay">
+                <i class="oi oi-chevron-left"></i> Previous Day
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="NextDay">
+                <i class="oi oi-chevron-right"></i> Next Day
+            </button>
+            <button class="btn btn-primary" @onclick="GoToToday">
+                <i class="oi oi-home"></i> Today
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading memories...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading memories for @selectedDate.ToString("MMMM d")...</p>
+        </div>
+    }
+    else if (memories?.HasMemories == true)
+    {
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="oi oi-info me-2"></i>
+                    <span>Found <strong>@memories.TotalPhotos</strong> photos from @memories.FormattedDate across <strong>@memories.YearGroups.Count</strong> years</span>
+                </div>
+            </div>
+        </div>
+
+        @foreach (var yearGroup in memories.YearGroups)
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">
+                        @if (yearGroup.IsCurrentYear)
+                        {
+                            <span class="badge bg-primary me-2">TODAY</span>
+                        }
+                        @yearGroup.Year
+                    </h3>
+                    <span class="badge bg-secondary">@yearGroup.PhotoCount photos</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        @foreach (var photo in yearGroup.Photos.Take(20))
+                        {
+                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="position-relative">
+                                        <img src="/api/images/@photo.ImageId/thumbnail" 
+                                             class="card-img-top object-fit-cover" 
+                                             style="height: 150px; cursor: pointer;" 
+                                             alt="@photo.FileName"
+                                             @onclick="() => ShowPhotoDetails(photo)" />
+                                        @if (photo.tbl_image_metadata?.DateTaken != null)
+                                        {
+                                            <div class="position-absolute bottom-0 start-0 p-1">
+                                                <small class="badge bg-dark bg-opacity-75">
+                                                    @photo.tbl_image_metadata.DateTaken.Value.ToString("MMM d, yyyy")
+                                                </small>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <small class="card-text text-muted text-truncate d-block">
+                                            @photo.FileName
+                                        </small>
+                                        @if (!string.IsNullOrEmpty(photo.tbl_image_analysis?.AIDescription))
+                                        {
+                                            <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                                @photo.tbl_image_analysis.AIDescription.Substring(0, Math.Min(50, photo.tbl_image_analysis.AIDescription.Length))@(photo.tbl_image_analysis.AIDescription.Length > 50 ? "..." : "")
+                                            </small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @if (yearGroup.PhotoCount > 20)
+                    {
+                        <div class="mt-3 text-center">
+                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ShowAllPhotosForYear(yearGroup.Year)">
+                                View all @yearGroup.PhotoCount photos from @yearGroup.Year
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="oi oi-camera" style="font-size: 4rem; color: #6c757d;"></i>
+            </div>
+            <h3 class="text-muted">No memories found</h3>
+            <p class="text-muted">No photos were taken on @selectedDate.ToString("MMMM d") in previous years.</p>
+            <p class="text-muted mb-4">Try browsing other dates or make sure your photos have been scanned and have date information.</p>
+            <div class="d-flex gap-2 justify-content-center">
+                <button class="btn btn-outline-primary" @onclick="PreviousDay">
+                    <i class="oi oi-chevron-left"></i> Previous Day
+                </button>
+                <button class="btn btn-outline-primary" @onclick="NextDay">
+                    <i class="oi oi-chevron-right"></i> Next Day
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime selectedDate = DateTime.Today;
+    private MemoryCollection? memories;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMemories();
+    }
+
+    private async Task LoadMemories()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            memories = await MemoryService.GetTodaysMemoriesAsync(selectedDate);
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't show to user
+            Console.WriteLine($"Error loading memories: {ex.Message}");
+            memories = new MemoryCollection { Date = selectedDate };
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PreviousDay()
+    {
+        selectedDate = selectedDate.AddDays(-1);
+        await LoadMemories();
+    }
+
+    private async Task NextDay()
+    {
+        selectedDate = selectedDate.AddDays(1);
+        await LoadMemories();
+    }
+
+    private async Task GoToToday()
+    {
+        selectedDate = DateTime.Today;
+        await LoadMemories();
+    }
+
+    private async Task ShowPhotoDetails(tbl_images photo)
+    {
+        // TODO: Implement photo detail modal or navigation
+        await JSRuntime.InvokeVoidAsync("alert", $"Photo: {photo.FileName}");
+    }
+
+    private async Task ShowAllPhotosForYear(int year)
+    {
+        // TODO: Navigate to photo gallery filtered by year and date
+        await JSRuntime.InvokeVoidAsync("alert", $"Show all photos from {year}");
+    }
+}

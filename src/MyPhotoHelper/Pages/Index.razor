@@ -1,0 +1,12 @@
+@page "/"
+@inject NavigationManager Navigation
+
+<PageTitle>MyPhotoHelper</PageTitle>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect to memories page immediately
+        Navigation.NavigateTo("/memories", replace: true);
+    }
+}

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>MyPhotoHelper.Tests</AssemblyName>
+    <RootNamespace>MyPhotoHelper.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="MSTest" Version="3.6.4" />
+    <PackageReference Include="CSnakes.Runtime" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyPhotoHelper\MyPhotoHelper.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Images\**\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <!-- Link all files from MyPhotoHelper Python directory -->
+    <Content Include="..\MyPhotoHelper\Python\**\*.*" 
+             Link="Python\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
