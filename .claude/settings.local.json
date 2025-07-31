@@ -6,7 +6,8 @@
       "Bash(rm:*)",
       "Bash(find:*)",
       "Bash(dotnet run:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

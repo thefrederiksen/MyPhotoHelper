@@ -96,33 +96,28 @@ namespace MyPhotoHelper.Services
                     StartTime = startTime
                 };
                 
-                // First pass: count total files
-                var allFiles = new List<string>();
-                foreach (var scanDir in scanDirectories)
+                // Load all existing images into memory for fast lookups
+                var existingImagesLookup = new Dictionary<(string relativePath, int scanDirId), tbl_images>();
+                
+                _logger.LogInformation("Loading existing images from database...");
+                var existingImages = await dbContext.tbl_images
+                    .Where(img => scanDirectories.Select(sd => sd.ScanDirectoryId).Contains(img.ScanDirectoryId))
+                    .ToListAsync(cancellationToken);
+                
+                foreach (var img in existingImages)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
-                        
-                    _currentProgress.CurrentDirectory = scanDir.DirectoryPath;
-                    
-                    try
-                    {
-                        if (Directory.Exists(scanDir.DirectoryPath))
-                        {
-                            var files = GetImageFiles(scanDir.DirectoryPath);
-                            allFiles.AddRange(files);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Error scanning directory: {scanDir.DirectoryPath}");
-                        errorCount++;
-                    }
+                    existingImagesLookup[(img.RelativePath, img.ScanDirectoryId)] = img;
                 }
+                _logger.LogInformation($"Loaded {existingImages.Count} existing images into memory");
                 
-                _currentProgress.TotalFiles = allFiles.Count;
+                // Batch for new images
+                var newImagesBatch = new List<tbl_images>();
+                const int BATCH_SIZE = 500;
                 
-                // Second pass: process files
+                // Single-pass approach: collect all files while processing
+                var totalFileCount = 0;
+                
+                // Process each scan directory
                 foreach (var scanDir in scanDirectories)
                 {
                     if (cancellationToken.IsCancellationRequested)
@@ -134,7 +129,11 @@ namespace MyPhotoHelper.Services
                     {
                         if (Directory.Exists(scanDir.DirectoryPath))
                         {
-                            var files = GetImageFiles(scanDir.DirectoryPath);
+                            var files = GetImageFiles(scanDir.DirectoryPath).ToList();
+                            
+                            // Update total file count as we go
+                            totalFileCount += files.Count;
+                            _currentProgress.TotalFiles = totalFileCount;
                             
                             foreach (var file in files)
                             {
@@ -149,11 +148,10 @@ namespace MyPhotoHelper.Services
                                     // Calculate relative path
                                     var relativePath = Path.GetRelativePath(scanDir.DirectoryPath, file);
                                     
-                                    // Check if file already exists in database
-                                    var existingImage = await dbContext.tbl_images
-                                        .FirstOrDefaultAsync(i => i.RelativePath == relativePath && i.ScanDirectoryId == scanDir.ScanDirectoryId, cancellationToken);
-                                        
-                                    if (existingImage == null)
+                                    // Check if file already exists using in-memory lookup (O(1) instead of O(n))
+                                    var lookupKey = (relativePath, scanDir.ScanDirectoryId);
+                                    
+                                    if (!existingImagesLookup.ContainsKey(lookupKey))
                                     {
                                         // Add new image
                                         var fileInfo = new FileInfo(file);
@@ -171,9 +169,24 @@ namespace MyPhotoHelper.Services
                                             ScanDirectoryId = scanDir.ScanDirectoryId
                                         };
                                         
-                                        dbContext.tbl_images.Add(image);
-                                        await dbContext.SaveChangesAsync(cancellationToken);
+                                        newImagesBatch.Add(image);
                                         newFilesAdded++;
+                                        
+                                        // Save in batches for better performance
+                                        if (newImagesBatch.Count >= BATCH_SIZE)
+                                        {
+                                            dbContext.tbl_images.AddRange(newImagesBatch);
+                                            await dbContext.SaveChangesAsync(cancellationToken);
+                                            
+                                            // Add new images to lookup to avoid duplicates within this scan
+                                            foreach (var newImg in newImagesBatch)
+                                            {
+                                                existingImagesLookup[(newImg.RelativePath, newImg.ScanDirectoryId)] = newImg;
+                                            }
+                                            
+                                            newImagesBatch.Clear();
+                                            _logger.LogDebug($"Saved batch of {BATCH_SIZE} images");
+                                        }
                                     }
                                     
                                     totalFilesProcessed++;
@@ -201,6 +214,14 @@ namespace MyPhotoHelper.Services
                     
                     _currentProgress.ProcessedDirectories++;
                     ReportProgress();
+                }
+                
+                // Save any remaining images in the batch
+                if (newImagesBatch.Count > 0)
+                {
+                    dbContext.tbl_images.AddRange(newImagesBatch);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    _logger.LogDebug($"Saved final batch of {newImagesBatch.Count} images");
                 }
                 
                 // Final progress report
@@ -257,24 +278,28 @@ namespace MyPhotoHelper.Services
             }
         }
         
-        private List<string> GetImageFiles(string directory)
+        private IEnumerable<string> GetImageFiles(string directory)
         {
-            var extensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic" };
-            var files = new List<string>();
+            var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
+            { 
+                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic" 
+            };
             
-            foreach (var ext in extensions)
-            {
-                try
+            // Use EnumerateFiles for better memory efficiency with large directories
+            return Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+                .Where(file => 
                 {
-                    files.AddRange(Directory.GetFiles(directory, $"*{ext}", SearchOption.AllDirectories));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, $"Error getting files with extension {ext} in {directory}");
-                }
-            }
-            
-            return files;
+                    try
+                    {
+                        var ext = Path.GetExtension(file);
+                        return extensions.Contains(ext);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, $"Error checking file extension for {file}");
+                        return false;
+                    }
+                });
         }
     }
 }
