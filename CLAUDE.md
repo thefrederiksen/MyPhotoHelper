@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication Guidelines
+
+- Use simple, user-friendly language in all UI text
+- Avoid technical jargon or "nerd speak" when communicating with users
+- Keep messages concise and clear
+- Don't state the obvious (e.g., "This page refreshes automatically" is unnecessary)
+
 ## Project Overview
 
 MyPhotoHelper (also referenced as FaceVault in documentation) is a .NET 9 Blazor Server application for photo organization and management with AI-powered features. The application combines C# for the web UI and database operations with Python for image processing and AI analysis.

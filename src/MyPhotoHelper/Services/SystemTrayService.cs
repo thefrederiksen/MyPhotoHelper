@@ -7,6 +7,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using System.Drawing.Drawing2D;
 
 namespace MyPhotoHelper.Services
 {
@@ -131,8 +132,29 @@ namespace MyPhotoHelper.Services
         {
             try
             {
-                // Try to use system default icon first for testing
-                var icon = SystemIcons.Application;
+                Icon? icon = null;
+                
+                // Try to load icon from resources first
+                var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "tray_icon.ico");
+                if (File.Exists(iconPath))
+                {
+                    try
+                    {
+                        icon = new Icon(iconPath);
+                        _logger.LogInformation($"Loaded icon from file: {iconPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Failed to load icon from file: {ex.Message}");
+                    }
+                }
+                
+                // If no icon file or loading failed, create programmatically
+                if (icon == null)
+                {
+                    icon = CreateDefaultIcon();
+                    _logger.LogInformation("Using programmatically created icon");
+                }
                 
                 _trayIcon = new NotifyIcon
                 {
@@ -202,22 +224,47 @@ namespace MyPhotoHelper.Services
 
         private Icon CreateDefaultIcon()
         {
-            // Create a simple icon programmatically
+            // Create a clean, modern photo icon for system tray
             var bitmap = new Bitmap(16, 16);
             using (var g = Graphics.FromImage(bitmap))
             {
+                // Enable antialiasing for smoother edges
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.Clear(Color.Transparent);
                 
-                // Draw a simple camera/photo icon
-                g.FillRectangle(new SolidBrush(Color.FromArgb(0, 122, 204)), 2, 4, 12, 9);
-                g.FillEllipse(new SolidBrush(Color.White), 5, 6, 6, 5);
-                g.FillPolygon(new SolidBrush(Color.FromArgb(0, 122, 204)), new[]
+                // Main photo frame - slightly rounded rectangle
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
                 {
-                    new Point(4, 4),
-                    new Point(7, 2),
-                    new Point(9, 2),
-                    new Point(12, 4)
-                });
+                    path.AddRectangle(new Rectangle(2, 3, 12, 10));
+                    
+                    // Fill with gradient for depth
+                    using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        new Point(2, 3), new Point(14, 13),
+                        Color.FromArgb(41, 128, 185),  // Nice blue
+                        Color.FromArgb(52, 152, 219))) // Lighter blue
+                    {
+                        g.FillPath(brush, path);
+                    }
+                }
+                
+                // Inner photo area (white)
+                g.FillRectangle(Brushes.White, 3, 4, 10, 8);
+                
+                // Mountain/landscape icon inside photo
+                using (var mountainPath = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    mountainPath.AddPolygon(new Point[] {
+                        new Point(3, 12),
+                        new Point(7, 7),
+                        new Point(9, 9),
+                        new Point(11, 6),
+                        new Point(13, 12)
+                    });
+                    g.FillPath(new SolidBrush(Color.FromArgb(46, 204, 113)), mountainPath); // Green
+                }
+                
+                // Sun/circle in corner
+                g.FillEllipse(new SolidBrush(Color.FromArgb(241, 196, 15)), 9, 5, 3, 3); // Yellow
             }
             
             return Icon.FromHandle(bitmap.GetHicon());

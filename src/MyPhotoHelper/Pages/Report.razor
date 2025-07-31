@@ -2,6 +2,7 @@
 @using MyPhotoHelper.Data
 @using MyPhotoHelper.Models
 @using MyPhotoHelper.Services
+@using MyPhotoHelper.Components.Shared
 @using Microsoft.EntityFrameworkCore
 @inject MyPhotoHelperDbContext DbContext
 @inject IPathService PathService
@@ -277,59 +278,137 @@
             </div>
         }
 
-        <!-- Duplicate Report -->
+        <!-- Duplicate Analysis -->
         @if (duplicateGroups.Any())
         {
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><span class="oi oi-layers" aria-hidden="true"></span> Duplicate Files</h5>
+                    <h5 class="mb-0">
+                        <span class="oi oi-layers me-2 text-warning" aria-hidden="true"></span>
+                        🔄 Duplicate Analysis
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <p>Found @duplicateGroups.Count groups of duplicate files:</p>
-                    <div class="accordion" id="duplicatesAccordion">
-                        @{
-                            int groupIndex = 0;
-                        }
-                        @foreach (var group in duplicateGroups.Take(10))
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="alert alert-warning text-center">
+                                <h4>@duplicateGroups.Count</h4>
+                                <small>Duplicate Groups</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-danger text-center">
+                                <h4>@duplicateCount</h4>
+                                <small>Duplicate Files</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-info text-center">
+                                <h4>@FormatFileSize(duplicateGroups.Sum(g => g.FileSize * (g.Files.Count - 1)))</h4>
+                                <small>Wasted Space</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6>Sample Duplicate Groups:</h6>
+                    @{
+                        int groupIndex = 0;
+                    }
+                    @foreach (var group in duplicateGroups.Take(5))
+                    {
+                        <div class="card mb-3 border-warning">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@group.Files.Count identical files</strong> - 
+                                        Wasting @FormatFileSize(group.FileSize * (group.Files.Count - 1))
+                                    </div>
+                                    <small class="text-muted">Hash: @group.Hash.Substring(0, 12)...</small>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    @foreach (var image in group.Files.Take(3))
+                                    {
+                                        <div class="col-4">
+                                            <div class="position-relative">
+                                                <ImageThumbnail Photo="image" CssClass="img-fluid rounded" />
+                                                <div class="position-absolute top-0 start-0 m-1">
+                                                    <span class="badge bg-dark bg-opacity-75">@FormatFileSize(image.FileSizeBytes)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="border-top pt-2">
+                                    <h6 class="mb-2">File Locations:</h6>
+                                    @foreach (var file in group.Files)
+                                    {
+                                        <div class="mb-1 small">
+                                            <span class="oi oi-folder me-1" aria-hidden="true"></span>
+                                            <strong>@(file.ScanDirectory?.DirectoryPath ?? "Unknown"):</strong>
+                                            @file.RelativePath
+                                            <span class="text-muted ms-2">(@file.DateCreated.ToString("yyyy-MM-dd"))</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        groupIndex++;
+                    }
+                    
+                    @if (duplicateGroups.Count > 5)
+                    {
+                        <div class="text-center mt-3">
+                            <button class="btn btn-outline-primary" @onclick="ShowAllDuplicates">
+                                <span class="oi oi-layers me-2" aria-hidden="true"></span>
+                                View All @duplicateGroups.Count Duplicate Groups
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Scan Directories -->
+        @if (scanDirectories.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <span class="oi oi-folder me-2" aria-hidden="true"></span>
+                        📁 Scan Directories
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var dir in scanDirectories)
                         {
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading@(groupIndex)">
-                                    <button class="accordion-button collapsed" type="button" 
-                                            data-bs-toggle="collapse" data-bs-target="#collapse@(groupIndex)">
-                                        <span class="badge bg-warning me-2">@group.Files.Count files</span>
-                                        Hash: @group.Hash.Substring(0, 12)...
-                                        <span class="ms-auto me-2 text-muted">@FormatFileSize(group.FileSize)</span>
-                                    </button>
-                                </h2>
-                                <div id="collapse@(groupIndex)" class="accordion-collapse collapse" 
-                                     data-bs-parent="#duplicatesAccordion">
-                                    <div class="accordion-body">
-                                        <ul class="list-unstyled">
-                                            @foreach (var file in group.Files)
-                                            {
-                                                <li class="mb-1">
-                                                    <span class="oi oi-file" aria-hidden="true"></span>
-                                                    @file.RelativePath
-                                                    <small class="text-muted">(@FormatFileSize(file.FileSizeBytes))</small>
-                                                </li>
-                                            }
-                                        </ul>
-                                        <p class="mt-2 mb-0">
-                                            <strong>Potential savings:</strong> 
-                                            @FormatFileSize(group.FileSize * (group.Files.Count - 1))
-                                        </p>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <span class="oi oi-folder-open me-2" aria-hidden="true"></span>
+                                            @Path.GetFileName(dir.DirectoryPath)
+                                        </h6>
+                                        <p class="small text-muted mb-2">@dir.DirectoryPath</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge bg-primary">@dir.ImageCount images</span>
+                                            <small class="text-muted">Added @dir.DateCreated.ToString("MMM dd, yyyy")</small>
+                                        </div>
+                                        @if (dir.ImageCount > 0)
+                                        {
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress-bar" 
+                                                     style="width: @(totalImages > 0 ? (double)dir.ImageCount / totalImages * 100 : 0)%"
+                                                     title="@((totalImages > 0 ? (double)dir.ImageCount / totalImages * 100 : 0).ToString("F1"))% of total library"></div>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             </div>
-                            groupIndex++;
                         }
                     </div>
-                    @if (duplicateGroups.Count > 10)
-                    {
-                        <p class="text-center text-muted mt-3">
-                            Showing 10 of @duplicateGroups.Count duplicate groups
-                        </p>
-                    }
                 </div>
             </div>
         }
@@ -400,6 +479,9 @@
     
     // File type statistics
     private List<FileTypeStat> fileTypeStats = new();
+    
+    // Scan directories
+    private List<ScanDirectoryStat> scanDirectories = new();
 
     private class CategoryStat
     {
@@ -430,6 +512,13 @@
         public string Extension { get; set; } = "";
         public int Count { get; set; }
         public double Percentage { get; set; }
+    }
+
+    private class ScanDirectoryStat
+    {
+        public string DirectoryPath { get; set; } = "";
+        public int ImageCount { get; set; }
+        public DateTime DateCreated { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -510,8 +599,9 @@
             currentAiPage = 0;
             UpdateAiSamplesPage();
             
-            // Load duplicate statistics
+            // Load duplicate statistics with scan directory information
             var duplicates = await DbContext.tbl_images
+                .Include(i => i.ScanDirectory)
                 .Where(i => i.IsDeleted == 0 && !string.IsNullOrEmpty(i.FileHash))
                 .GroupBy(i => i.FileHash)
                 .Where(g => g.Count() > 1)
@@ -531,6 +621,17 @@
                 .Where(i => i.IsDeleted == 0)
                 .SumAsync(i => (long)i.FileSizeBytes);
             totalSizeStr = FormatFileSize(totalSize);
+            
+            // Load scan directories statistics
+            scanDirectories = await DbContext.tbl_scan_directory
+                .Select(sd => new ScanDirectoryStat
+                {
+                    DirectoryPath = sd.DirectoryPath,
+                    ImageCount = DbContext.tbl_images.Count(img => img.ScanDirectoryId == sd.ScanDirectoryId && img.IsDeleted == 0),
+                    DateCreated = sd.DateCreated
+                })
+                .OrderBy(sd => sd.DateCreated)
+                .ToListAsync();
             
             // Load file type statistics
             var extensions = await DbContext.tbl_images
@@ -588,6 +689,13 @@
     private void GoBack()
     {
         Navigation.NavigateTo("/");
+    }
+
+    private void ShowAllDuplicates()
+    {
+        // TODO: Navigate to dedicated duplicates page
+        // For now, show an alert
+        // Navigation.NavigateTo("/duplicates");
     }
 
     private void UpdateAiSamplesPage()

@@ -4,10 +4,12 @@
 @using MyPhotoHelper.Components.Shared
 @using MyPhotoHelper.Data
 @using Microsoft.EntityFrameworkCore
+@implements IDisposable
 @inject IMemoryService MemoryService
 @inject IJSRuntime JSRuntime
 @inject MyPhotoHelperDbContext DbContext
 @inject NavigationManager Navigation
+@inject IScanStatusService ScanStatusService
 
 <PageTitle>Memories - MyPhotoHelper</PageTitle>
 
@@ -30,6 +32,19 @@
         </div>
     </div>
 
+    @if (ScanStatusService.IsScanning && !hasPhotos)
+    {
+        <div class="alert alert-info d-flex align-items-center mb-4">
+            <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                <span class="visually-hidden">Scanning...</span>
+            </div>
+            <div>
+                <h6 class="mb-0">Scanning for photos...</h6>
+                <small>Your memories will appear here as photos are discovered.</small>
+            </div>
+        </div>
+    }
+    
     @if (isLoading)
     {
         <div class="text-center py-5">
@@ -107,6 +122,9 @@
     private DateTime selectedDate = DateTime.Today;
     private MemoryCollection? memories;
     private bool isLoading = true;
+    private bool hasPhotos = false;
+    private System.Threading.Timer? refreshTimer;
+    private int lastPhotoCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -121,6 +139,15 @@
         }
         
         await LoadMemories();
+        
+        // Subscribe to scan status changes
+        ScanStatusService.StatusChanged += OnScanStatusChanged;
+        
+        // Start auto-refresh timer if scanning
+        if (ScanStatusService.IsScanning)
+        {
+            StartAutoRefresh();
+        }
     }
 
     private async Task LoadMemories()
@@ -131,6 +158,7 @@
         try
         {
             memories = await MemoryService.GetTodaysMemoriesAsync(selectedDate);
+            hasPhotos = memories?.TotalPhotos > 0;
         }
         catch (Exception ex)
         {
@@ -173,5 +201,52 @@
     {
         // TODO: Navigate to photo gallery filtered by year and date
         await JSRuntime.InvokeVoidAsync("alert", $"Show all photos from {year}");
+    }
+    
+    private void OnScanStatusChanged(object? sender, EventArgs e)
+    {
+        InvokeAsync(async () =>
+        {
+            if (ScanStatusService.IsScanning)
+            {
+                StartAutoRefresh();
+            }
+            else
+            {
+                StopAutoRefresh();
+                // Do one final refresh when scan completes
+                await LoadMemories();
+            }
+        });
+    }
+    
+    private void StartAutoRefresh()
+    {
+        // Refresh every 3 seconds while scanning
+        refreshTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                // Check if we have new photos
+                var currentPhotoCount = await DbContext.tbl_images.CountAsync();
+                if (currentPhotoCount != lastPhotoCount)
+                {
+                    lastPhotoCount = currentPhotoCount;
+                    await LoadMemories();
+                }
+            });
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+    
+    private void StopAutoRefresh()
+    {
+        refreshTimer?.Dispose();
+        refreshTimer = null;
+    }
+    
+    public void Dispose()
+    {
+        StopAutoRefresh();
+        ScanStatusService.StatusChanged -= OnScanStatusChanged;
     }
 }

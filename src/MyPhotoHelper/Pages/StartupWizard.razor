@@ -1221,8 +1221,8 @@
                 _ = Task.Run(async () => await backgroundService.TriggerScanAsync());
             }
 
-            // Navigate to photo scan
-            Navigation.NavigateTo("/photo-scan");
+            // Navigate to memories page where users can see their photos appear
+            Navigation.NavigateTo("/memories");
         }
         catch (Exception ex)
         {

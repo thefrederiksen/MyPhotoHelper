@@ -56,6 +56,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Include Resources directory -->
+    <Content Include="Resources\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Exclude backup directory from build -->
     <Compile Remove="Backup_RemovedFiles\**" />
     <Content Remove="Backup_RemovedFiles\**" />
