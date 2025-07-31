@@ -59,26 +59,19 @@ namespace MyPhotoHelper.Services
                 .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
                 .CountAsync(cancellationToken);
 
-            // Get count of images that already have metadata
-            var imagesWithMetadata = await dbContext.tbl_images
+            // Get initial count of images that already have metadata
+            var initialImagesWithMetadata = await dbContext.tbl_images
                 .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
                 .Where(img => dbContext.tbl_image_metadata.Any(meta => meta.ImageId == img.ImageId))
                 .CountAsync(cancellationToken);
 
-            // Get images without metadata
-            var imagesWithoutMetadata = await dbContext.tbl_images
-                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
-                .Where(img => !dbContext.tbl_image_metadata.Any(meta => meta.ImageId == img.ImageId))
-                .Take(1000) // Process in batches
-                .ToListAsync(cancellationToken);
-
-            _logger.LogInformation($"Metadata extraction: {imagesWithMetadata} completed, {imagesWithoutMetadata.Count} remaining, {totalImages} total");
+            _logger.LogInformation($"Metadata extraction starting: {initialImagesWithMetadata}/{totalImages} already have metadata");
 
             var phaseProgress = new PhaseProgress
             {
-                Phase = ScanPhase.Phase3_Metadata,
+                Phase = ScanPhase.Phase2_Metadata,
                 TotalItems = totalImages,
-                ProcessedItems = imagesWithMetadata,
+                ProcessedItems = initialImagesWithMetadata,
                 SuccessCount = 0,
                 ErrorCount = 0,
                 StartTime = DateTime.UtcNow
@@ -86,58 +79,79 @@ namespace MyPhotoHelper.Services
 
             progress?.Report(phaseProgress);
 
-            var processedCount = 0;
-            var errorCount = 0;
-            var currentIndex = 0;
+            var totalProcessedCount = 0;
+            var totalErrorCount = 0;
+            var batchSize = 1000;
+            var hasMoreImages = true;
 
-            foreach (var image in imagesWithoutMetadata)
+            // Process all images in batches
+            while (hasMoreImages && !cancellationToken.IsCancellationRequested)
             {
-                if (cancellationToken.IsCancellationRequested)
-                    break;
+                // Get next batch of images without metadata
+                var imagesWithoutMetadata = await dbContext.tbl_images
+                    .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                    .Where(img => !dbContext.tbl_image_metadata.Any(meta => meta.ImageId == img.ImageId))
+                    .Take(batchSize)
+                    .ToListAsync(cancellationToken);
 
-                currentIndex++;
-
-                phaseProgress.CurrentItem = image.FileName;
-                progress?.Report(phaseProgress);
-
-                try
+                if (imagesWithoutMetadata.Count == 0)
                 {
-                    var metadata = await ExtractMetadataAsync(image, cancellationToken);
-                    if (metadata != null)
-                    {
-                        dbContext.tbl_image_metadata.Add(metadata);
-                        processedCount++;
-                        phaseProgress.SuccessCount = processedCount;
+                    hasMoreImages = false;
+                    break;
+                }
 
-                        // Save every 50 images
-                        if (processedCount % 50 == 0)
+                _logger.LogInformation($"Processing batch of {imagesWithoutMetadata.Count} images");
+
+                foreach (var image in imagesWithoutMetadata)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    phaseProgress.CurrentItem = image.FileName;
+                    progress?.Report(phaseProgress);
+
+                    try
+                    {
+                        var metadata = await ExtractMetadataAsync(image, cancellationToken);
+                        if (metadata != null)
                         {
-                            await dbContext.SaveChangesAsync(cancellationToken);
-                            _logger.LogDebug($"Saved metadata for {processedCount} images");
+                            dbContext.tbl_image_metadata.Add(metadata);
+                            totalProcessedCount++;
+                            phaseProgress.SuccessCount = totalProcessedCount;
+
+                            // Save every 50 images
+                            if (totalProcessedCount % 50 == 0)
+                            {
+                                await dbContext.SaveChangesAsync(cancellationToken);
+                                _logger.LogDebug($"Saved metadata for {totalProcessedCount} images");
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error extracting metadata for image {image.ImageId}: {image.FileName}");
-                    errorCount++;
-                    phaseProgress.ErrorCount = errorCount;
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error extracting metadata for image {image.ImageId}: {image.FileName}");
+                        totalErrorCount++;
+                        phaseProgress.ErrorCount = totalErrorCount;
+                    }
+
+                    phaseProgress.ProcessedItems = initialImagesWithMetadata + totalProcessedCount + totalErrorCount;
+                    progress?.Report(phaseProgress);
                 }
 
-                phaseProgress.ProcessedItems = imagesWithMetadata + currentIndex;
-                progress?.Report(phaseProgress);
-            }
-
-            // Save any remaining
-            if (processedCount % 50 != 0)
-            {
+                // Save any remaining in this batch
                 await dbContext.SaveChangesAsync(cancellationToken);
+
+                // Check if we've processed fewer images than the batch size
+                if (imagesWithoutMetadata.Count < batchSize)
+                {
+                    hasMoreImages = false;
+                }
             }
 
             phaseProgress.EndTime = DateTime.UtcNow;
             progress?.Report(phaseProgress);
 
-            _logger.LogInformation($"Metadata extraction completed. Processed: {processedCount}, Errors: {errorCount}");
+            _logger.LogInformation($"Metadata extraction completed. Processed: {totalProcessedCount}, Errors: {totalErrorCount}");
         }
 
         public async Task<tbl_image_metadata?> ExtractMetadataAsync(tbl_images image, CancellationToken cancellationToken = default)
@@ -163,39 +177,112 @@ namespace MyPhotoHelper.Services
                         
                         if (pythonResult != null)
                         {
-                            // Convert Python dictionary to C# objects
-                            var width = pythonResult.ContainsKey("width") ? int.Parse(pythonResult["width"].ToString()!) : 0;
-                            var height = pythonResult.ContainsKey("height") ? int.Parse(pythonResult["height"].ToString()!) : 0;
-                            var dateTakenStr = pythonResult.ContainsKey("date_taken") && pythonResult["date_taken"] != null 
-                                && pythonResult["date_taken"].ToString() != "None"
-                                ? pythonResult["date_taken"].ToString() : null;
-                            var pythonLat = pythonResult.ContainsKey("latitude") && pythonResult["latitude"] != null 
-                                && pythonResult["latitude"].ToString() != "None"
-                                ? double.Parse(pythonResult["latitude"].ToString()!) : (double?)null;
-                            var pythonLon = pythonResult.ContainsKey("longitude") && pythonResult["longitude"] != null 
-                                && pythonResult["longitude"].ToString() != "None"
-                                ? double.Parse(pythonResult["longitude"].ToString()!) : (double?)null;
-                            
-                            // Parse date if available
-                            DateTime? dateTaken = null;
-                            if (!string.IsNullOrEmpty(dateTakenStr))
+                            // Helper method to safely extract values from Python result
+                            T? GetValue<T>(string key, Func<string, T> converter) where T : struct
                             {
-                                if (DateTime.TryParse(dateTakenStr, out var parsedDate))
-                                    dateTaken = parsedDate;
+                                if (pythonResult.ContainsKey(key) && pythonResult[key] != null && pythonResult[key].ToString() != "None")
+                                {
+                                    try { return converter(pythonResult[key].ToString()!); }
+                                    catch { return null; }
+                                }
+                                return null;
+                            }
+                            
+                            string? GetString(string key)
+                            {
+                                if (pythonResult.ContainsKey(key) && pythonResult[key] != null && pythonResult[key].ToString() != "None")
+                                {
+                                    var value = pythonResult[key].ToString();
+                                    return string.IsNullOrEmpty(value) ? null : value;
+                                }
+                                return null;
+                            }
+                            
+                            DateTime? GetDateTime(string key)
+                            {
+                                var dateStr = GetString(key);
+                                if (!string.IsNullOrEmpty(dateStr) && DateTime.TryParse(dateStr, out var parsedDate))
+                                {
+                                    return parsedDate;
+                                }
+                                return null;
                             }
                             
                             var metadata = new tbl_image_metadata
                             {
                                 ImageId = image.ImageId,
-                                Width = width,
-                                Height = height,
-                                DateTaken = dateTaken ?? image.DateModified,
-                                Latitude = pythonLat,
-                                Longitude = pythonLon,
-                                LocationName = null
+                                
+                                // Basic Image Properties
+                                Width = GetValue("width", int.Parse),
+                                Height = GetValue("height", int.Parse),
+                                ColorSpace = GetString("color_space"),
+                                BitDepth = GetValue("bit_depth", int.Parse),
+                                Orientation = GetString("orientation"),
+                                ResolutionX = GetValue("resolution_x", double.Parse),
+                                ResolutionY = GetValue("resolution_y", double.Parse),
+                                ResolutionUnit = GetString("resolution_unit"),
+                                
+                                // Date/Time Information
+                                DateTaken = GetDateTime("date_taken") ?? image.DateModified,
+                                DateDigitized = GetDateTime("date_digitized"),
+                                DateModified = GetDateTime("date_modified"),
+                                TimeZone = GetString("time_zone"),
+                                
+                                // GPS/Location Data
+                                Latitude = GetValue("latitude", double.Parse),
+                                Longitude = GetValue("longitude", double.Parse),
+                                Altitude = GetValue("altitude", double.Parse),
+                                GPSDirection = GetString("gps_direction"),
+                                GPSSpeed = GetValue("gps_speed", double.Parse),
+                                GPSProcessingMethod = GetString("gps_processing_method"),
+                                LocationName = GetString("location_name"),
+                                
+                                // Camera Information
+                                CameraMake = GetString("camera_make"),
+                                CameraModel = GetString("camera_model"),
+                                CameraSerial = GetString("camera_serial"),
+                                LensModel = GetString("lens_model"),
+                                LensMake = GetString("lens_make"),
+                                LensSerial = GetString("lens_serial"),
+                                
+                                // Camera Settings
+                                FocalLength = GetValue("focal_length", double.Parse),
+                                FocalLength35mm = GetValue("focal_length_35mm", double.Parse),
+                                FNumber = GetString("f_number"),
+                                ExposureTime = GetString("exposure_time"),
+                                ISO = GetValue("iso", int.Parse),
+                                ExposureMode = GetString("exposure_mode"),
+                                ExposureProgram = GetString("exposure_program"),
+                                MeteringMode = GetString("metering_mode"),
+                                Flash = GetString("flash"),
+                                WhiteBalance = GetString("white_balance"),
+                                SceneCaptureType = GetString("scene_capture_type"),
+                                
+                                // Software/Processing
+                                Software = GetString("software"),
+                                ProcessingSoftware = GetString("processing_software"),
+                                Artist = GetString("artist"),
+                                Copyright = GetString("copyright"),
+                                
+                                // Technical Details
+                                ColorProfile = GetString("color_profile"),
+                                ExposureBias = GetValue("exposure_bias", double.Parse),
+                                MaxAperture = GetValue("max_aperture", double.Parse),
+                                SubjectDistance = GetString("subject_distance"),
+                                LightSource = GetString("light_source"),
+                                SensingMethod = GetString("sensing_method"),
+                                FileSource = GetString("file_source"),
+                                SceneType = GetString("scene_type"),
+                                
+                                // Additional Properties
+                                ImageDescription = GetString("image_description"),
+                                UserComment = GetString("user_comment"),
+                                Keywords = GetString("keywords"),
+                                Subject = GetString("subject")
                             };
                             
-                            _logger.LogInformation($"Python extracted metadata - GPS: {metadata.Latitude}, {metadata.Longitude}");
+                            var hasGps = metadata.Latitude.HasValue && metadata.Longitude.HasValue;
+                            _logger.LogInformation($"Python extracted metadata for {image.FileName} - GPS: {(hasGps ? $"{metadata.Latitude}, {metadata.Longitude}" : "None")}");
                             return metadata;
                         }
                     }

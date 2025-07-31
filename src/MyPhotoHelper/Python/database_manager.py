@@ -92,16 +92,16 @@ def run_sql_script(db_path: str, script_path: str, version: int) -> bool:
         try:
             conn.executescript(sql_content)
             conn.commit()
-            print(f"  ✅ Version {version} applied successfully")
+            print(f"  [OK] Version {version} applied successfully")
             return True
         finally:
             conn.close()
             
     except sqlite3.Error as e:
-        print(f"  ❌ SQLite error in version {version}: {e}")
+        print(f"  [ERROR] SQLite error in version {version}: {e}")
         return False
     except Exception as e:
-        print(f"  ❌ Error running version {version}: {e}")
+        print(f"  [ERROR] Error running version {version}: {e}")
         return False
 
 def create_or_update_database(db_path: str, database_scripts_dir: Optional[str] = None) -> bool:
@@ -140,7 +140,7 @@ def create_or_update_database(db_path: str, database_scripts_dir: Optional[str] 
         scripts_to_run = [(v, p) for v, p in scripts if v > current_version]
         
         if not scripts_to_run:
-            print("✅ Database is already up to date!")
+            print("[OK] Database is already up to date!")
             return True
         
         print(f"Scripts to run: {len(scripts_to_run)}")
@@ -149,13 +149,13 @@ def create_or_update_database(db_path: str, database_scripts_dir: Optional[str] 
         # Run each script in order
         for version, script_path in scripts_to_run:
             if not run_sql_script(db_path, script_path, version):
-                print(f"❌ Failed to apply version {version}")
+                print(f"[ERROR] Failed to apply version {version}")
                 return False
         
         # Verify final version
         final_version = get_current_database_version(db_path)
         print()
-        print(f"✅ Database updated successfully!")
+        print(f"[OK] Database updated successfully!")
         print(f"Final Version: {final_version}")
         
         # Show database info
@@ -172,7 +172,7 @@ def create_or_update_database(db_path: str, database_scripts_dir: Optional[str] 
         return True
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
         return False
 
 def main():
@@ -201,7 +201,7 @@ def main():
         print("2. Use for EF scaffolding")
         print("3. Use for development and testing")
     else:
-        print("❌ Failed to create/update database")
+        print("[ERROR] Failed to create/update database")
         sys.exit(1)
 
 if __name__ == "__main__":

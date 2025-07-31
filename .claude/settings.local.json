@@ -12,7 +12,8 @@
       "Bash(taskkill:*)",
       "Bash(powershell:*)",
       "Bash(del dev_facevault.db)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

@@ -54,12 +54,74 @@ CREATE INDEX IF NOT EXISTS IX_tbl_images_ScanDirectoryId ON tbl_images (ScanDire
 -- Uses same primary key as Images table (one-to-one relationship)
 CREATE TABLE IF NOT EXISTS tbl_image_metadata (
     ImageId INTEGER PRIMARY KEY,
+    
+    -- Basic Image Properties
     Width INTEGER,
     Height INTEGER,
+    ColorSpace TEXT,
+    BitDepth INTEGER,
+    Orientation TEXT,
+    ResolutionX REAL,
+    ResolutionY REAL,
+    ResolutionUnit TEXT,
+    
+    -- Date/Time Information
     DateTaken DATETIME,
+    DateDigitized DATETIME,
+    DateModified DATETIME,
+    TimeZone TEXT,
+    
+    -- GPS/Location Data
     Latitude REAL,
     Longitude REAL,
+    Altitude REAL,
+    GPSDirection TEXT,
+    GPSSpeed REAL,
+    GPSProcessingMethod TEXT,
     LocationName TEXT,
+    
+    -- Camera Information
+    CameraMake TEXT,
+    CameraModel TEXT,
+    CameraSerial TEXT,
+    LensModel TEXT,
+    LensMake TEXT,
+    LensSerial TEXT,
+    
+    -- Camera Settings
+    FocalLength REAL,
+    FocalLength35mm REAL,
+    FNumber TEXT,
+    ExposureTime TEXT,
+    ISO INTEGER,
+    ExposureMode TEXT,
+    ExposureProgram TEXT,
+    MeteringMode TEXT,
+    Flash TEXT,
+    WhiteBalance TEXT,
+    SceneCaptureType TEXT,
+    
+    -- Software/Processing
+    Software TEXT,
+    ProcessingSoftware TEXT,
+    Artist TEXT,
+    Copyright TEXT,
+    
+    -- Technical Details
+    ColorProfile TEXT,
+    ExposureBias REAL,
+    MaxAperture REAL,
+    SubjectDistance TEXT,
+    LightSource TEXT,
+    SensingMethod TEXT,
+    FileSource TEXT,
+    SceneType TEXT,
+    
+    -- Additional Properties
+    ImageDescription TEXT,
+    UserComment TEXT,
+    Keywords TEXT,
+    Subject TEXT,
     
     FOREIGN KEY (ImageId) REFERENCES tbl_images(ImageId) ON DELETE CASCADE
 );

@@ -4,8 +4,8 @@ namespace MyPhotoHelper.Models
     {
         None = 0,
         Phase1_Discovery = 1,      // Find files and basic info
-        Phase2_Hashing = 2,         // Calculate file hashes for duplicate detection
-        Phase3_Metadata = 3,        // Extract EXIF and image metadata
+        Phase2_Metadata = 2,        // Extract EXIF and image metadata
+        Phase3_Hashing = 3,         // Calculate file hashes for duplicate detection
         Phase4_Analysis = 4,        // AI analysis and categorization
         Completed = 5
     }

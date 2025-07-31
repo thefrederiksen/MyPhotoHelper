@@ -77,12 +77,12 @@ namespace MyPhotoHelper.Services
                 await ExecutePhase1DiscoveryAsync(cancellationToken);
                 if (cancellationToken.IsCancellationRequested) return;
 
-                // Phase 2: Hashing
-                await ExecutePhase2HashingAsync(cancellationToken);
+                // Phase 2: Metadata
+                await ExecutePhase2MetadataAsync(cancellationToken);
                 if (cancellationToken.IsCancellationRequested) return;
 
-                // Phase 3: Metadata (already implemented)
-                await ExecutePhase3MetadataAsync(cancellationToken);
+                // Phase 3: Hashing
+                await ExecutePhase3HashingAsync(cancellationToken);
                 if (cancellationToken.IsCancellationRequested) return;
 
                 // Phase 4: AI Analysis (future)
@@ -158,45 +158,45 @@ namespace MyPhotoHelper.Services
             _logger.LogInformation($"Phase 1 completed. Found {phaseProgress.SuccessCount} new images");
         }
 
-        private async Task ExecutePhase2HashingAsync(CancellationToken cancellationToken)
+        private async Task ExecutePhase2MetadataAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting Phase 2: Hashing");
-            _currentProgress!.CurrentPhase = ScanPhase.Phase2_Hashing;
-            
-            using var scope = _serviceProvider.CreateScope();
-            var hashService = scope.ServiceProvider.GetRequiredService<IHashCalculationService>();
-            
-            var progressReporter = new Progress<PhaseProgress>(progress =>
-            {
-                _currentProgress.PhaseProgress[ScanPhase.Phase2_Hashing] = progress;
-                ProgressChanged?.Invoke(this, _currentProgress);
-                _scanStatusService.UpdatePhasedStatus(_currentProgress);
-            });
-
-            await hashService.CalculateHashesForImagesAsync(progressReporter, cancellationToken);
-            
-            PhaseCompleted?.Invoke(this, ScanPhase.Phase2_Hashing);
-            _logger.LogInformation("Phase 2 completed");
-        }
-
-        private async Task ExecutePhase3MetadataAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Starting Phase 3: Image Details Extraction");
-            _currentProgress!.CurrentPhase = ScanPhase.Phase3_Metadata;
+            _logger.LogInformation("Starting Phase 2: Image Details Extraction");
+            _currentProgress!.CurrentPhase = ScanPhase.Phase2_Metadata;
             
             using var scope = _serviceProvider.CreateScope();
             var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
             
             var progressReporter = new Progress<PhaseProgress>(progress =>
             {
-                _currentProgress.PhaseProgress[ScanPhase.Phase3_Metadata] = progress;
+                _currentProgress.PhaseProgress[ScanPhase.Phase2_Metadata] = progress;
                 ProgressChanged?.Invoke(this, _currentProgress);
                 _scanStatusService.UpdatePhasedStatus(_currentProgress);
             });
 
             await metadataService.ExtractMetadataForNewImagesAsync(progressReporter, cancellationToken);
             
-            PhaseCompleted?.Invoke(this, ScanPhase.Phase3_Metadata);
+            PhaseCompleted?.Invoke(this, ScanPhase.Phase2_Metadata);
+            _logger.LogInformation("Phase 2 completed");
+        }
+
+        private async Task ExecutePhase3HashingAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Starting Phase 3: Hashing for Duplicate Detection");
+            _currentProgress!.CurrentPhase = ScanPhase.Phase3_Hashing;
+            
+            using var scope = _serviceProvider.CreateScope();
+            var hashService = scope.ServiceProvider.GetRequiredService<IHashCalculationService>();
+            
+            var progressReporter = new Progress<PhaseProgress>(progress =>
+            {
+                _currentProgress.PhaseProgress[ScanPhase.Phase3_Hashing] = progress;
+                ProgressChanged?.Invoke(this, _currentProgress);
+                _scanStatusService.UpdatePhasedStatus(_currentProgress);
+            });
+
+            await hashService.CalculateHashesForImagesAsync(progressReporter, cancellationToken);
+            
+            PhaseCompleted?.Invoke(this, ScanPhase.Phase3_Hashing);
             _logger.LogInformation("Phase 3 completed");
         }
     }

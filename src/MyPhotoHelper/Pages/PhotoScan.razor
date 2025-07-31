@@ -308,11 +308,11 @@
                     <h6>Phase 1: Discovery</h6>
                     <p class="small">Finds new photo files and gathers basic information.</p>
                     
-                    <h6>Phase 2: Hashing</h6>
-                    <p class="small">Calculates unique fingerprints for duplicate detection.</p>
+                    <h6>Phase 2: Image Details</h6>
+                    <p class="small">Reading photo information like dates, locations, camera settings, and image properties.</p>
                     
-                    <h6>Phase 3: Image Details</h6>
-                    <p class="small">Reading photo information like dates, locations, and image properties.</p>
+                    <h6>Phase 3: Duplicate Detection</h6>
+                    <p class="small">Calculates unique fingerprints to identify duplicate photos.</p>
                     
                     <h6>Phase 4: AI Analysis</h6>
                     <p class="small text-muted">Coming soon - AI categorization and tagging.</p>
@@ -508,8 +508,8 @@
         return phase switch
         {
             ScanPhase.Phase1_Discovery => "Phase 1: File Discovery",
-            ScanPhase.Phase2_Hashing => "Phase 2: Duplicate Detection",
-            ScanPhase.Phase3_Metadata => "Phase 3: Getting Image Details",
+            ScanPhase.Phase2_Metadata => "Phase 2: Getting Image Details",
+            ScanPhase.Phase3_Hashing => "Phase 3: Duplicate Detection",
             ScanPhase.Phase4_Analysis => "Phase 4: AI Analysis",
             _ => phase.ToString()
         };

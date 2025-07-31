@@ -53,6 +53,8 @@ public partial class MyPhotoHelperDbContext : DbContext
             entity.HasIndex(e => new { e.Latitude, e.Longitude }, "IX_tbl_image_metadata_Location");
 
             entity.Property(e => e.ImageId).ValueGeneratedNever();
+            entity.Property(e => e.DateDigitized).HasColumnType("DATETIME");
+            entity.Property(e => e.DateModified).HasColumnType("DATETIME");
             entity.Property(e => e.DateTaken).HasColumnType("DATETIME");
 
             entity.HasOne(d => d.Image).WithOne(p => p.tbl_image_metadata).HasForeignKey<tbl_image_metadata>(d => d.ImageId);
