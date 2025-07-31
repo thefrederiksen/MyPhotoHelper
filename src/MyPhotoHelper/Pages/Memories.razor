@@ -8,6 +8,7 @@
 @inject IMemoryService MemoryService
 @inject IJSRuntime JSRuntime
 @inject MyPhotoHelperDbContext DbContext
+@inject IServiceProvider ServiceProvider
 @inject NavigationManager Navigation
 @inject IScanStatusService ScanStatusService
 
@@ -244,12 +245,26 @@
         {
             await InvokeAsync(async () =>
             {
-                // Check if we have new photos
-                var currentPhotoCount = await DbContext.tbl_images.CountAsync();
-                if (currentPhotoCount != lastPhotoCount)
+                try
                 {
-                    lastPhotoCount = currentPhotoCount;
-                    await LoadMemories();
+                    // Create a new scoped context for the background timer
+                    using var scope = ServiceProvider.CreateScope();
+                    var scopedDbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                    
+                    // Check if we have new photos
+                    var currentPhotoCount = await scopedDbContext.tbl_images.CountAsync();
+                    if (currentPhotoCount != lastPhotoCount)
+                    {
+                        lastPhotoCount = currentPhotoCount;
+                        await LoadMemories();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't crash the timer
+                    Console.WriteLine($"Error in auto-refresh timer: {ex.Message}");
+                    // Stop the timer to prevent repeated errors
+                    StopAutoRefresh();
                 }
             });
         }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));

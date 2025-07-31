@@ -10,7 +10,9 @@
       "Bash(ls:*)",
       "Bash(mv:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(del dev_facevault.db)",
+      "Bash(dotnet test:*)"
     ],
     "deny": []
   }

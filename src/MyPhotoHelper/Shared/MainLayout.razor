@@ -1,5 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using MyPhotoHelper.Components.Shared
+@using MyPhotoHelper.Services
+@inject IImageDetailsService ImageDetailsService
+@implements IDisposable
 
 <PageTitle>FaceVault</PageTitle>
 
@@ -22,3 +25,28 @@
         </article>
     </main>
 </div>
+
+<!-- Global Image Details Modal -->
+<ImageDetailsModal @ref="imageDetailsModal" />
+
+@code {
+    private ImageDetailsModal? imageDetailsModal;
+
+    protected override void OnInitialized()
+    {
+        ImageDetailsService.ShowImageDetailsRequested += OnShowImageDetailsRequested;
+    }
+
+    private async void OnShowImageDetailsRequested(object? sender, int imageId)
+    {
+        if (imageDetailsModal != null)
+        {
+            await imageDetailsModal.ShowImageDetailsAsync(imageId);
+        }
+    }
+
+    public void Dispose()
+    {
+        ImageDetailsService.ShowImageDetailsRequested -= OnShowImageDetailsRequested;
+    }
+}

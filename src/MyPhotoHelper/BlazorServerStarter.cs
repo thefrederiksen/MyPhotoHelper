@@ -52,50 +52,58 @@ namespace MyPhotoHelper
         
         private async Task InitializeAndStartBlazorServer(string[] args, bool startMinimized)
         {
-            UpdateStatus("Initializing directories...", 10);
-            
-            // All the original initialization code from Program.cs goes here
-            // Initialize PathService
-            var pathService = new PathService();
-            Logger.Initialize(pathService.GetLogsDirectory(), MyPhotoHelper.Services.LogLevel.Info);
-            Logger.Info("MyPhotoHelper starting (WinForms launcher)");
-            
-            pathService.EnsureDirectoriesExist();
-            pathService.MigrateDatabaseIfNeeded();
-            
-            UpdateStatus("Creating web application...", 20);
-            
-            // Create the Blazor web application
-            var builder = WebApplication.CreateBuilder(args);
-            
-            // Configure Kestrel
-            builder.WebHost.ConfigureKestrel(serverOptions =>
+            try
             {
-                serverOptions.ListenLocalhost(5113, listenOptions =>
+                UpdateStatus("Initializing directories...", 10);
+                StartupErrorLogger.LogError("Initializing directories", null);
+                
+                // All the original initialization code from Program.cs goes here
+                // Initialize PathService
+                var pathService = new PathService();
+                Logger.Initialize(pathService.GetLogsDirectory(), MyPhotoHelper.Services.LogLevel.Info);
+                Logger.Info("MyPhotoHelper starting (WinForms launcher)");
+                
+                pathService.EnsureDirectoriesExist();
+                pathService.MigrateDatabaseIfNeeded();
+                
+                UpdateStatus("Creating web application...", 20);
+                StartupErrorLogger.LogError("Creating web application", null);
+                
+                // Create the Blazor web application
+                var builder = WebApplication.CreateBuilder(args);
+                
+                // Configure Kestrel
+                builder.WebHost.ConfigureKestrel(serverOptions =>
                 {
-                    listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2;
+                    serverOptions.ListenLocalhost(5113, listenOptions =>
+                    {
+                        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2;
+                    });
                 });
-            });
-            
-            UpdateStatus("Configuring services...", 30);
-            
-            // Configure all the services (logging, EF, Python, etc.)
-            ConfigureServices(builder, pathService);
-            
-            UpdateStatus("Building application...", 40);
-            
-            // Build the app
-            app = builder.Build();
-            
-            // Configure the HTTP pipeline
-            ConfigureApp(app);
-            
-            UpdateStatus("Initializing Python...", 50);
-            
-            // Initialize Python
-            await InitializePython(app);
-            
-            UpdateStatus("Initializing database...", 70);
+                
+                UpdateStatus("Configuring services...", 30);
+                StartupErrorLogger.LogError("Configuring services", null);
+                
+                // Configure all the services (logging, EF, Python, etc.)
+                ConfigureServices(builder, pathService);
+                
+                UpdateStatus("Building application...", 40);
+                StartupErrorLogger.LogError("Building application", null);
+                
+                // Build the app
+                app = builder.Build();
+                
+                // Configure the HTTP pipeline
+                ConfigureApp(app);
+                
+                UpdateStatus("Initializing Python...", 50);
+                StartupErrorLogger.LogError("Initializing Python", null);
+                
+                // Initialize Python
+                await InitializePython(app);
+                
+                UpdateStatus("Initializing database...", 70);
+                StartupErrorLogger.LogError("Initializing database", null);
             
             // Initialize database
             await InitializeDatabase(app, pathService);
@@ -149,6 +157,35 @@ namespace MyPhotoHelper
                     }
                 }
             }));
+            }
+            catch (Exception ex)
+            {
+                StartupErrorLogger.LogError("Fatal error during Blazor server initialization", ex);
+                
+                // Hide startup form
+                startupForm?.Invoke(new Action(() => startupForm.Hide()));
+                
+                // Show error dialog
+                if (startupForm?.InvokeRequired == true)
+                {
+                    startupForm.Invoke(new Action(() =>
+                    {
+                        using (var errorForm = new StartupErrorForm("Failed to start MyPhotoHelper server", ex))
+                        {
+                            errorForm.ShowDialog();
+                        }
+                        Application.Exit();
+                    }));
+                }
+                else
+                {
+                    using (var errorForm = new StartupErrorForm("Failed to start MyPhotoHelper server", ex))
+                    {
+                        errorForm.ShowDialog();
+                    }
+                    Application.Exit();
+                }
+            }
         }
         
         private void ConfigureServices(WebApplicationBuilder builder, IPathService pathService)
@@ -199,6 +236,7 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IHashCalculationService, HashCalculationService>();
             builder.Services.AddScoped<IPhasedScanService, PhasedScanService>();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
+            builder.Services.AddSingleton<IImageDetailsService, ImageDetailsService>();
             
             // Add Blazor services
             builder.Services.AddRazorPages();
@@ -286,24 +324,35 @@ namespace MyPhotoHelper
         
         private async Task InitializeDatabase(WebApplication app, IPathService pathService)
         {
-            var dbPath = pathService.GetDatabasePath();
-            var connectionString = $"Data Source={dbPath};Cache=Shared;";
-            
-            using var scope = app.Services.CreateScope();
-            var dbInitService = scope.ServiceProvider.GetRequiredService<IDatabaseInitializationService>();
-            var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
-            
-            var success = await dbInitService.InitializeDatabaseAsync(connectionString);
-            if (!success)
+            try
             {
-                throw new Exception("Database initialization failed");
+                var dbPath = pathService.GetDatabasePath();
+                var connectionString = $"Data Source={dbPath};Cache=Shared;";
+                
+                StartupErrorLogger.LogError($"Database path: {dbPath}", null);
+                
+                using var scope = app.Services.CreateScope();
+                var dbInitService = scope.ServiceProvider.GetRequiredService<IDatabaseInitializationService>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                
+                var success = await dbInitService.InitializeDatabaseAsync(connectionString);
+                if (!success)
+                {
+                    throw new Exception("Database initialization failed");
+                }
+                
+                await dbContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+                await dbContext.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;");
+                await dbContext.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys=ON;");
+                
+                Logger.Info("Database initialized successfully");
+                StartupErrorLogger.LogError("Database initialized successfully", null);
             }
-            
-            await dbContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
-            await dbContext.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;");
-            await dbContext.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys=ON;");
-            
-            Logger.Info("Database initialized successfully");
+            catch (Exception ex)
+            {
+                StartupErrorLogger.LogError("Database initialization error", ex);
+                throw; // Re-throw to be caught by the main error handler
+            }
         }
         
         private void UpdateStatus(string message, int progress)

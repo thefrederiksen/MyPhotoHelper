@@ -4,12 +4,15 @@
 @using MyPhotoHelper.Services
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.Hosting
+@using Microsoft.JSInterop
 @implements IDisposable
 @inject MyPhotoHelperDbContext DbContext
 @inject MyPhotoHelper.Services.IScanStatusService ScanStatusService
+@inject MyPhotoHelper.Services.IMetadataExtractionService MetadataExtractionService
 @inject IServiceProvider ServiceProvider
 @inject NavigationManager Navigation
 @inject ILogger<PhotoScan> Logger
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Scan Progress - MyPhotoHelper</PageTitle>
 
@@ -145,6 +148,13 @@
                                             <span class="fw-bold">@(phase.ProgressPercentage.ToString("F1"))%</span>
                                         </div>
                                     </div>
+                                    
+                                    @if (phase.Phase == ScanPhase.Phase1_Discovery && phase.ProcessedItems > 0)
+                                    {
+                                        <div class="text-muted small">
+                                            <i class="oi oi-info"></i> Discovering new files in your directories
+                                        </div>
+                                    }
                                 }
                                 
                                 @if (isActive && !string.IsNullOrEmpty(phase.CurrentItem))
@@ -266,9 +276,23 @@
                         <button class="btn btn-outline-secondary" @onclick="GoBack">
                             <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
                         </button>
-                        <button class="btn btn-outline-primary" @onclick="RefreshStats">
-                            <span class="oi oi-reload" aria-hidden="true"></span> Refresh
-                        </button>
+                        <div>
+                            <button class="btn btn-outline-warning me-2" @onclick="RescanMetadata" disabled="@(ScanStatusService.IsScanning || isRescanningMetadata)">
+                                @if (isRescanningMetadata)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    <span>Rescanning...</span>
+                                }
+                                else
+                                {
+                                    <span class="oi oi-data-transfer-download" aria-hidden="true"></span>
+                                    <span>Rescan Metadata</span>
+                                }
+                            </button>
+                            <button class="btn btn-outline-primary" @onclick="RefreshStats">
+                                <span class="oi oi-reload" aria-hidden="true"></span> Refresh
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -287,8 +311,8 @@
                     <h6>Phase 2: Hashing</h6>
                     <p class="small">Calculates unique fingerprints for duplicate detection.</p>
                     
-                    <h6>Phase 3: Metadata</h6>
-                    <p class="small">Extracts dates, locations, and image properties.</p>
+                    <h6>Phase 3: Image Details</h6>
+                    <p class="small">Reading photo information like dates, locations, and image properties.</p>
                     
                     <h6>Phase 4: AI Analysis</h6>
                     <p class="small text-muted">Coming soon - AI categorization and tagging.</p>
@@ -333,6 +357,7 @@
     private int totalImagesInDb = 0;
     private int imagesWithHashes = 0;
     private int imagesWithMetadata = 0;
+    private bool isRescanningMetadata = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -384,6 +409,86 @@
         await LoadDatabaseStats();
     }
 
+    private async Task RescanMetadata()
+    {
+        if (ScanStatusService.IsScanning || isRescanningMetadata)
+        {
+            return; // Already scanning
+        }
+
+        // Show confirmation dialog
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            "This will delete all existing image metadata and re-extract it using the latest Python-based extraction. This may take a while depending on your photo collection size. Continue?");
+        
+        if (!confirmed)
+        {
+            return;
+        }
+
+        isRescanningMetadata = true;
+        StateHasChanged();
+        
+        Logger.LogInformation("Starting metadata rescan from UI");
+
+        // Run the rescan in the background to avoid blocking the UI
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Create a progress reporter that updates the UI WITHOUT blocking database calls
+                var progress = new Progress<PhaseProgress>(phaseProgress =>
+                {
+                    // Don't use InvokeAsync here - just update the UI state
+                    // Database stats will be updated when the process completes
+                    _ = InvokeAsync(() =>
+                    {
+                        StateHasChanged();
+                        return Task.CompletedTask;
+                    });
+                });
+
+                using var scope = ServiceProvider.CreateScope();
+                var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
+                await metadataService.RescanAllMetadataAsync(progress);
+                
+                // Refresh stats after completion WITHOUT blocking the UI
+                _ = InvokeAsync(() =>
+                {
+                    Logger.LogInformation("Metadata rescan completed successfully");
+                    // Update database stats in the background
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(1000); // Small delay to let things settle
+                        await InvokeAsync(async () =>
+                        {
+                            await LoadDatabaseStats();
+                            StateHasChanged();
+                        });
+                    });
+                    return Task.CompletedTask;
+                });
+            }
+            catch (Exception ex)
+            {
+                await InvokeAsync(() =>
+                {
+                    Logger.LogError(ex, "Error during metadata rescan");
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                });
+            }
+            finally
+            {
+                await InvokeAsync(() =>
+                {
+                    isRescanningMetadata = false;
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                });
+            }
+        });
+    }
+
     private void OnScanStatusChanged(object? sender, EventArgs e)
     {
         InvokeAsync(async () =>
@@ -403,8 +508,8 @@
         return phase switch
         {
             ScanPhase.Phase1_Discovery => "Phase 1: File Discovery",
-            ScanPhase.Phase2_Hashing => "Phase 2: Hash Calculation",
-            ScanPhase.Phase3_Metadata => "Phase 3: Metadata Extraction",
+            ScanPhase.Phase2_Hashing => "Phase 2: Duplicate Detection",
+            ScanPhase.Phase3_Metadata => "Phase 3: Getting Image Details",
             ScanPhase.Phase4_Analysis => "Phase 4: AI Analysis",
             _ => phase.ToString()
         };

@@ -1,0 +1,189 @@
+@using MyPhotoHelper.Models
+@using MyPhotoHelper.Data
+@using Microsoft.EntityFrameworkCore
+@inject MyPhotoHelperDbContext DbContext
+@inject IJSRuntime JSRuntime
+
+<!-- Image Details Modal -->
+<div class="modal fade" id="imageDetailsModal" tabindex="-1" aria-labelledby="imageDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageDetailsModalLabel">
+                    <i class="oi oi-info"></i> Photo Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (currentImage != null)
+                {
+                    <div class="row">
+                        <!-- Image Preview -->
+                        <div class="col-md-5 mb-3">
+                            <div class="text-center">
+                                <img src="/api/images/@currentImage.ImageId/thumbnail" 
+                                     alt="@currentImage.FileName" 
+                                     class="img-fluid rounded shadow-sm"
+                                     style="max-height: 250px;" />
+                                <h6 class="mt-2 text-muted">@currentImage.FileName</h6>
+                            </div>
+                        </div>
+
+                        <!-- Image Information -->
+                        <div class="col-md-7">
+                            <div class="row g-3">
+                                <!-- Basic Info -->
+                                <div class="col-12">
+                                    <h6 class="border-bottom pb-2 mb-3">📄 File Information</h6>
+                                    <div class="row mb-2">
+                                        <div class="col-sm-4"><strong>File Size:</strong></div>
+                                        <div class="col-sm-8">@FormatFileSize(currentImage.FileSizeBytes)</div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-sm-4"><strong>Date Created:</strong></div>
+                                        <div class="col-sm-8">@currentImage.DateCreated.ToString("MMM d, yyyy h:mm tt")</div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-sm-4"><strong>Date Modified:</strong></div>
+                                        <div class="col-sm-8">@currentImage.DateModified.ToString("MMM d, yyyy h:mm tt")</div>
+                                    </div>
+                                </div>
+
+                                <!-- Image Details -->
+                                @if (currentMetadata != null)
+                                {
+                                    <div class="col-12">
+                                        <h6 class="border-bottom pb-2 mb-3">📷 Photo Details</h6>
+                                        @if (currentMetadata.Width.HasValue && currentMetadata.Height.HasValue)
+                                        {
+                                            <div class="row mb-2">
+                                                <div class="col-sm-4"><strong>Dimensions:</strong></div>
+                                                <div class="col-sm-8">@currentMetadata.Width × @currentMetadata.Height pixels</div>
+                                            </div>
+                                        }
+                                        @if (currentMetadata.DateTaken.HasValue)
+                                        {
+                                            <div class="row mb-2">
+                                                <div class="col-sm-4"><strong>Date Taken:</strong></div>
+                                                <div class="col-sm-8">@currentMetadata.DateTaken.Value.ToString("MMM d, yyyy h:mm tt")</div>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <!-- Location Info -->
+                                    @if (currentMetadata.Latitude.HasValue && currentMetadata.Longitude.HasValue)
+                                    {
+                                        <div class="col-12">
+                                            <h6 class="border-bottom pb-2 mb-3">🗺️ Location Details</h6>
+                                            @if (!string.IsNullOrEmpty(currentMetadata.LocationName))
+                                            {
+                                                <div class="row mb-2">
+                                                    <div class="col-sm-4"><strong>Location:</strong></div>
+                                                    <div class="col-sm-8">@currentMetadata.LocationName</div>
+                                                </div>
+                                            }
+                                            <div class="row mb-2">
+                                                <div class="col-sm-4"><strong>Coordinates:</strong></div>
+                                                <div class="col-sm-8">
+                                                    @currentMetadata.Latitude.Value.ToString("F6"), @currentMetadata.Longitude.Value.ToString("F6")
+                                                    <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                                            @onclick="CopyCoordinates">
+                                                        <i class="oi oi-clipboard"></i> Copy
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="row mb-2">
+                                                <div class="col-sm-4"></div>
+                                                <div class="col-sm-8">
+                                                    <a href="https://www.google.com/maps?q=@currentMetadata.Latitude.Value,@currentMetadata.Longitude.Value" 
+                                                       target="_blank" class="btn btn-sm btn-primary">
+                                                        <i class="oi oi-external-link"></i> Open in Maps
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <i class="oi oi-info"></i> Detailed photo information is being processed...
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <LoadingSpinner />
+                        <p class="text-muted mt-2">Loading photo details...</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private tbl_images? currentImage;
+    private tbl_image_metadata? currentMetadata;
+
+    public async Task ShowImageDetailsAsync(int imageId)
+    {
+        try
+        {
+            // Load image and metadata
+            currentImage = await DbContext.tbl_images
+                .FirstOrDefaultAsync(img => img.ImageId == imageId);
+
+            currentMetadata = await DbContext.tbl_image_metadata
+                .FirstOrDefaultAsync(meta => meta.ImageId == imageId);
+
+            StateHasChanged();
+
+            // Show the modal
+            await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('imageDetailsModal')).show()");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading image details: {ex.Message}");
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task CopyCoordinates()
+    {
+        if (currentMetadata?.Latitude.HasValue == true && currentMetadata?.Longitude.HasValue == true)
+        {
+            var coordinates = $"{currentMetadata.Latitude.Value},{currentMetadata.Longitude.Value}";
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", coordinates);
+            }
+            catch
+            {
+                // Fallback for older browsers
+                await JSRuntime.InvokeVoidAsync("eval", $"prompt('Copy coordinates:', '{coordinates}')");
+            }
+        }
+    }
+}

@@ -30,8 +30,8 @@ public static class Logger
             Directory.CreateDirectory(logDirectory);
         }
 
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        _logFilePath = Path.Combine(logDirectory, $"MyPhotoHelper_{timestamp}.log");
+        var dateStamp = DateTime.Now.ToString("yyyyMMdd");
+        _logFilePath = Path.Combine(logDirectory, $"MyPhotoHelper_{dateStamp}.log");
         
         try
         {

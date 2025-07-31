@@ -67,9 +67,62 @@ If the database fails to initialize:
 3. **Check Logs**: Review logs in `%APPDATA%\FaceVault\Logs\` for detailed error messages
 4. **Manual Creation**: Use the Database Status page to manually trigger database creation
 
+## Development Workflow
+
+When making changes to the database schema during development:
+
+### 1. Update SQL Scripts
+First, modify the appropriate `DatabaseVersion_*.sql` file in the Database folder to include your schema changes.
+
+### 2. Create Development Database
+Run the Python database manager to create a fresh development database with your changes:
+
+```bash
+cd src/MyPhotoHelper/Python
+python database_manager.py
+```
+
+This will:
+- Create `dev_facevault.db` in the Database folder
+- Apply all SQL scripts in version order
+- Report success/failure of database creation
+
+### 3. Regenerate EF Models
+After the database is created, regenerate the Entity Framework models using Visual Studio:
+
+1. **Open Visual Studio** and load the MyPhotoHelper project
+2. **Open Package Manager Console**: Tools → NuGet Package Manager → Package Manager Console
+3. **Select Project**: Ensure "MyPhotoHelper" is selected in the Default project dropdown
+4. **Run Scaffolding Command**:
+   ```powershell
+   Scaffold-DbContext "Data Source=Database\dev_facevault.db" Microsoft.EntityFrameworkCore.Sqlite -OutputDir Models -ContextDir Data -Context MyPhotoHelperDbContext -Force -NoPluralize -UseDatabaseNames -NoOnConfiguring
+   ```
+
+This will regenerate:
+- `Models/tbl_*.cs` - Updated entity models with your schema changes
+- `Data/MyPhotoHelperDbContext.cs` - Updated DbContext with new tables/columns
+
+### 4. Test and Build
+After regenerating models:
+1. Build the solution to check for compilation errors
+2. Test your changes with the updated models
+3. Commit both the SQL scripts and generated models
+
+### Alternative CLI Approach
+If you prefer command line over Visual Studio Package Manager Console:
+
+```bash
+# First ensure you have the EF Core CLI tools installed
+dotnet tool install --global dotnet-ef
+
+# Then run the scaffolding command
+dotnet ef dbcontext scaffold "Data Source=Database\dev_facevault.db" Microsoft.EntityFrameworkCore.Sqlite --output-dir Models --context-dir Data --context MyPhotoHelperDbContext --force --no-pluralize --use-database-names --no-onconfiguring
+```
+
 ## Development Notes
 
 - The database uses Entity Framework Core with a database-first approach
-- Models are generated using EF Core scaffolding (see `GenerateEFModels.ps1`)
+- Always use the Python script to create dev databases to ensure consistency
+- Models are auto-generated - never edit them manually as they'll be overwritten
 - All database operations use async methods for better performance
 - The schema is designed to be modular with separate tables for different concerns

@@ -181,20 +181,21 @@ namespace MyPhotoHelper.Services
 
         private async Task ExecutePhase3MetadataAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting Phase 3: Metadata Extraction");
+            _logger.LogInformation("Starting Phase 3: Image Details Extraction");
             _currentProgress!.CurrentPhase = ScanPhase.Phase3_Metadata;
             
             using var scope = _serviceProvider.CreateScope();
             var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
             
-            var phaseProgress = _currentProgress.PhaseProgress[ScanPhase.Phase3_Metadata];
-            phaseProgress.StartTime = DateTime.UtcNow;
+            var progressReporter = new Progress<PhaseProgress>(progress =>
+            {
+                _currentProgress.PhaseProgress[ScanPhase.Phase3_Metadata] = progress;
+                ProgressChanged?.Invoke(this, _currentProgress);
+                _scanStatusService.UpdatePhasedStatus(_currentProgress);
+            });
 
-            // Note: The current metadata service doesn't support progress reporting
-            // We'll update this when we enhance the metadata service
-            await metadataService.ExtractMetadataForNewImagesAsync(cancellationToken);
+            await metadataService.ExtractMetadataForNewImagesAsync(progressReporter, cancellationToken);
             
-            phaseProgress.EndTime = DateTime.UtcNow;
             PhaseCompleted?.Invoke(this, ScanPhase.Phase3_Metadata);
             _logger.LogInformation("Phase 3 completed");
         }

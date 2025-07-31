@@ -57,9 +57,15 @@ CREATE TABLE IF NOT EXISTS tbl_image_metadata (
     Width INTEGER,
     Height INTEGER,
     DateTaken DATETIME,
+    Latitude REAL,
+    Longitude REAL,
+    LocationName TEXT,
     
     FOREIGN KEY (ImageId) REFERENCES tbl_images(ImageId) ON DELETE CASCADE
 );
+
+-- Create index for location-based queries
+CREATE INDEX IF NOT EXISTS IX_tbl_image_metadata_Location ON tbl_image_metadata (Latitude, Longitude);
 
 -- Create ImageAnalysis table - AI analysis results
 -- Uses same primary key as Images table (one-to-one relationship)

@@ -8,6 +8,7 @@
 @inject IPathService PathService
 @inject NavigationManager Navigation
 @inject ILogger<Report> Logger
+@inject IImageDetailsService ImageDetailsService
 
 <PageTitle>Library Report - FaceVault</PageTitle>
 
@@ -413,6 +414,134 @@
             </div>
         }
 
+        <!-- GPS Coordinates Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <span class="oi oi-map-marker me-2" aria-hidden="true"></span>
+                        🗺️ GPS Location Data
+                    </h5>
+                    @if (gpsEnabledImages > 0)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="@(() => Navigation.NavigateTo("/locations"))">
+                            <span class="oi oi-external-link me-1"></span>
+                            View Photo Map
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="card-body">
+                @if (gpsEnabledImages == 0)
+                {
+                    <div class="text-center py-3">
+                        <i class="oi oi-map-marker text-muted" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2 text-muted">No GPS Data Found</h6>
+                        <p class="text-muted mb-0">Photos need location information to appear here. Most smartphone photos include GPS data.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h4 class="text-success">@gpsEnabledImages</h4>
+                                <small class="text-muted">Photos with GPS</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h4 class="text-info">@uniqueLocations</h4>
+                                <small class="text-muted">Different Locations</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h4 class="text-primary">@gpsPercentage.ToString("F1")%</h4>
+                                <small class="text-muted">of Total Photos</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (gpsFileTypeStats.Any())
+                    {
+                        <h6 class="mb-3">GPS Data by File Type:</h6>
+                        <div class="row mb-4">
+                            @foreach (var fileType in gpsFileTypeStats.OrderByDescending(f => f.Count))
+                            {
+                                <div class="col-md-3 mb-2">
+                                    <div class="d-flex justify-content-between align-items-center bg-light rounded p-2">
+                                        <div>
+                                            <strong>@fileType.Extension.ToUpper()</strong><br>
+                                            <small class="text-muted">@fileType.Count photos</small>
+                                        </div>
+                                        <span class="badge bg-success">@fileType.Percentage.ToString("F1")%</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (gpsSampleImages.Any())
+                    {
+                        <h6 class="mb-3">Sample Photos with GPS Data:</h6>
+                        <div class="row">
+                            @foreach (var sample in gpsSampleImages)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-success">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1" title="@sample.FileName">
+                                                        <span class="oi oi-file me-1"></span>
+                                                        @(sample.FileName.Length > 30 ? sample.FileName.Substring(0, 30) + "..." : sample.FileName)
+                                                    </h6>
+                                                    <div class="small text-muted">
+                                                        <span class="badge bg-secondary me-1">@sample.FileExtension.ToUpper()</span>
+                                                        @if (sample.DateTaken.HasValue)
+                                                        {
+                                                            <span>📅 @sample.DateTaken.Value.ToString("MMM dd, yyyy")</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <small class="text-success">
+                                                    <span class="oi oi-map-marker me-1"></span>
+                                                    <strong>@sample.Latitude.ToString("F4"), @sample.Longitude.ToString("F4")</strong>
+                                                </small>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <a href="https://www.google.com/maps?q=@sample.Latitude,@sample.Longitude" 
+                                                   target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <span class="oi oi-external-link me-1"></span>View on Map
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-secondary" 
+                                                        @onclick="() => ShowImageDetails(sample.ImageId)">
+                                                    <span class="oi oi-info me-1"></span>Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        
+                        @if (gpsEnabledImages > gpsSampleImages.Count)
+                        {
+                            <div class="text-center mt-3">
+                                <button class="btn btn-outline-primary" @onclick="@(() => Navigation.NavigateTo("/locations"))">
+                                    <span class="oi oi-map-marker me-2"></span>
+                                    View All @gpsEnabledImages Photos with GPS Data
+                                </button>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </div>
+
         <!-- File Type Distribution -->
         @if (fileTypeStats.Any())
         {
@@ -482,6 +611,13 @@
     
     // Scan directories
     private List<ScanDirectoryStat> scanDirectories = new();
+    
+    // GPS/Location statistics
+    private int gpsEnabledImages = 0;
+    private int uniqueLocations = 0;
+    private double gpsPercentage = 0;
+    private List<FileTypeStat> gpsFileTypeStats = new();
+    private List<GpsSampleImage> gpsSampleImages = new();
 
     private class CategoryStat
     {
@@ -519,6 +655,16 @@
         public string DirectoryPath { get; set; } = "";
         public int ImageCount { get; set; }
         public DateTime DateCreated { get; set; }
+    }
+
+    private class GpsSampleImage
+    {
+        public int ImageId { get; set; }
+        public string FileName { get; set; } = "";
+        public string FileExtension { get; set; } = "";
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public DateTime? DateTaken { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -649,6 +795,93 @@
                 })
                 .OrderByDescending(f => f.Count)
                 .ToList();
+            
+            // Load GPS/Location statistics
+            var photosWithGps = await DbContext.tbl_images
+                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                .Join(DbContext.tbl_image_metadata.Where(m => m.Latitude.HasValue && m.Longitude.HasValue),
+                      img => img.ImageId,
+                      meta => meta.ImageId,
+                      (img, meta) => new { Image = img, Metadata = meta })
+                .ToListAsync();
+
+            gpsEnabledImages = photosWithGps.Count;
+            gpsPercentage = totalImages > 0 ? (double)gpsEnabledImages / totalImages * 100 : 0;
+
+            // Count unique locations (rounded to ~100m precision)
+            uniqueLocations = photosWithGps
+                .GroupBy(x => new 
+                { 
+                    Lat = Math.Round(x.Metadata.Latitude!.Value, 3),
+                    Lon = Math.Round(x.Metadata.Longitude!.Value, 3)
+                })
+                .Count();
+
+            // GPS file type statistics
+            if (photosWithGps.Any())
+            {
+                var gpsExtensions = photosWithGps
+                    .Select(x => Path.GetExtension(x.Image.FileName).ToLower())
+                    .ToList();
+
+                gpsFileTypeStats = gpsExtensions
+                    .GroupBy(ext => string.IsNullOrEmpty(ext) ? ".unknown" : ext)
+                    .Select(g => new FileTypeStat
+                    {
+                        Extension = g.Key,
+                        Count = g.Count(),
+                        Percentage = gpsEnabledImages > 0 ? (double)g.Count() / gpsEnabledImages * 100 : 0
+                    })
+                    .OrderByDescending(f => f.Count)
+                    .ToList();
+
+                // Load sample GPS images - try to get different file types
+                var distinctExtensions = gpsFileTypeStats.Take(4).Select(f => f.Extension).ToList();
+                gpsSampleImages = new List<GpsSampleImage>();
+
+                foreach (var extension in distinctExtensions)
+                {
+                    var sample = photosWithGps
+                        .Where(x => Path.GetExtension(x.Image.FileName).ToLower() == extension)
+                        .OrderByDescending(x => x.Metadata.DateTaken ?? x.Image.DateModified)
+                        .Select(x => new GpsSampleImage
+                        {
+                            ImageId = x.Image.ImageId,
+                            FileName = x.Image.FileName,
+                            FileExtension = Path.GetExtension(x.Image.FileName),
+                            Latitude = x.Metadata.Latitude!.Value,
+                            Longitude = x.Metadata.Longitude!.Value,
+                            DateTaken = x.Metadata.DateTaken
+                        })
+                        .FirstOrDefault();
+
+                    if (sample != null)
+                    {
+                        gpsSampleImages.Add(sample);
+                    }
+                }
+
+                // If we have fewer than 6 samples, fill with any remaining photos
+                if (gpsSampleImages.Count < 6)
+                {
+                    var additionalSamples = photosWithGps
+                        .Where(x => !gpsSampleImages.Any(s => s.ImageId == x.Image.ImageId))
+                        .OrderByDescending(x => x.Metadata.DateTaken ?? x.Image.DateModified)
+                        .Take(6 - gpsSampleImages.Count)
+                        .Select(x => new GpsSampleImage
+                        {
+                            ImageId = x.Image.ImageId,
+                            FileName = x.Image.FileName,
+                            FileExtension = Path.GetExtension(x.Image.FileName),
+                            Latitude = x.Metadata.Latitude!.Value,
+                            Longitude = x.Metadata.Longitude!.Value,
+                            DateTaken = x.Metadata.DateTaken
+                        })
+                        .ToList();
+
+                    gpsSampleImages.AddRange(additionalSamples);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -724,5 +957,10 @@
             UpdateAiSamplesPage();
             StateHasChanged();
         }
+    }
+
+    private void ShowImageDetails(int imageId)
+    {
+        ImageDetailsService.ShowImageDetails(imageId);
     }
 }

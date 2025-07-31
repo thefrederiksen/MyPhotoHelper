@@ -13,5 +13,11 @@ public partial class tbl_image_metadata
 
     public DateTime? DateTaken { get; set; }
 
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
+
+    public string? LocationName { get; set; }
+
     public virtual tbl_images Image { get; set; } = null!;
 }

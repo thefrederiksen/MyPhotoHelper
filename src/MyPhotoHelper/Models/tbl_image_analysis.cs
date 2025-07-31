@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace MyPhotoHelper.Models;
 
 public partial class tbl_image_analysis
 {
+    [Key]
     public int ImageId { get; set; }
 
     public string? ImageCategory { get; set; }

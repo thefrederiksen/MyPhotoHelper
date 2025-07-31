@@ -55,6 +55,19 @@ namespace MyPhotoHelper.Services
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
 
+            // Get total count of non-deleted images
+            var totalImages = await dbContext.tbl_images
+                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                .CountAsync(cancellationToken);
+
+            // Get count of images that already have hashes
+            var imagesWithHash = await dbContext.tbl_images
+                .Where(img => img.FileExists == 1 && 
+                             img.IsDeleted == 0 && 
+                             img.FileHash != null && 
+                             img.FileHash != "")
+                .CountAsync(cancellationToken);
+
             // Get images without hashes
             var imagesWithoutHash = await dbContext.tbl_images
                 .Where(img => img.FileExists == 1 && 
@@ -62,13 +75,13 @@ namespace MyPhotoHelper.Services
                              (img.FileHash == null || img.FileHash == ""))
                 .ToListAsync(cancellationToken);
 
-            _logger.LogInformation($"Found {imagesWithoutHash.Count} images without hashes");
+            _logger.LogInformation($"Hash calculation: {imagesWithHash} completed, {imagesWithoutHash.Count} remaining, {totalImages} total");
 
             var phaseProgress = new PhaseProgress
             {
                 Phase = ScanPhase.Phase2_Hashing,
-                TotalItems = imagesWithoutHash.Count,
-                ProcessedItems = 0,
+                TotalItems = totalImages,
+                ProcessedItems = imagesWithHash,
                 StartTime = DateTime.UtcNow
             };
 
@@ -76,11 +89,14 @@ namespace MyPhotoHelper.Services
 
             const int BATCH_SIZE = 50;
             var processedInBatch = 0;
+            var currentIndex = 0;
 
             foreach (var image in imagesWithoutHash)
             {
                 if (cancellationToken.IsCancellationRequested)
                     break;
+
+                currentIndex++;
 
                 try
                 {
@@ -115,7 +131,7 @@ namespace MyPhotoHelper.Services
                     phaseProgress.ErrorCount++;
                 }
 
-                phaseProgress.ProcessedItems++;
+                phaseProgress.ProcessedItems = imagesWithHash + currentIndex;
                 progress?.Report(phaseProgress);
             }
 

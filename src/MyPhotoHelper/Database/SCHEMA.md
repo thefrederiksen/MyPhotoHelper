@@ -59,8 +59,11 @@ All tables use the `tbl_` prefix to clearly distinguish database tables from reg
 | Width | INTEGER | Image width in pixels |
 | Height | INTEGER | Image height in pixels |
 | DateTaken | DATETIME | EXIF date taken (nullable) |
+| Latitude | REAL | GPS latitude (nullable) |
+| Longitude | REAL | GPS longitude (nullable) |
+| LocationName | TEXT | Reverse geocoded location name (nullable) |
 
-**Indexes**: None needed (uses same PK as tbl_images)
+**Indexes**: Location (Latitude, Longitude)
 
 **Relationships**: 
 - One-to-One with tbl_images (CASCADE delete)
