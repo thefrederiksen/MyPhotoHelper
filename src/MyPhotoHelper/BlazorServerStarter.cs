@@ -195,6 +195,7 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
             builder.Services.AddScoped<IPhotoScanService, PhotoScanService>();
             builder.Services.AddSingleton<IScanStatusService, ScanStatusService>();
+            builder.Services.AddScoped<IMetadataExtractionService, MetadataExtractionService>();
             
             // Add Blazor services
             builder.Services.AddRazorPages();

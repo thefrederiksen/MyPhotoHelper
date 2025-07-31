@@ -230,6 +230,21 @@ namespace MyPhotoHelper.Services
                 var duration = DateTime.UtcNow - startTime;
                 _logger.LogInformation($"Photo scan completed. Processed: {totalFilesProcessed}, New: {newFilesAdded}, Errors: {errorCount}, Duration: {duration}");
                 
+                // Trigger metadata extraction for new images
+                if (newFilesAdded > 0)
+                {
+                    _logger.LogInformation("Starting metadata extraction for new images...");
+                    try
+                    {
+                        var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
+                        await metadataService.ExtractMetadataForNewImagesAsync(cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during metadata extraction");
+                    }
+                }
+                
                 ScanCompleted?.Invoke(this, new ScanCompletedEventArgs
                 {
                     Success = true,

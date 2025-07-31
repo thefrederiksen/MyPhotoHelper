@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace MyPhotoHelper.Services
 {
@@ -98,6 +99,19 @@ namespace MyPhotoHelper.Services
                 }
                 
                 _logger.LogInformation("Background photo scan completed");
+                
+                // Also run metadata extraction for any images missing it
+                try
+                {
+                    _logger.LogInformation("Running metadata extraction...");
+                    var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
+                    await metadataService.ExtractMetadataForNewImagesAsync();
+                    _logger.LogInformation("Metadata extraction completed");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during metadata extraction");
+                }
             }
             catch (Exception ex)
             {

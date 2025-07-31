@@ -68,7 +68,7 @@ public class MemoryService : IMemoryService
                 })
                 .ToList();
 
-            Logger.Info($"Found {photos.Count} photos for {date:MMMM d} across {yearGroups.Count} years");
+            Logger.Info($"Found {photos.Count} photos for {date:MMMM d, yyyy} (Month: {date.Month}, Day: {date.Day}) across {yearGroups.Count} years");
             return yearGroups;
         }
         catch (Exception ex)
