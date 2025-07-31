@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MyPhotoHelper.Models;
 
 namespace MyPhotoHelper.Services
 {
@@ -54,64 +55,53 @@ namespace MyPhotoHelper.Services
                 _logger.LogInformation("Starting background photo scan");
                 
                 using var scope = _serviceProvider.CreateScope();
-                var photoScanService = scope.ServiceProvider.GetRequiredService<IPhotoScanService>();
+                var phasedScanService = scope.ServiceProvider.GetRequiredService<IPhasedScanService>();
                 
                 // Subscribe to progress events
-                void OnProgressChanged(object? sender, ScanProgressEventArgs e)
+                void OnProgressChanged(object? sender, PhasedScanProgress progress)
                 {
-                    _scanStatusService.UpdateStatus(true, new ScanProgress
+                    _scanStatusService.UpdatePhasedStatus(progress);
+                    _logger.LogInformation($"Phased scan progress - Phase: {progress.CurrentPhase}");
+                }
+                
+                void OnPhaseCompleted(object? sender, ScanPhase phase)
+                {
+                    _logger.LogInformation($"Phase {phase} completed");
+                    
+                    if (phase == ScanPhase.Phase1_Discovery)
                     {
-                        TotalDirectories = e.TotalDirectories,
-                        ProcessedDirectories = e.ProcessedDirectories,
-                        TotalFiles = e.TotalFiles,
-                        ProcessedFiles = e.ProcessedFiles,
-                        CurrentDirectory = e.CurrentDirectory,
-                        CurrentFile = e.CurrentFile,
-                        ErrorCount = e.ErrorCount,
-                        StartTime = DateTime.UtcNow
-                    });
+                        var scanResult = new ScanCompletedEventArgs
+                        {
+                            Success = true,
+                            TotalFilesProcessed = 0, // Will be updated from progress
+                            NewFilesAdded = 0,
+                            ErrorCount = 0,
+                            Duration = TimeSpan.Zero
+                        };
+                        _scanStatusService.UpdateLastScan(DateTime.UtcNow, scanResult);
+                    }
                 }
                 
-                void OnScanCompleted(object? sender, ScanCompletedEventArgs e)
-                {
-                    _scanStatusService.UpdateStatus(false);
-                    _scanStatusService.UpdateLastScan(DateTime.UtcNow, e);
-                    _logger.LogInformation($"Background scan completed. New files: {e.NewFilesAdded}, Errors: {e.ErrorCount}");
-                }
-                
-                photoScanService.ScanProgressChanged += OnProgressChanged;
-                photoScanService.ScanCompleted += OnScanCompleted;
+                phasedScanService.ProgressChanged += OnProgressChanged;
+                phasedScanService.PhaseCompleted += OnPhaseCompleted;
                 
                 try
                 {
-                    await photoScanService.StartScanAsync();
+                    await phasedScanService.StartPhasedScanAsync();
                     
                     // Wait for scan to complete
-                    while (photoScanService.IsScanning)
+                    while (phasedScanService.IsScanning)
                     {
                         await Task.Delay(1000);
                     }
                 }
                 finally
                 {
-                    photoScanService.ScanProgressChanged -= OnProgressChanged;
-                    photoScanService.ScanCompleted -= OnScanCompleted;
+                    phasedScanService.ProgressChanged -= OnProgressChanged;
+                    phasedScanService.PhaseCompleted -= OnPhaseCompleted;
                 }
                 
-                _logger.LogInformation("Background photo scan completed");
-                
-                // Also run metadata extraction for any images missing it
-                try
-                {
-                    _logger.LogInformation("Running metadata extraction...");
-                    var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
-                    await metadataService.ExtractMetadataForNewImagesAsync();
-                    _logger.LogInformation("Metadata extraction completed");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during metadata extraction");
-                }
+                _logger.LogInformation("Background phased scan completed");
             }
             catch (Exception ex)
             {

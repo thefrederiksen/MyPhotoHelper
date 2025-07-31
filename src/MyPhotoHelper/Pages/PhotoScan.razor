@@ -11,11 +11,11 @@
 @inject NavigationManager Navigation
 @inject ILogger<PhotoScan> Logger
 
-<PageTitle>Photo Scanner - MyPhotoHelper</PageTitle>
+<PageTitle>Scan Progress - MyPhotoHelper</PageTitle>
 
 <div class="container-fluid">
-    <h1 class="display-4">Photo Scanner</h1>
-    <p class="lead">Monitor and control photo scanning operations</p>
+    <h1 class="display-4">Scan Progress</h1>
+    <p class="lead">Monitor the progress of photo scanning operations</p>
     
     <div class="row">
         <div class="col-md-8">
@@ -23,8 +23,8 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <span class="oi oi-magnifying-glass" aria-hidden="true"></span> 
-                        Scanner Status
+                        <span class="oi oi-pulse" aria-hidden="true"></span> 
+                        Current Status
                     </h5>
                 </div>
                 <div class="card-body">
@@ -67,34 +67,110 @@
                                         <span class="visually-hidden">Scanning...</span>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">Background scan in progress...</h6>
-                                        <small>The scanner is running in the background. You can navigate away from this page.</small>
+                                        <h6 class="mb-0">Phased scan in progress...</h6>
+                                        <small>The scanner is running multiple phases. You can navigate away from this page.</small>
                                     </div>
                                 </div>
                             </div>
                         }
                     }
                     
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary btn-lg" @onclick="StartScan" 
-                                disabled="@(ScanStatusService.IsScanning || scanDirectories == null || !scanDirectories.Any())">
-                            @if (ScanStatusService.IsScanning)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                <text>Scanning in Progress...</text>
-                            }
-                            else
-                            {
-                                <span class="oi oi-media-play me-2" aria-hidden="true"></span>
-                                <text>Start Manual Scan</text>
-                            }
-                        </button>
-                    </div>
+                    @if (!ScanStatusService.IsScanning)
+                    {
+                        <div class="text-center py-3">
+                            <p class="text-muted mb-0">
+                                <i class="oi oi-info"></i> No scan is currently running. 
+                                Scans run automatically in the background based on your settings.
+                            </p>
+                        </div>
+                    }
                 </div>
             </div>
 
-            <!-- Scan Progress -->
-            @if (ScanStatusService.IsScanning && ScanStatusService.CurrentProgress != null)
+            <!-- Phased Scan Progress -->
+            @if (ScanStatusService.IsScanning && ScanStatusService.CurrentPhasedProgress != null)
+            {
+                var phasedProgress = ScanStatusService.CurrentPhasedProgress;
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            Phased Scan Progress - @GetPhaseDisplayName(phasedProgress.CurrentPhase)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var phase in phasedProgress.PhaseProgress.Values.OrderBy(p => p.Phase))
+                        {
+                            var isCurrentPhase = phase.Phase == phasedProgress.CurrentPhase;
+                            var isCompleted = phase.IsComplete;
+                            var isActive = isCurrentPhase && !isCompleted;
+                            
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center">
+                                        @if (isCompleted)
+                                        {
+                                            <span class="badge bg-success me-2">✓</span>
+                                        }
+                                        else if (isActive)
+                                        {
+                                            <span class="spinner-grow spinner-grow-sm text-primary me-2"></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary me-2">⏳</span>
+                                        }
+                                        <strong class="@(isActive ? "text-primary" : "")">
+                                            @GetPhaseDisplayName(phase.Phase)
+                                        </strong>
+                                    </div>
+                                    @if (phase.TotalItems > 0)
+                                    {
+                                        <span>
+                                            <strong>@phase.ProcessedItems</strong> / @phase.TotalItems
+                                            @if (phase.ErrorCount > 0)
+                                            {
+                                                <span class="text-danger ms-2">(@phase.ErrorCount errors)</span>
+                                            }
+                                        </span>
+                                    }
+                                </div>
+                                
+                                @if (phase.TotalItems > 0)
+                                {
+                                    <div class="progress mb-2" style="height: 25px;">
+                                        <div class="progress-bar @(isActive ? "progress-bar-striped progress-bar-animated" : "")" 
+                                             style="width: @(phase.ProgressPercentage)%" 
+                                             role="progressbar">
+                                            <span class="fw-bold">@(phase.ProgressPercentage.ToString("F1"))%</span>
+                                        </div>
+                                    </div>
+                                }
+                                
+                                @if (isActive && !string.IsNullOrEmpty(phase.CurrentItem))
+                                {
+                                    <div class="text-muted small">
+                                        <i class="oi oi-file"></i> @phase.CurrentItem
+                                    </div>
+                                }
+                            </div>
+                        }
+                        
+                        <div class="mt-3 text-muted">
+                            <small>
+                                Started: @phasedProgress.StartTime.ToLocalTime().ToString("g")
+                                @if (phasedProgress.EndTime.HasValue)
+                                {
+                                    <span> | Completed: @phasedProgress.EndTime.Value.ToLocalTime().ToString("g")</span>
+                                }
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <!-- Old-style scan progress (fallback) -->
+            @if (ScanStatusService.IsScanning && ScanStatusService.CurrentProgress != null && ScanStatusService.CurrentPhasedProgress == null)
             {
                 var progress = ScanStatusService.CurrentProgress;
                 <div class="card mb-4 border-primary">
@@ -199,43 +275,51 @@
         </div>
 
         <div class="col-md-4">
-            <!-- Scan Information -->
+            <!-- Scan Phases Information -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <h5 class="mb-0"><span class="oi oi-info" aria-hidden="true"></span> Scan Information</h5>
+                    <h5 class="mb-0"><span class="oi oi-list" aria-hidden="true"></span> Scan Phases</h5>
                 </div>
                 <div class="card-body">
-                    <h6>Background Scanning:</h6>
-                    <p class="small">
-                        Photos are automatically scanned in the background when the application starts 
-                        and every hour thereafter. You can also trigger a manual scan using the button above.
-                    </p>
+                    <h6>Phase 1: Discovery</h6>
+                    <p class="small">Finds new photo files and gathers basic information.</p>
                     
-                    <h6>What the Scanner Does:</h6>
-                    <ul class="small">
-                        <li>Discovers new photo files</li>
-                        <li>Reads image metadata</li>
-                        <li>Identifies photo dates and locations</li>
-                        <li>Builds your photo timeline</li>
-                        <li>Updates the memories feature</li>
-                    </ul>
+                    <h6>Phase 2: Hashing</h6>
+                    <p class="small">Calculates unique fingerprints for duplicate detection.</p>
+                    
+                    <h6>Phase 3: Metadata</h6>
+                    <p class="small">Extracts dates, locations, and image properties.</p>
+                    
+                    <h6>Phase 4: AI Analysis</h6>
+                    <p class="small text-muted">Coming soon - AI categorization and tagging.</p>
                 </div>
             </div>
 
             <!-- Database Statistics -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><span class="oi oi-graph" aria-hidden="true"></span> Database Stats</h5>
+                    <h5 class="mb-0"><span class="oi oi-graph" aria-hidden="true"></span> Photo Collection Overview</h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-6">
                             <strong>@totalImagesInDb</strong><br>
-                            <small class="text-muted">Total Photos</small>
+                            <small class="text-muted">📷 Photos Found</small>
                         </div>
                         <div class="col-6">
                             <strong>@(ScanStatusService.LastScanTime?.ToString("g") ?? "Never")</strong><br>
-                            <small class="text-muted">Last Scan</small>
+                            <small class="text-muted">🕒 Last Updated</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <strong>@imagesWithHashes</strong><br>
+                            <small class="text-muted">🔍 Ready for Duplicate Detection</small>
+                        </div>
+                        <div class="col-6">
+                            <strong>@imagesWithMetadata</strong><br>
+                            <small class="text-muted">📋 With Photo Details</small>
                         </div>
                     </div>
                 </div>
@@ -247,6 +331,8 @@
 @code {
     private List<tbl_scan_directory>? scanDirectories;
     private int totalImagesInDb = 0;
+    private int imagesWithHashes = 0;
+    private int imagesWithMetadata = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -280,6 +366,10 @@
         try
         {
             totalImagesInDb = await DbContext.tbl_images.CountAsync();
+            imagesWithHashes = await DbContext.tbl_images
+                .Where(img => img.FileHash != null && img.FileHash != "")
+                .CountAsync();
+            imagesWithMetadata = await DbContext.tbl_image_metadata.CountAsync();
             StateHasChanged();
         }
         catch (Exception ex)
@@ -288,25 +378,6 @@
         }
     }
 
-    private void StartScan()
-    {
-        try
-        {
-            using var scope = ServiceProvider.CreateScope();
-            var hostedServices = scope.ServiceProvider.GetServices<IHostedService>();
-            var backgroundService = hostedServices.OfType<BackgroundTaskService>().FirstOrDefault();
-            
-            if (backgroundService != null)
-            {
-                // Trigger scan in background
-                _ = Task.Run(async () => await backgroundService.TriggerScanAsync());
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error starting scan");
-        }
-    }
 
     private async Task RefreshStats()
     {
@@ -315,12 +386,28 @@
 
     private void OnScanStatusChanged(object? sender, EventArgs e)
     {
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(async () =>
+        {
+            await LoadDatabaseStats();
+            StateHasChanged();
+        });
     }
 
     private void GoBack()
     {
         Navigation.NavigateTo("/");
+    }
+
+    private string GetPhaseDisplayName(ScanPhase phase)
+    {
+        return phase switch
+        {
+            ScanPhase.Phase1_Discovery => "Phase 1: File Discovery",
+            ScanPhase.Phase2_Hashing => "Phase 2: Hash Calculation",
+            ScanPhase.Phase3_Metadata => "Phase 3: Metadata Extraction",
+            ScanPhase.Phase4_Analysis => "Phase 4: AI Analysis",
+            _ => phase.ToString()
+        };
     }
 
     public void Dispose()

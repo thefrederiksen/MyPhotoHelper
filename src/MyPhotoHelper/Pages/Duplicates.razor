@@ -1,0 +1,935 @@
+@page "/duplicates"
+@using MyPhotoHelper.Services
+@using MyPhotoHelper.Models
+@using MyPhotoHelper.Components.Shared
+@using Microsoft.EntityFrameworkCore
+@implements IDisposable
+@inject IDuplicateDetectionService DuplicateService
+@inject IScanStatusService ScanStatusService
+@inject IThumbnailService ThumbnailService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject ILogger<Duplicates> Logger
+
+<PageTitle>Duplicate Photos - MyPhotoHelper</PageTitle>
+
+<AppErrorBoundary>
+    <ChildContent>
+        <div class="container-fluid duplicates-page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="display-5">🔍 Duplicate Photos</h1>
+                    <p class="lead text-muted">Find and manage duplicate photos in your collection</p>
+                </div>
+                <div class="d-flex gap-2">
+                    @if (statistics?.TotalDuplicateGroups > 0 && !showDeleteAllConfirmation)
+                    {
+                        <button class="btn btn-danger" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
+                            <i class="oi oi-trash"></i> Delete All Duplicates
+                        </button>
+                    }
+                    <button class="btn btn-primary" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        <i class="oi oi-reload"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            
+            @if (showDeleteAllConfirmation)
+            {
+                <div class="alert alert-danger border-danger mb-4" style="border-width: 2px;">
+                    <h5 class="alert-heading">⚠️ Delete All Duplicates - Are you sure?</h5>
+                    <p>This will permanently delete all duplicate files marked with the red "Delete?" badge.</p>
+                    <p class="mb-2"><strong>This action cannot be undone!</strong></p>
+                    <p class="mb-0">Total files to be deleted: <strong>@(statistics?.DuplicateGroups.Sum(g => g.Images.Count - 1) ?? 0)</strong></p>
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-danger" @onclick="DeleteAllDuplicates" disabled="@isDeletingAll">
+                            @if (isDeletingAll)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <text>Deleting...</text>
+                            }
+                            else
+                            {
+                                <i class="oi oi-trash"></i>
+                                <text>Yes, Delete All Duplicates</text>
+                            }
+                        </button>
+                        <button class="btn btn-secondary" @onclick="CancelDeleteAll" disabled="@isDeletingAll">
+                            <i class="oi oi-x"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <ErrorDisplay ErrorMessage="@errorMessage" Exception="@lastException" ShowDetails="true" />
+
+            @if (ScanStatusService.IsScanning && ScanStatusService.CurrentPhasedProgress != null)
+            {
+                var phasedProgress = ScanStatusService.CurrentPhasedProgress;
+                var hashingPhase = phasedProgress.PhaseProgress.ContainsKey(ScanPhase.Phase2_Hashing) 
+                    ? phasedProgress.PhaseProgress[ScanPhase.Phase2_Hashing] 
+                    : null;
+
+                @if (hashingPhase != null && (phasedProgress.CurrentPhase == ScanPhase.Phase2_Hashing || !hashingPhase.IsComplete))
+                {
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border text-info me-3" role="status">
+                                <span class="visually-hidden">Calculating hashes...</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">Hash Calculation in Progress</h6>
+                                <p class="mb-2 small">
+                                    Calculating file hashes is required for duplicate detection. 
+                                    This page will update automatically when new duplicates are found.
+                                </p>
+                                @if (hashingPhase.TotalItems > 0)
+                                {
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             style="width: @(hashingPhase.ProgressPercentage)%" 
+                                             role="progressbar">
+                                            <span class="fw-bold">@hashingPhase.ProcessedItems / @hashingPhase.TotalItems files</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+
+            <LoadingSpinner IsLoading="@isLoading" Message="Analyzing photos for duplicates..." />
+
+            @if (!isLoading && statistics != null)
+            {
+                @if (statistics.TotalDuplicateGroups > 0)
+                {
+                    <!-- Statistics Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary">Duplicate Groups</h5>
+                                    <p class="display-6 mb-0">@statistics.TotalDuplicateGroups</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-warning">Duplicate Files</h5>
+                                    <p class="display-6 mb-0">@statistics.TotalDuplicateFiles</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title text-danger">Wasted Space</h5>
+                                    <p class="display-6 mb-0">@statistics.FormattedWastedSpace</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Duplicate Groups -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h3 class="mb-3">Duplicate Groups</h3>
+                            <p class="text-muted mb-4">Each group shows identical photos. The first photo in each group is the oldest.</p>
+                        </div>
+                    </div>
+
+                    @foreach (var group in statistics.DuplicateGroups.Take(50)) // Limit display for performance
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@group.Count identical photos</strong>
+                                    <span class="text-muted ms-3">
+                                        <i class="oi oi-hard-drive"></i> @FormatBytes(group.Images.FirstOrDefault()?.FileSizeBytes ?? 0) each
+                                    </span>
+                                    <span class="text-danger ms-3">
+                                        <i class="oi oi-warning"></i> @FormatBytes(group.PotentialSavings) can be saved
+                                    </span>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDuplicateDetails(group)">
+                                    <i class="oi oi-eye"></i> View Details
+                                </button>
+                            </div>
+                            <div class="card-body" style="overflow: visible;">
+                                <div class="row g-3" style="overflow: visible;">
+                                    @foreach (var image in group.Images.Take(4)) // Show up to 4 larger previews
+                                    {
+                                        <div class="col-12 col-sm-6 col-md-4 col-lg-3 position-relative">
+                                            @if (group.Images.IndexOf(image) == 0)
+                                            {
+                                                <span class="badge bg-success position-absolute top-0 start-0 m-2 z-1">Keep This</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-1">Delete?</span>
+                                            }
+                                            <ImageViewer Photo="image" 
+                                                        ContainerClass="" 
+                                                        ThumbnailSize="400"
+                                                        ShowTime="false">
+                                                <AdditionalContent>
+                                                    <div class="image-info mt-2 p-2 bg-light rounded">
+                                                        <small class="d-block text-truncate" title="@image.FileName">
+                                                            <strong>@image.FileName</strong>
+                                                        </small>
+                                                        <small class="d-block text-muted text-truncate" title="Full path: @GetFullDisplayPath(image)">
+                                                            <i class="oi oi-folder"></i> @GetFullDisplayPath(image)
+                                                        </small>
+                                                        @if (group.Images.IndexOf(image) > 0)
+                                                        {
+                                                            <div class="mt-2 p-2 bg-warning bg-opacity-10 rounded border border-warning">
+                                                                <small class="d-block text-dark">
+                                                                    <i class="oi oi-info"></i> <strong>Why delete this one?</strong>
+                                                                </small>
+                                                                <small class="d-block text-dark">
+                                                                    @GetDifferenceDescription(image, group.Images[0], group.Images)
+                                                                </small>
+                                                            </div>
+                                                            <button class="btn btn-sm btn-danger mt-2 w-100" 
+                                                                    @onclick="() => DeleteSingleImage(image)" 
+                                                                    disabled="@(deletingImages.Contains(image.ImageId))">
+                                                                @if (deletingImages.Contains(image.ImageId))
+                                                                {
+                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                    <text>Deleting...</text>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <i class="oi oi-trash"></i>
+                                                                    <text>Delete This File</text>
+                                                                }
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <small class="d-block text-success mt-2">
+                                                                <i class="oi oi-check"></i> Original file (oldest)
+                                                            </small>
+                                                        }
+                                                    </div>
+                                                </AdditionalContent>
+                                            </ImageViewer>
+                                        </div>
+                                    }
+                                    @if (group.Images.Count > 4)
+                                    {
+                                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                            <div class="duplicate-image-container">
+                                                <div class="border rounded p-4 text-center d-flex align-items-center justify-content-center" style="min-height: 300px;">
+                                                    <div>
+                                                        <i class="oi oi-plus" style="font-size: 3rem;"></i>
+                                                        <p class="mb-0 mt-3 h5">@(group.Images.Count - 4) more duplicates</p>
+                                                        <button class="btn btn-sm btn-outline-primary mt-2" @onclick="() => ShowDuplicateDetails(group)">
+                                                            View All
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (statistics.DuplicateGroups.Count > 50)
+                    {
+                        <div class="alert alert-info text-center">
+                            <i class="oi oi-info"></i> Showing first 50 duplicate groups out of @statistics.TotalDuplicateGroups total
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="oi oi-check-circle" style="font-size: 4rem; color: #28a745;"></i>
+                        </div>
+                        <h3 class="text-success">No Duplicates Found!</h3>
+                        <p class="text-muted">Your photo collection is free of duplicate files.</p>
+                        <p class="text-muted">
+                            Make sure all photos have been scanned and hashes calculated.
+                            @if (totalImagesWithoutHashes > 0)
+                            {
+                                <br />
+                                <strong class="text-warning">@totalImagesWithoutHashes photos still need hash calculation.</strong>
+                            }
+                        </p>
+                    </div>
+                }
+            }
+        </div>
+    </ChildContent>
+</AppErrorBoundary>
+
+<style>
+    /* Override ImageViewer styles for duplicates page */
+    .duplicates-page .photo-container {
+        aspect-ratio: unset;
+        min-height: 300px;
+        max-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+    }
+    
+    .duplicates-page .photo-card {
+        height: 100%;
+        position: relative;
+    }
+    
+    .duplicates-page .photo-thumbnail {
+        object-fit: contain;
+        max-height: 400px;
+    }
+    
+    .image-info {
+        font-size: 0.875rem;
+    }
+    
+    /* Position badges properly over ImageViewer */
+    .duplicates-page .position-relative > .badge {
+        z-index: 10;
+    }
+    
+    /* Ensure dropdown menu appears above other elements */
+    .duplicates-page .custom-dropdown-menu {
+        z-index: 1050 !important;
+    }
+    
+    /* Highlight file name differences */
+    .file-diff-highlight {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        font-weight: bold;
+        border: 1px solid #ffeaa7;
+        display: inline-block;
+        margin: 0 0.1rem;
+    }
+    
+    /* Delete button hover effect */
+    .duplicates-page .btn-danger:hover:not(:disabled) {
+        transform: scale(1.02);
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    /* Deleting state animation */
+    .duplicates-page .btn-danger:disabled {
+        opacity: 0.8;
+    }
+</style>
+
+@code {
+    private DuplicateStatistics? statistics;
+    private bool isLoading = false;
+    private string? errorMessage;
+    private Exception? lastException;
+    private int totalImagesWithoutHashes = 0;
+    private System.Threading.Timer? refreshTimer;
+    private bool showDeleteAllConfirmation = false;
+    private bool isDeletingAll = false;
+    private HashSet<int> deletingImages = new();
+    private DateTime lastLoadTime = DateTime.MinValue;
+    private readonly TimeSpan minLoadInterval = TimeSpan.FromSeconds(2);
+    
+    private class FileNameDifference
+    {
+        public string CommonPrefix { get; set; } = "";
+        public string DifferentPart { get; set; } = "";
+        public string CommonSuffix { get; set; } = "";
+    }
+    
+    private FileNameDifference GetFileNameDifference(string fileName, List<tbl_images> allImages)
+    {
+        // Remove extension for comparison
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+        
+        // Get all other file names without extensions
+        var otherNames = allImages
+            .Where(img => img.FileName != fileName)
+            .Select(img => Path.GetFileNameWithoutExtension(img.FileName))
+            .ToList();
+        
+        if (!otherNames.Any())
+        {
+            return new FileNameDifference { DifferentPart = nameWithoutExt, CommonSuffix = extension };
+        }
+        
+        // Find common prefix
+        int commonPrefixLength = 0;
+        for (int i = 0; i < nameWithoutExt.Length; i++)
+        {
+            if (otherNames.All(other => i < other.Length && other[i] == nameWithoutExt[i]))
+            {
+                commonPrefixLength++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        // Find common suffix (before extension)
+        int commonSuffixLength = 0;
+        for (int i = 1; i <= nameWithoutExt.Length - commonPrefixLength; i++)
+        {
+            if (otherNames.All(other => 
+                nameWithoutExt.Length - i >= 0 && 
+                other.Length - i >= 0 && 
+                other[other.Length - i] == nameWithoutExt[nameWithoutExt.Length - i]))
+            {
+                commonSuffixLength++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        var result = new FileNameDifference
+        {
+            CommonPrefix = commonPrefixLength > 0 ? nameWithoutExt.Substring(0, commonPrefixLength) : "",
+            DifferentPart = nameWithoutExt.Substring(commonPrefixLength, nameWithoutExt.Length - commonPrefixLength - commonSuffixLength),
+            CommonSuffix = (commonSuffixLength > 0 ? nameWithoutExt.Substring(nameWithoutExt.Length - commonSuffixLength) : "") + extension
+        };
+        
+        return result;
+    }
+    
+    private string GetDifferenceDescription(tbl_images image, tbl_images original, List<tbl_images> allImages)
+    {
+        // Build description
+        var reasons = new List<string>();
+        
+        // Compare file names more thoroughly
+        var imageName = Path.GetFileNameWithoutExtension(image.FileName);
+        var originalName = Path.GetFileNameWithoutExtension(original.FileName);
+        
+        if (imageName != originalName)
+        {
+            // Check for very subtle differences
+            if (imageName.Replace(" ", "") == originalName.Replace(" ", ""))
+            {
+                var spaceCount1 = imageName.Count(c => c == ' ');
+                var spaceCount2 = originalName.Count(c => c == ' ');
+                if (spaceCount1 > spaceCount2)
+                    reasons.Add("Has extra spaces in name");
+                else if (spaceCount1 < spaceCount2)
+                    reasons.Add("Has fewer spaces in name");
+                else
+                    reasons.Add("Spaces in different positions");
+            }
+            else if (imageName.Replace("_", "") == originalName.Replace("_", ""))
+            {
+                reasons.Add("Uses underscores instead of spaces (or vice versa)");
+            }
+            else if (imageName.Replace("-", "") == originalName.Replace("-", ""))
+            {
+                reasons.Add("Uses hyphens instead of spaces (or vice versa)");
+            }
+            else if (imageName.ToLower() == originalName.ToLower())
+            {
+                reasons.Add("Different capitalization");
+            }
+            else if (imageName.StartsWith(originalName))
+            {
+                var suffix = imageName.Substring(originalName.Length);
+                if (suffix.Contains("(") && suffix.Contains(")"))
+                    reasons.Add($"Windows copy suffix: '{suffix}'");
+                else if (suffix.All(c => char.IsDigit(c) || c == '_' || c == '-' || c == ' '))
+                    reasons.Add($"Added '{suffix}' to name");
+                else
+                    reasons.Add($"Name has extra: '{suffix}'");
+            }
+            else if (originalName.StartsWith(imageName))
+            {
+                var removed = originalName.Substring(imageName.Length);
+                reasons.Add($"Name missing: '{removed}'");
+            }
+            else
+            {
+                // Look for common patterns
+                if (imageName.Contains("Copy") && !originalName.Contains("Copy"))
+                    reasons.Add("Has 'Copy' in name");
+                else if (imageName.Contains("backup", StringComparison.OrdinalIgnoreCase))
+                    reasons.Add("Marked as backup");
+                else if (imageName.Contains("duplicate", StringComparison.OrdinalIgnoreCase))
+                    reasons.Add("Marked as duplicate");
+                else
+                {
+                    // Find the actual difference
+                    var diff = FindDetailedDifference(originalName, imageName);
+                    reasons.Add(diff);
+                }
+            }
+        }
+        
+        // Compare full paths including subdirectories
+        var imagePath = GetFullDisplayPath(image);
+        var originalPath = GetFullDisplayPath(original);
+        
+        if (imagePath != originalPath)
+        {
+            // Check if they're in completely different base directories
+            if (image.ScanDirectory?.DirectoryPath != original.ScanDirectory?.DirectoryPath)
+            {
+                var originalDir = Path.GetFileName(original.ScanDirectory?.DirectoryPath?.TrimEnd('\\', '/') ?? "");
+                var imageDir = Path.GetFileName(image.ScanDirectory?.DirectoryPath?.TrimEnd('\\', '/') ?? "");
+                reasons.Add($"In '{imageDir}' folder (original in '{originalDir}')");
+            }
+            else
+            {
+                // Same base directory but different subdirectories
+                var imageSubDir = Path.GetDirectoryName(image.RelativePath ?? "") ?? "";
+                var originalSubDir = Path.GetDirectoryName(original.RelativePath ?? "") ?? "";
+                
+                if (!string.IsNullOrEmpty(imageSubDir) && string.IsNullOrEmpty(originalSubDir))
+                {
+                    reasons.Add($"In subfolder '{imageSubDir}'");
+                }
+                else if (string.IsNullOrEmpty(imageSubDir) && !string.IsNullOrEmpty(originalSubDir))
+                {
+                    reasons.Add($"In parent folder (original in '{originalSubDir}')");
+                }
+                else if (imageSubDir != originalSubDir)
+                {
+                    reasons.Add($"In '{imageSubDir}' (original in '{originalSubDir}')");
+                }
+            }
+        }
+        
+        // Compare dates
+        var timeDiff = Math.Abs((image.DateCreated - original.DateCreated).TotalSeconds);
+        if (timeDiff > 60) // More than 1 minute difference
+        {
+            var timeDesc = timeDiff < 3600 ? $"{(int)(timeDiff / 60)} minutes" :
+                          timeDiff < 86400 ? $"{(int)(timeDiff / 3600)} hours" :
+                          $"{(int)(timeDiff / 86400)} days";
+            reasons.Add($"Created {timeDesc} later");
+        }
+        
+        if (!reasons.Any())
+        {
+            // This shouldn't happen - two files can't have identical paths
+            // Add debug info
+            reasons.Add($"Same path? Check RelativePath: '{image.RelativePath}' vs '{original.RelativePath}'");
+        }
+        
+        return string.Join(" • ", reasons);
+    }
+    
+    private string FindDetailedDifference(string original, string modified)
+    {
+        // Find first difference
+        int firstDiff = -1;
+        for (int i = 0; i < Math.Min(original.Length, modified.Length); i++)
+        {
+            if (original[i] != modified[i])
+            {
+                firstDiff = i;
+                break;
+            }
+        }
+        
+        if (firstDiff == -1)
+        {
+            if (original.Length != modified.Length)
+                return original.Length > modified.Length ? "Name is shorter" : "Name is longer";
+            return "Names appear identical";
+        }
+        
+        // Check if it's a single character substitution
+        if (original.Length == modified.Length)
+        {
+            int diffCount = 0;
+            for (int i = 0; i < original.Length; i++)
+            {
+                if (original[i] != modified[i]) diffCount++;
+            }
+            
+            if (diffCount == 1)
+            {
+                return $"'{original[firstDiff]}' changed to '{modified[firstDiff]}'";
+            }
+            else if (diffCount <= 3)
+            {
+                return $"{diffCount} characters different";
+            }
+        }
+        
+        // Show context around the difference
+        int contextStart = Math.Max(0, firstDiff - 5);
+        int contextEnd = Math.Min(firstDiff + 5, Math.Min(original.Length, modified.Length));
+        
+        var origPart = original.Substring(contextStart, contextEnd - contextStart);
+        var modPart = modified.Substring(contextStart, Math.Min(contextEnd - contextStart, modified.Length - contextStart));
+        
+        return $"Differs at: ...{origPart}... vs ...{modPart}...";
+    }
+    
+    private string GetFullDisplayPath(tbl_images image)
+    {
+        if (image.ScanDirectory == null) return "Unknown location";
+        
+        // Combine the scan directory path with the relative path
+        var basePath = image.ScanDirectory.DirectoryPath ?? "";
+        var relativePath = image.RelativePath ?? "";
+        
+        // If relative path contains directory separators, it's in a subdirectory
+        if (relativePath.Contains('\\') || relativePath.Contains('/'))
+        {
+            var dir = Path.GetDirectoryName(relativePath) ?? "";
+            if (!string.IsNullOrEmpty(dir))
+            {
+                return Path.Combine(basePath, dir).Replace('/', '\\');
+            }
+        }
+        
+        return basePath;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ScanStatusService.StatusChanged += OnScanStatusChanged;
+        await LoadDuplicates();
+        
+        // Start auto-refresh if scanning
+        if (ScanStatusService.IsScanning)
+        {
+            StartAutoRefresh();
+        }
+    }
+
+    private async Task LoadDuplicates(bool showLoadingIndicator = true)
+    {
+        // Prevent loading too frequently
+        var timeSinceLastLoad = DateTime.Now - lastLoadTime;
+        if (timeSinceLastLoad < minLoadInterval)
+        {
+            return;
+        }
+        
+        if (showLoadingIndicator)
+        {
+            isLoading = true;
+            errorMessage = null;
+            lastException = null;
+            StateHasChanged();
+        }
+
+        try
+        {
+            lastLoadTime = DateTime.Now;
+            var newStatistics = await DuplicateService.GetDuplicateStatisticsAsync();
+            
+            // Also check for images without hashes
+            using var scope = ServiceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelper.Data.MyPhotoHelperDbContext>();
+            var newTotalImagesWithoutHashes = await dbContext.tbl_images
+                .Where(img => img.FileExists == 1 && 
+                             img.IsDeleted == 0 && 
+                             (img.FileHash == null || img.FileHash == ""))
+                .CountAsync();
+            
+            // Only update if data has changed to prevent flicker
+            if (statistics == null || 
+                statistics.TotalDuplicateGroups != newStatistics.TotalDuplicateGroups ||
+                totalImagesWithoutHashes != newTotalImagesWithoutHashes)
+            {
+                statistics = newStatistics;
+                totalImagesWithoutHashes = newTotalImagesWithoutHashes;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load duplicate information. Please try again.";
+            lastException = ex;
+            Logger.LogError(ex, "Error loading duplicates");
+        }
+        finally
+        {
+            if (showLoadingIndicator)
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RefreshDuplicates()
+    {
+        await LoadDuplicates(true);
+    }
+
+    private async Task ShowDuplicateDetails(DuplicateGroup group)
+    {
+        try
+        {
+            // TODO: Navigate to detailed view or show modal
+            await JSRuntime.InvokeVoidAsync("alert", $"Details for {group.Count} duplicates with hash: {group.FileHash}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error showing duplicate details");
+        }
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    private void OnScanStatusChanged(object? sender, EventArgs e)
+    {
+        InvokeAsync(async () =>
+        {
+            if (ScanStatusService.IsScanning)
+            {
+                StartAutoRefresh();
+            }
+            else
+            {
+                StopAutoRefresh();
+                // Do a final refresh when scan completes
+                await LoadDuplicates(true);
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void StartAutoRefresh()
+    {
+        // Stop any existing timer first
+        StopAutoRefresh();
+        
+        // Refresh every 10 seconds while scanning (increased from 5 to reduce load)
+        refreshTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    // Additional check to prevent overlapping refreshes
+                    if (!isLoading && !isDeletingAll && deletingImages.Count == 0)
+                    {
+                        await LoadDuplicates(false); // Don't show loading indicator for auto-refresh
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Prevent timer exceptions from breaking the page
+                Logger.LogError(ex, "Error in auto-refresh timer");
+            }
+        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private void StopAutoRefresh()
+    {
+        refreshTimer?.Dispose();
+        refreshTimer = null;
+    }
+
+    [Inject]
+    private IServiceProvider ServiceProvider { get; set; } = default!;
+    
+    [Inject]
+    private IPhotoPathService PhotoPathService { get; set; } = default!;
+    
+    private void ShowDeleteAllConfirmation()
+    {
+        showDeleteAllConfirmation = true;
+    }
+    
+    private void CancelDeleteAll()
+    {
+        showDeleteAllConfirmation = false;
+        StateHasChanged();
+    }
+    
+    private async Task DeleteAllDuplicates()
+    {
+        if (statistics == null) return;
+        
+        isDeletingAll = true;
+        StateHasChanged();
+        
+        try
+        {
+            var deletedCount = 0;
+            var errors = 0;
+            
+            using var scope = ServiceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelper.Data.MyPhotoHelperDbContext>();
+            
+            // Delete all duplicates (skip first image in each group)
+            foreach (var group in statistics.DuplicateGroups)
+            {
+                for (int i = 1; i < group.Images.Count; i++)
+                {
+                    var image = group.Images[i];
+                    try
+                    {
+                        // Get full path and delete physical file
+                        var fullPath = await PhotoPathService.GetFullPathAsync(image.RelativePath);
+                        if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+                        {
+                            File.Delete(fullPath);
+                            Logger.LogInformation($"Deleted file: {fullPath}");
+                        }
+                        
+                        // Mark as deleted in database
+                        image.IsDeleted = 1;
+                        image.FileExists = 0;
+                        dbContext.Update(image);
+                        deletedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, $"Failed to delete file: {image.FileName}");
+                        errors++;
+                    }
+                }
+            }
+            
+            await dbContext.SaveChangesAsync();
+            
+            // Show result
+            if (errors > 0)
+            {
+                errorMessage = $"Deleted {deletedCount} files with {errors} errors. Please refresh to see updated list.";
+            }
+            else
+            {
+                errorMessage = null;
+            }
+            
+            // Refresh the list
+            showDeleteAllConfirmation = false;
+            await LoadDuplicates();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete duplicates. Please check logs for details.";
+            lastException = ex;
+            Logger.LogError(ex, "Error deleting all duplicates");
+        }
+        finally
+        {
+            isDeletingAll = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task DeleteSingleImage(tbl_images image)
+    {
+        // Stop auto-refresh during deletion
+        StopAutoRefresh();
+        
+        // Add to deleting set for UI feedback
+        deletingImages.Add(image.ImageId);
+        StateHasChanged();
+        
+        try
+        {
+            // Get full path to the image
+            var fullPath = await PhotoPathService.GetFullPathAsync(image.RelativePath);
+            Logger.LogInformation($"Attempting to delete file: {fullPath}");
+            
+            // Delete physical file if it exists
+            if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+            {
+                try
+                {
+                    File.Delete(fullPath);
+                    Logger.LogInformation($"Successfully deleted file: {fullPath}");
+                }
+                catch (IOException ioEx)
+                {
+                    Logger.LogWarning($"Could not delete file {fullPath}: {ioEx.Message}");
+                    // Continue anyway - mark as deleted in DB
+                }
+            }
+            
+            // Mark as deleted in database using a fresh context
+            using var scope = ServiceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelper.Data.MyPhotoHelperDbContext>();
+            
+            // Load the image fresh to avoid tracking issues
+            var dbImage = await dbContext.tbl_images
+                .FirstOrDefaultAsync(img => img.ImageId == image.ImageId);
+                
+            if (dbImage != null)
+            {
+                dbImage.IsDeleted = 1;
+                dbImage.FileExists = 0;
+                dbImage.DateModified = DateTime.Now;
+                
+                dbContext.Update(dbImage);
+                await dbContext.SaveChangesAsync();
+                Logger.LogInformation($"Marked image {image.ImageId} as deleted in database");
+            }
+            
+            // Clear any error messages
+            errorMessage = null;
+            
+            // Give UI time to show the deletion happened
+            await Task.Delay(500);
+            
+            // Refresh the list
+            await LoadDuplicates();
+            
+            // Restart auto-refresh if scanning is still active
+            if (ScanStatusService.IsScanning)
+            {
+                StartAutoRefresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete {image.FileName}: {ex.Message}";
+            lastException = ex;
+            Logger.LogError(ex, $"Error deleting image {image.ImageId}: {image.FileName}");
+            StateHasChanged();
+        }
+        finally
+        {
+            deletingImages.Remove(image.ImageId);
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        StopAutoRefresh();
+        ScanStatusService.StatusChanged -= OnScanStatusChanged;
+    }
+}

@@ -3,10 +3,10 @@
 @inject IJSRuntime JSRuntime
 @inject IPhotoPathService PhotoPathService
 
-<div class="col-6 col-sm-4 col-md-3 col-lg-2">
+<div class="@ContainerClass">
     <div class="card border-0 shadow-sm photo-card">
         <div class="photo-container position-relative" @onclick="() => OpenImage()" @onclick:stopPropagation="true">
-            <ImageThumbnail Photo="Photo" />
+            <ImageThumbnail Photo="Photo" Size="ThumbnailSize" />
             
             <!-- Photo overlay with info and dropdown -->
             <div class="photo-overlay">
@@ -60,6 +60,10 @@
                 </div>
             </div>
         </div>
+        @if (AdditionalContent != null)
+        {
+            @AdditionalContent
+        }
     </div>
 </div>
 
@@ -70,6 +74,9 @@
     [Parameter] public tbl_images Photo { get; set; } = default!;
     [Parameter] public bool ShowTime { get; set; } = true;
     [Parameter] public EventCallback<tbl_images> OnImageClick { get; set; }
+    [Parameter] public string ContainerClass { get; set; } = "col-6 col-sm-4 col-md-3 col-lg-2";
+    [Parameter] public int ThumbnailSize { get; set; } = 250;
+    [Parameter] public RenderFragment? AdditionalContent { get; set; }
     
     private bool isDropdownOpen = false;
     private bool showPropertiesDialog = false;

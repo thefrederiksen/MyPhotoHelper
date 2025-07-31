@@ -1,0 +1,48 @@
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-@AlertType alert-dismissible fade show" role="alert">
+        <i class="oi oi-@GetIcon()"></i>
+        <strong>@Title</strong>
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <span> - @ErrorMessage</span>
+        }
+        @if (Exception != null && ShowDetails)
+        {
+            <details class="mt-2">
+                <summary>Technical Details</summary>
+                <pre class="mt-2 small">@Exception.ToString()</pre>
+            </details>
+        }
+        <button type="button" class="btn-close" @onclick="Dismiss" aria-label="Close"></button>
+    </div>
+}
+
+@code {
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public Exception? Exception { get; set; }
+    [Parameter] public string Title { get; set; } = "Error";
+    [Parameter] public string AlertType { get; set; } = "danger";
+    [Parameter] public bool ShowDetails { get; set; } = false;
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private void Dismiss()
+    {
+        ErrorMessage = null;
+        Exception = null;
+        OnDismiss.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private string GetIcon()
+    {
+        return AlertType switch
+        {
+            "danger" => "x-circle",
+            "warning" => "warning",
+            "info" => "info",
+            "success" => "check-circle",
+            _ => "warning"
+        };
+    }
+}

@@ -7,7 +7,10 @@
       "Bash(find:*)",
       "Bash(dotnet run:*)",
       "Bash(python:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mv:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }

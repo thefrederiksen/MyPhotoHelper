@@ -1,0 +1,58 @@
+@if (IsLoading)
+{
+    <div class="@GetContainerClass()">
+        <div class="spinner-border @GetSpinnerClass()" role="status">
+            <span class="visually-hidden">@LoadingText</span>
+        </div>
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <p class="@GetMessageClass()">@Message</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string LoadingText { get; set; } = "Loading...";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string Size { get; set; } = "normal"; // small, normal, large
+    [Parameter] public string Color { get; set; } = "primary"; // primary, secondary, success, etc.
+    [Parameter] public bool Centered { get; set; } = true;
+
+    private string GetContainerClass()
+    {
+        var classes = new List<string>();
+        
+        if (Centered)
+        {
+            classes.Add("text-center");
+            classes.Add("py-5");
+        }
+        
+        return string.Join(" ", classes);
+    }
+
+    private string GetSpinnerClass()
+    {
+        var classes = new List<string> { $"text-{Color}" };
+        
+        if (Size == "small")
+            classes.Add("spinner-border-sm");
+        else if (Size == "large")
+            classes.Add("spinner-border-lg");
+            
+        return string.Join(" ", classes);
+    }
+
+    private string GetMessageClass()
+    {
+        var classes = new List<string> { "mt-2", "text-muted" };
+        
+        if (Size == "small")
+            classes.Add("small");
+        else if (Size == "large")
+            classes.Add("fs-5");
+            
+        return string.Join(" ", classes);
+    }
+}

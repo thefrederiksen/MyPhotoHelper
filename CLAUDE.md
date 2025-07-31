@@ -114,3 +114,35 @@ src/
 - Python tests use pytest
 - Integration testing covers C#-Python interop
 - Manual testing documented in implementation docs
+
+## UI/UX Guidelines
+
+### Responsiveness
+- **CRITICAL**: Every user action must provide immediate visual feedback
+- When navigating between pages, show a loading spinner immediately
+- Button clicks should disable the button and show a spinner while processing
+- Use the `LoadingSpinner` component for consistent loading states
+- The `PageTransition` component provides automatic navigation feedback
+
+### Communication Style
+- Use simple, non-technical language when communicating with users
+- Avoid "nerd speak" and technical jargon
+- Examples:
+  - ❌ "This page refreshes automatically"
+  - ✅ "Your memories will appear here as photos are discovered"
+  - ❌ "Processing image metadata extraction"
+  - ✅ "Reading photo information"
+
+### Error Handling
+- All pages must be wrapped in `AppErrorBoundary` component
+- Errors should show user-friendly messages with:
+  - Clear explanation of what went wrong
+  - A "Copy Error" button for technical details
+  - Options to recover (Try Again, Go Home)
+- Never show raw exception messages to users
+
+### Performance
+- Pages should load incrementally - show what's available immediately
+- Use virtualization for large lists
+- Implement proper loading states for all async operations
+- Background tasks should not block the UI

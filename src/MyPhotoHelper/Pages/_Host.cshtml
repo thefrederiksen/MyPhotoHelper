@@ -30,5 +30,48 @@
     </div>
 
     <script src="_framework/blazor.server.js"></script>
+    <script>
+        window.setupNavigationInterceptor = (dotNetHelper) => {
+            // Intercept all navigation link clicks
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest('a');
+                if (link && link.href && !link.target && link.href.startsWith(window.location.origin)) {
+                    // This is an internal navigation link
+                    dotNetHelper.invokeMethodAsync('ShowNavigationSpinner');
+                }
+            }, true);
+            
+            // Also intercept programmatic navigation via Blazor
+            const originalNavigateTo = Blazor.navigateTo;
+            if (originalNavigateTo) {
+                Blazor.navigateTo = function(uri, options) {
+                    dotNetHelper.invokeMethodAsync('ShowNavigationSpinner');
+                    return originalNavigateTo.call(this, uri, options);
+                };
+            }
+        };
+        
+        // Safer clipboard copy fallback
+        window.copyToClipboardFallback = async (text) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (!successful) {
+                    throw new Error('Copy command failed');
+                }
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        };
+    </script>
 </body>
 </html>

@@ -1,0 +1,131 @@
+@using Microsoft.Extensions.Logging
+@inherits ErrorBoundaryBase
+@inject ILogger<AppErrorBoundary> Logger
+
+@if (CurrentException is not null)
+{
+    <div class="alert alert-danger m-3" role="alert">
+        <h4 class="alert-heading">
+            <i class="oi oi-warning"></i> Oops! Something went wrong
+        </h4>
+        <p>We encountered an error while loading this content. The error has been logged and we're working on fixing it.</p>
+        
+        <div class="d-flex justify-content-between align-items-center my-3">
+            <span class="text-muted">Need to share this error?</span>
+            <button class="btn btn-sm @(isCopied ? "btn-success" : "btn-outline-secondary")" 
+                    @onclick="CopyErrorToClipboard" 
+                    disabled="@isCopying">
+                @if (isCopying)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <text>Copying...</text>
+                }
+                else if (isCopied)
+                {
+                    <i class="oi oi-check me-1"></i>
+                    <text>Copied!</text>
+                }
+                else
+                {
+                    <i class="oi oi-clipboard me-1"></i>
+                    <text>Copy Error Details</text>
+                }
+            </button>
+        </div>
+        
+        @if (ShowDetails && CurrentException is not null)
+        {
+            <hr>
+            <details open>
+                <summary>Error Details</summary>
+                <div class="mt-2">
+                    <pre class="bg-light p-2 border rounded" style="max-height: 300px; overflow-y: auto;">@CurrentException.ToString()</pre>
+                </div>
+            </details>
+        }
+        
+        <hr>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" @onclick="Recover">
+                <i class="oi oi-reload"></i> Try Again
+            </button>
+            <button class="btn btn-secondary" @onclick="NavigateHome">
+                <i class="oi oi-home"></i> Go Home
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public bool ShowDetails { get; set; } = false;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    
+    private bool isCopied = false;
+    private bool isCopying = false;
+
+    protected override Task OnErrorAsync(Exception exception)
+    {
+        // Log the error with full details
+        Logger.LogError(exception, "Unhandled error in component");
+        return Task.CompletedTask;
+    }
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+
+    private async Task CopyErrorToClipboard()
+    {
+        if (CurrentException is not null && !isCopying)
+        {
+            isCopying = true;
+            StateHasChanged();
+            
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", CurrentException.ToString());
+                isCopied = true;
+                isCopying = false;
+                StateHasChanged();
+                
+                // Reset the copied state after 3 seconds
+                _ = Task.Delay(3000).ContinueWith(_ => 
+                {
+                    isCopied = false;
+                    InvokeAsync(StateHasChanged);
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to copy error to clipboard");
+                isCopying = false;
+                
+                // Fallback: try using the safer textarea method
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("copyToClipboardFallback", CurrentException.ToString());
+                    
+                    isCopied = true;
+                    StateHasChanged();
+                    
+                    _ = Task.Delay(3000).ContinueWith(_ => 
+                    {
+                        isCopied = false;
+                        InvokeAsync(StateHasChanged);
+                    });
+                }
+                catch
+                {
+                    // If all else fails, show the error in an alert
+                    await JSRuntime.InvokeVoidAsync("alert", "Unable to copy to clipboard. Please manually select and copy the error details.");
+                }
+            }
+        }
+    }
+}
