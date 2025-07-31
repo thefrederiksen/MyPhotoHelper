@@ -80,11 +80,15 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">
-                        @if (yearGroup.IsCurrentYear)
-                        {
-                            <span class="badge bg-primary me-2">TODAY</span>
-                        }
                         @yearGroup.Year
+                        @if (yearGroup.IsToday(selectedDate))
+                        {
+                            <span class="badge bg-success ms-2">Today's Photos</span>
+                        }
+                        else if (yearGroup.Year == DateTime.Today.Year - 1)
+                        {
+                            <span class="badge bg-info ms-2">Last Year</span>
+                        }
                     </h3>
                     <span class="badge bg-secondary">@yearGroup.PhotoCount photos</span>
                 </div>

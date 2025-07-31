@@ -23,6 +23,12 @@ public class YearGroup
     public int Year { get; set; }
     public List<tbl_images> Photos { get; set; } = new();
     public int PhotoCount => Photos.Count;
-    public string YearLabel => Year == DateTime.Now.Year ? "Today" : Year.ToString();
+    public string YearLabel => Year.ToString();
     public bool IsCurrentYear => Year == DateTime.Now.Year;
+    
+    // For memories page, we want to know if these are photos from "today" in this specific year
+    public bool IsToday(DateTime selectedDate) => 
+        Year == DateTime.Today.Year && 
+        selectedDate.Month == DateTime.Today.Month && 
+        selectedDate.Day == DateTime.Today.Day;
 }
