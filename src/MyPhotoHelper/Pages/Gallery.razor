@@ -1,13 +1,5 @@
 @page "/gallery"
-@using MyPhotoHelper.Models
 @using MyPhotoHelper.Components.Shared
-@using MyPhotoHelper.Data
-@using MyPhotoHelper.Services
-@using Microsoft.EntityFrameworkCore
-@implements IDisposable
-@inject MyPhotoHelperDbContext DbContext
-@inject IScanStatusService ScanStatusService
-@inject IJSRuntime JSRuntime
 
 <PageTitle>Gallery - MyPhotoHelper</PageTitle>
 
@@ -26,6 +18,62 @@
                     </p>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
+                    <!-- Category Filter Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" @onclick="ToggleCategoryDropdown" @onclick:stopPropagation="true">
+                            <i class="oi oi-tags"></i> 
+                            @if (selectedCategories.Count == 3 || selectedCategories.Count == 0)
+                            {
+                                <span>All Categories</span>
+                            }
+                            else
+                            {
+                                <span>@selectedCategories.Count selected</span>
+                            }
+                        </button>
+                        @if (showCategoryDropdown)
+                        {
+                            <div class="dropdown-menu show p-3" style="min-width: 200px;" @onclick:stopPropagation="true">
+                                <h6 class="dropdown-header">Filter by Category</h6>
+                                <div class="dropdown-divider"></div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cat-photo" 
+                                           checked="@selectedCategories.Contains("photo")"
+                                           @onchange="@(() => ToggleCategory("photo"))" />
+                                    <label class="form-check-label" for="cat-photo">
+                                        📷 Photos
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cat-screenshot" 
+                                           checked="@selectedCategories.Contains("screenshot")"
+                                           @onchange="@(() => ToggleCategory("screenshot"))" />
+                                    <label class="form-check-label" for="cat-screenshot">
+                                        🖥️ Screenshots
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cat-unknown" 
+                                           checked="@selectedCategories.Contains("unknown")"
+                                           @onchange="@(() => ToggleCategory("unknown"))" />
+                                    <label class="form-check-label" for="cat-unknown">
+                                        ❓ Unknown
+                                    </label>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <button class="btn btn-sm btn-link p-0" @onclick="SelectAllCategories">Select All</button>
+                                    <button class="btn btn-sm btn-link p-0" @onclick="ClearAllCategories">Clear All</button>
+                                </div>
+                                <div class="d-grid">
+                                    <button class="btn btn-primary btn-sm" @onclick="ApplyCategoryFilter">
+                                        <i class="oi oi-check"></i> Apply Filter
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
                     <button class="btn btn-outline-secondary" @onclick="ToggleView">
                         <i class="oi @(isCompactView ? "oi-grid-four-up" : "oi-list")"></i> 
                         @(isCompactView ? "Grid View" : "Compact View")
@@ -207,243 +255,3 @@
         }
     }
 </style>
-
-@code {
-    private class YearGroup
-    {
-        public int Year { get; set; }
-        public int TotalPhotos { get; set; }
-        public List<MonthGroup> MonthGroups { get; set; } = new();
-    }
-
-    private class MonthGroup
-    {
-        public int Month { get; set; }
-        public int PhotoCount { get; set; }
-        public List<tbl_images>? Photos { get; set; }
-    }
-
-    private List<YearGroup> yearGroups = new();
-    private bool isLoading = true;
-    private bool isCompactView = false;
-    private int totalPhotos = 0;
-    private int totalImagesCount = 0;
-    private DateTime? oldestPhoto;
-    private DateTime? newestPhoto;
-    private bool showScrollTop = false;
-    private Dictionary<string, bool> expandedMonths = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        ScanStatusService.StatusChanged += OnScanStatusChanged;
-        await LoadGalleryStructure();
-        
-        // Set up scroll detection for scroll-to-top button
-        await JSRuntime.InvokeVoidAsync("eval", @"
-            window.addEventListener('scroll', function() {
-                window.scrollY > 300 ? 
-                    DotNet.invokeMethodAsync('MyPhotoHelper', 'SetScrollTopVisible', true) :
-                    DotNet.invokeMethodAsync('MyPhotoHelper', 'SetScrollTopVisible', false);
-            });
-        ");
-    }
-
-    private async Task LoadGalleryStructure()
-    {
-        isLoading = true;
-        StateHasChanged();
-
-        try
-        {
-            // Get photo counts grouped by year and month
-            var photoStats = await DbContext.tbl_images
-                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
-                .Join(DbContext.tbl_image_metadata,
-                      img => img.ImageId,
-                      meta => meta.ImageId,
-                      (img, meta) => new { img, meta })
-                .Select(x => new
-                {
-                    x.img.ImageId,
-                    // Always use DateTaken from metadata, which should never be null
-                    // If it is null for some reason, fall back to DateCreated
-                    Date = x.meta.DateTaken ?? x.img.DateCreated,
-                    Year = (x.meta.DateTaken ?? x.img.DateCreated).Year,
-                    Month = (x.meta.DateTaken ?? x.img.DateCreated).Month
-                })
-                .GroupBy(x => new { x.Year, x.Month })
-                .Select(g => new
-                {
-                    g.Key.Year,
-                    g.Key.Month,
-                    Count = g.Count()
-                })
-                .OrderByDescending(x => x.Year)
-                .ThenByDescending(x => x.Month)
-                .ToListAsync();
-
-            // Calculate totals
-            totalPhotos = photoStats.Sum(x => x.Count);
-            totalImagesCount = totalPhotos;
-            
-            // Get date range
-            if (photoStats.Any())
-            {
-                var years = photoStats.Select(x => x.Year).Distinct().OrderBy(y => y).ToList();
-                oldestPhoto = new DateTime(years.First(), 1, 1);
-                newestPhoto = new DateTime(years.Last(), 12, 31);
-            }
-
-            // Build year/month structure (without loading photos yet)
-            yearGroups = photoStats
-                .GroupBy(x => x.Year)
-                .Select(yearGroup => new YearGroup
-                {
-                    Year = yearGroup.Key,
-                    TotalPhotos = yearGroup.Sum(x => x.Count),
-                    MonthGroups = yearGroup
-                        .Select(x => new MonthGroup
-                        {
-                            Month = x.Month,
-                            PhotoCount = x.Count,
-                            Photos = null // Will load on demand
-                        })
-                        .OrderByDescending(x => x.Month)
-                        .ToList()
-                })
-                .OrderByDescending(x => x.Year)
-                .ToList();
-
-            // Auto-expand current month
-            var currentYear = DateTime.Now.Year;
-            var currentMonth = DateTime.Now.Month;
-            var key = $"{currentYear}-{currentMonth}";
-            expandedMonths[key] = true;
-            
-            // Load photos for current month immediately
-            if (yearGroups.Any(y => y.Year == currentYear && y.MonthGroups.Any(m => m.Month == currentMonth)))
-            {
-                await LoadMonthPhotos(currentYear, currentMonth);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading gallery: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadMonthPhotos(int year, int month)
-    {
-        var yearGroup = yearGroups.FirstOrDefault(y => y.Year == year);
-        var monthGroup = yearGroup?.MonthGroups.FirstOrDefault(m => m.Month == month);
-        
-        if (monthGroup == null || monthGroup.Photos != null) return;
-
-        try
-        {
-            // Load photos for this specific month
-            var startDate = new DateTime(year, month, 1);
-            var endDate = startDate.AddMonths(1);
-
-            monthGroup.Photos = await DbContext.tbl_images
-                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
-                .Join(DbContext.tbl_image_metadata,
-                      img => img.ImageId,
-                      meta => meta.ImageId,
-                      (img, meta) => new { img, meta })
-                .Where(x => (x.meta.DateTaken ?? x.img.DateCreated) >= startDate &&
-                           (x.meta.DateTaken ?? x.img.DateCreated) < endDate)
-                .OrderByDescending(x => x.meta.DateTaken ?? x.img.DateCreated)
-                .Select(x => x.img)
-                .Include(img => img.tbl_image_metadata)
-                .Include(img => img.tbl_image_analysis)
-                .Include(img => img.ScanDirectory)
-                .ToListAsync();
-
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading photos for {year}-{month}: {ex.Message}");
-        }
-    }
-
-    private async Task ToggleMonth(int year, int month)
-    {
-        var key = $"{year}-{month}";
-        
-        if (expandedMonths.ContainsKey(key))
-        {
-            expandedMonths[key] = !expandedMonths[key];
-        }
-        else
-        {
-            expandedMonths[key] = true;
-        }
-
-        // Load photos if expanding and not already loaded
-        if (expandedMonths[key])
-        {
-            await LoadMonthPhotos(year, month);
-        }
-        
-        StateHasChanged();
-    }
-
-    private bool IsMonthExpanded(int year, int month)
-    {
-        var key = $"{year}-{month}";
-        return expandedMonths.ContainsKey(key) && expandedMonths[key];
-    }
-
-    private string GetMonthName(int month)
-    {
-        return new DateTime(2000, month, 1).ToString("MMMM");
-    }
-
-    private void ToggleView()
-    {
-        isCompactView = !isCompactView;
-    }
-
-    private async Task RefreshGallery()
-    {
-        expandedMonths.Clear();
-        await LoadGalleryStructure();
-    }
-
-    private async Task ScrollToTop()
-    {
-        await JSRuntime.InvokeVoidAsync("window.scrollTo", 0, 0);
-    }
-
-    [JSInvokable]
-    public static Task SetScrollTopVisible(bool visible)
-    {
-        // This would need to be implemented with a static event or similar
-        // For now, we'll keep it simple
-        return Task.CompletedTask;
-    }
-
-    private async void OnScanStatusChanged(object? sender, EventArgs e)
-    {
-        await InvokeAsync(async () =>
-        {
-            // Refresh if scan completed
-            if (!ScanStatusService.IsScanning)
-            {
-                await LoadGalleryStructure();
-            }
-        });
-    }
-
-    public void Dispose()
-    {
-        ScanStatusService.StatusChanged -= OnScanStatusChanged;
-    }
-}
