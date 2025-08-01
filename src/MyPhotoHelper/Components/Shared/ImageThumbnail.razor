@@ -60,8 +60,16 @@
     {
         try
         {
-            // Use the raw image endpoint - serves files directly without processing
-            imageUrl = $"/api/images/{Photo.ImageId}/raw";
+            // For HEIC files, use the thumbnail endpoint which caches
+            // For other files, use raw endpoint
+            if (IsHeicFile())
+            {
+                imageUrl = $"/api/images/{Photo.ImageId}/thumbnail";
+            }
+            else
+            {
+                imageUrl = $"/api/images/{Photo.ImageId}/raw";
+            }
             isLoading = true;
         }
         catch (Exception ex)

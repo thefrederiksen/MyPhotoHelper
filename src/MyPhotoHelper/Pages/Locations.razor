@@ -139,15 +139,15 @@
                                         {
                                             <div class="mt-3">
                                                 <div class="row">
-                                                    @foreach (var (imageId, index) in location.SampleImageIds.Take(3).Select((id, i) => (id, i)))
+                                                    @foreach (var (imageId, index) in location.SampleImageIds.Take(6).Select((id, i) => (id, i)))
                                                     {
                                                         var image = GetImageForId(imageId);
-                                                        <div class="col-4">
+                                                        <div class="col-2">
                                                             @if (image != null)
                                                             {
                                                                 <ImageViewer Photo="image" 
                                                                            ShowTime="false"
-                                                                           ContainerClass="col-12" />
+                                                                           ContainerClass="w-100" />
                                                             }
                                                             else
                                                             {
@@ -161,11 +161,11 @@
                                                         </div>
                                                     }
                                                 </div>
-                                                @if (location.PhotoCount > 3)
+                                                @if (location.PhotoCount > 6)
                                                 {
                                                     <div class="text-center mt-2">
                                                         <small class="text-muted">
-                                                            <i class="oi oi-camera-slr"></i> +@(location.PhotoCount - 3) more photos at this location
+                                                            <i class="oi oi-camera-slr"></i> +@(location.PhotoCount - 6) more photos at this location
                                                         </small>
                                                     </div>
                                                 }
@@ -250,7 +250,7 @@
                     Longitude = g.Key.Lon,
                     LocationName = g.Key.LocationName,
                     PhotoCount = g.Count(),
-                    SampleImageIds = g.Take(3).Select(x => x.ImageId).ToList() // Only 3 samples needed
+                    SampleImageIds = g.Take(6).Select(x => x.ImageId).ToList() // Show 6 samples per location
                 })
                 .OrderByDescending(x => x.PhotoCount)
                 .Take(50) // Show top 50 locations initially

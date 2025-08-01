@@ -15,11 +15,13 @@ public class ImagesController : ControllerBase
     private readonly MyPhotoHelperDbContext _context;
     private readonly IPathService _pathService;
     private readonly IPythonEnvironment? _pythonEnv;
+    private readonly IHeicCacheService _heicCacheService;
 
-    public ImagesController(MyPhotoHelperDbContext context, IPathService pathService, IServiceProvider serviceProvider)
+    public ImagesController(MyPhotoHelperDbContext context, IPathService pathService, IServiceProvider serviceProvider, IHeicCacheService heicCacheService)
     {
         _context = context;
         _pathService = pathService;
+        _heicCacheService = heicCacheService;
         
         // Try to get Python environment for HEIC support
         try
@@ -68,14 +70,14 @@ public class ImagesController : ControllerBase
             var extension = (image.FileExtension ?? "").ToLowerInvariant();
             var isHeicFile = extension == ".heic" || extension == ".heif";
 
-            if (isHeicFile && _pythonEnv != null)
+            if (isHeicFile)
             {
                 try
                 {
-                    Logger.Info($"Using Python HEIC converter for thumbnail: {image.FileName}");
+                    Logger.Info($"Using cached HEIC converter for thumbnail: {image.FileName}");
                     
-                    // Call Python HEIC converter
-                    var heicBytes = _pythonEnv.HeicConverter().GetHeicThumbnail(fullPath, 250);
+                    // Use cached HEIC thumbnail
+                    var heicBytes = await _heicCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
                     
                     if (heicBytes != null)
                     {
@@ -84,13 +86,14 @@ public class ImagesController : ControllerBase
                     }
                     else
                     {
-                        Logger.Warning($"Python HEIC converter returned null for {image.FileName}, falling back to standard method");
+                        Logger.Warning($"HEIC converter returned null for {image.FileName}, falling back to placeholder");
+                        return GetPlaceholderThumbnail(isHeicFile);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Python HEIC conversion failed for {image.FileName}: {ex.Message}");
-                    // Fall through to standard method
+                    Logger.Error($"HEIC conversion failed for {image.FileName}: {ex.Message}");
+                    return GetPlaceholderThumbnail(isHeicFile);
                 }
             }
 
@@ -209,7 +212,40 @@ public class ImagesController : ControllerBase
                 return NotFound("File not found");
             }
 
-            // Serve the raw file directly - let the browser handle sizing
+            // Check if this is a HEIC file and convert it to JPEG for browser compatibility
+            var extension = (image.FileExtension ?? "").ToLowerInvariant();
+            var isHeicFile = extension == ".heic" || extension == ".heif";
+
+            if (isHeicFile)
+            {
+                try
+                {
+                    Logger.Info($"Converting HEIC file to JPEG for browser display: {image.FileName}");
+                    
+                    // Convert HEIC on-demand (not cached for full size)
+                    // Using 2000 as max dimension to get high quality while keeping file size reasonable
+                    var jpegBytes = await _heicCacheService.ConvertHeicToJpegAsync(fullPath, 2000, 85);
+                    
+                    if (jpegBytes != null)
+                    {
+                        Logger.Info($"Successfully converted HEIC to JPEG for {image.FileName}");
+                        return File(jpegBytes, "image/jpeg");
+                    }
+                    else
+                    {
+                        Logger.Warning($"HEIC conversion returned null for {image.FileName}, returning placeholder");
+                        return GetPlaceholderThumbnail(isHeicFile);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"HEIC conversion failed for {image.FileName}: {ex.Message}");
+                    // Return placeholder for HEIC files that fail to convert
+                    return GetPlaceholderThumbnail(isHeicFile);
+                }
+            }
+
+            // Serve non-HEIC files directly
             var contentType = GetContentType(image.FileExtension ?? "");
             
             // Use FileStream for better memory efficiency

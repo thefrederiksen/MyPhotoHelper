@@ -3,6 +3,7 @@
 @using MyPhotoHelper.Data
 @using Microsoft.EntityFrameworkCore
 @inject MyPhotoHelperDbContext DbContext
+@inject IHeicCacheService HeicCacheService
 
 @if (IsVisible && Image != null)
 {
@@ -138,6 +139,29 @@
                                         <td><strong>File Hash:</strong></td>
                                         <td class="text-break small font-monospace">@Image.FileHash</td>
                                     </tr>
+                                    @if (IsHeicFile())
+                                    {
+                                        <tr class="table-info">
+                                            <td><strong>HEIC Cache:</strong></td>
+                                            <td class="text-break small">
+                                                <div><strong>Cache Directory:</strong></div>
+                                                <code>@HeicCacheService.GetCacheDirectory()</code>
+                                                <div class="mt-2"><strong>Thumbnail Cache File:</strong></div>
+                                                <code>@GetCachedThumbnailPath()</code>
+                                                @if (File.Exists(GetCachedThumbnailPath()))
+                                                {
+                                                    <span class="badge bg-success ms-2">Cached</span>
+                                                    <div class="small text-muted mt-1">
+                                                        Size: @GetFileSize(GetCachedThumbnailPath())
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning ms-2">Not Cached</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
                                 </tbody>
                             </table>
                         </div>
@@ -166,6 +190,61 @@
         {
             await CalculateFullPath();
         }
+    }
+
+    private bool IsHeicFile()
+    {
+        if (Image?.FileExtension == null) return false;
+        var extension = Image.FileExtension.ToLowerInvariant();
+        return extension == ".heic" || extension == ".heif";
+    }
+
+    private string GetCachedThumbnailPath()
+    {
+        if (Image == null || !IsHeicFile()) return "";
+        
+        // Generate the same cache key that HeicCacheService uses
+        var cacheKey = GetCacheKey(fullPath, 250, 80);
+        
+        // Use same subdirectory structure as HeicCacheService
+        var subDir1 = cacheKey.Substring(0, 2).ToLower();
+        var subDir2 = cacheKey.Substring(2, 2).ToLower();
+        
+        return Path.Combine(HeicCacheService.GetCacheDirectory(), subDir1, subDir2, $"thumb_{cacheKey}.jpg");
+    }
+
+    private string GetCacheKey(string filePath, int maxSize, int quality)
+    {
+        // This should match the logic in HeicCacheService
+        var input = $"{filePath.ToLowerInvariant()}|{maxSize}|{quality}";
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        return Convert.ToHexString(hashBytes).Substring(0, 16);
+    }
+
+    private string GetFileSize(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                var fileInfo = new FileInfo(path);
+                var bytes = fileInfo.Length;
+                string[] sizes = { "B", "KB", "MB", "GB" };
+                int order = 0;
+                double size = bytes;
+                
+                while (size >= 1024 && order < sizes.Length - 1)
+                {
+                    order++;
+                    size /= 1024;
+                }
+                
+                return $"{size:0.##} {sizes[order]}";
+            }
+        }
+        catch { }
+        return "Unknown";
     }
 
     private async Task CalculateFullPath()

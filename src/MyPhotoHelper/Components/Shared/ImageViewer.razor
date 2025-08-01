@@ -5,65 +5,61 @@
 @inject IPhotoPathService PhotoPathService
 @inject IImageDetailsService ImageDetailsService
 
-<div class="@ContainerClass">
+<div class="@ContainerClass" style="overflow: visible !important;">
     <div class="card border-0 shadow-sm photo-card">
         <div class="photo-container position-relative" @onclick="() => OpenImage()" @onclick:stopPropagation="true">
             <ImageThumbnail Photo="Photo" Size="ThumbnailSize" />
             
-            <!-- Photo overlay with info and dropdown -->
+            <!-- Photo overlay with info -->
             <div class="photo-overlay">
-                <div class="d-flex justify-content-between align-items-start h-100">
-                    <div class="flex-grow-1 overlay-click-area">
-                        <div class="d-flex flex-column align-items-center justify-content-center h-100">
-                            <span class="oi oi-external-link mb-1" aria-hidden="true"></span>
-                            <small class="text-white">
-                                @if (ShowTime && Photo.tbl_image_metadata?.DateTaken.HasValue == true)
-                                {
-                                    @Photo.tbl_image_metadata.DateTaken.Value.ToString("HH:mm")
-                                }
-                                else if (ShowTime)
-                                {
-                                    @Photo.DateCreated.ToString("HH:mm")
-                                }
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <!-- Custom Dropdown Menu -->
-                    <div class="custom-dropdown" @onclick:stopPropagation="true">
-                        <button class="btn btn-sm btn-outline-light dropdown-btn" type="button" 
-                                @onclick="ToggleDropdown" 
-                                @onclick:stopPropagation="true" title="More options">
-                            <span class="oi oi-menu" aria-hidden="true"></span>
-                        </button>
-                        @if (isDropdownOpen)
+                <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                    <span class="oi oi-external-link mb-1" aria-hidden="true"></span>
+                    <small class="text-white">
+                        @if (ShowTime && Photo.tbl_image_metadata?.DateTaken.HasValue == true)
                         {
-                            <div class="custom-dropdown-menu">
-                                <button class="custom-dropdown-item" @onclick="HandleOpenImage" @onclick:stopPropagation="true">
-                                    <span class="oi oi-external-link me-2" aria-hidden="true"></span>
-                                    Open Image
-                                </button>
-                                <button class="custom-dropdown-item" @onclick="HandleCopyPath" @onclick:stopPropagation="true">
-                                    <span class="oi oi-clipboard me-2" aria-hidden="true"></span>
-                                    Copy Path
-                                </button>
-                                <button class="custom-dropdown-item" @onclick="HandleOpenLocation" @onclick:stopPropagation="true">
-                                    <span class="oi oi-folder-open me-2" aria-hidden="true"></span>
-                                    Open Location
-                                </button>
-                                <hr class="dropdown-divider my-1" />
-                                <button class="custom-dropdown-item" @onclick="HandleShowProperties" @onclick:stopPropagation="true">
-                                    <span class="oi oi-info me-2" aria-hidden="true"></span>
-                                    Properties
-                                </button>
-                                <button class="custom-dropdown-item" @onclick="HandleLoadDetailsFromFile" @onclick:stopPropagation="true">
-                                    <span class="oi oi-data-transfer-download me-2" aria-hidden="true"></span>
-                                    Load Details from File
-                                </button>
-                            </div>
+                            @Photo.tbl_image_metadata.DateTaken.Value.ToString("HH:mm")
                         }
-                    </div>
+                        else if (ShowTime)
+                        {
+                            @Photo.DateCreated.ToString("HH:mm")
+                        }
+                    </small>
                 </div>
+            </div>
+            
+            <!-- Dropdown Menu - Always Visible -->
+            <div class="photo-dropdown-container" @onclick:stopPropagation="true">
+                <button class="btn btn-sm photo-dropdown-btn" type="button" 
+                        @onclick="ToggleDropdown" 
+                        @onclick:stopPropagation="true" title="More options">
+                    <span class="oi oi-menu" aria-hidden="true"></span>
+                </button>
+                @if (isDropdownOpen)
+                {
+                    <div class="custom-dropdown-menu">
+                        <button class="custom-dropdown-item" @onclick="HandleOpenImage" @onclick:stopPropagation="true">
+                            <span class="oi oi-external-link me-2" aria-hidden="true"></span>
+                            Open Image
+                        </button>
+                        <button class="custom-dropdown-item" @onclick="HandleCopyPath" @onclick:stopPropagation="true">
+                            <span class="oi oi-clipboard me-2" aria-hidden="true"></span>
+                            Copy Path
+                        </button>
+                        <button class="custom-dropdown-item" @onclick="HandleOpenLocation" @onclick:stopPropagation="true">
+                            <span class="oi oi-folder-open me-2" aria-hidden="true"></span>
+                            Open Location
+                        </button>
+                        <hr class="dropdown-divider my-1" />
+                        <button class="custom-dropdown-item" @onclick="HandleShowProperties" @onclick:stopPropagation="true">
+                            <span class="oi oi-info me-2" aria-hidden="true"></span>
+                            Properties
+                        </button>
+                        <button class="custom-dropdown-item" @onclick="HandleLoadDetailsFromFile" @onclick:stopPropagation="true">
+                            <span class="oi oi-data-transfer-download me-2" aria-hidden="true"></span>
+                            Load Details from File
+                        </button>
+                    </div>
+                }
             </div>
         </div>
         @if (AdditionalContent != null)
@@ -523,6 +519,13 @@
     .photo-card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         cursor: pointer;
+        overflow: visible !important;
+        position: relative;
+    }
+    
+    /* Ensure card with open dropdown is on top */
+    .photo-card:has(.custom-dropdown-menu) {
+        z-index: 1000;
     }
 
     .photo-card:hover {
@@ -532,10 +535,11 @@
 
     .photo-container {
         aspect-ratio: 1;
-        overflow: hidden;
+        overflow: visible;
         border-radius: 0.375rem;
         position: relative;
         background-color: #f8f9fa;
+        z-index: 1;
     }
 
     .photo-thumbnail {
@@ -560,31 +564,45 @@
         padding: 0.5rem;
         opacity: 0;
         transition: opacity 0.3s ease;
+        pointer-events: none;
     }
 
     .photo-card:hover .photo-overlay {
         opacity: 1;
+        pointer-events: auto;
     }
 
     .overlay-click-area {
         cursor: pointer;
     }
 
-    .custom-dropdown {
-        position: relative;
-        display: inline-block;
+    /* Always visible dropdown button */
+    .photo-dropdown-container {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        z-index: 100;
+        overflow: visible !important;
     }
 
-    .dropdown-btn {
+    .photo-dropdown-btn {
         font-size: 0.75rem;
         padding: 0.25rem 0.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        background-color: rgba(0, 0, 0, 0.2);
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        color: #333;
+        opacity: 0.8;
+        transition: opacity 0.2s ease;
     }
 
-    .dropdown-btn:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
+    .photo-dropdown-btn:hover {
+        opacity: 1;
+        background-color: white;
+        color: #000;
+    }
+
+    .photo-card:hover .photo-dropdown-btn {
+        opacity: 1;
     }
 
     .custom-dropdown-menu {
@@ -595,10 +613,11 @@
         border: 1px solid #dee2e6;
         border-radius: 0.25rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        min-width: 150px;
-        z-index: 1000;
+        min-width: 200px;
+        z-index: 10000;
         padding: 0.5rem 0;
         animation: fadeIn 0.15s ease-in;
+        margin-top: 0.25rem;
     }
 
     .custom-dropdown-item {

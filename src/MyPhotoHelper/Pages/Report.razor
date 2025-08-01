@@ -333,8 +333,8 @@
                                     {
                                         <div class="col-4">
                                             <div class="position-relative">
-                                                <ImageThumbnail Photo="image" CssClass="img-fluid rounded" />
-                                                <div class="position-absolute top-0 start-0 m-1">
+                                                <ImageViewer Photo="image" ContainerClass="w-100" ShowTime="false" />
+                                                <div class="position-absolute top-0 start-0 m-1" style="z-index: 10;">
                                                     <span class="badge bg-dark bg-opacity-75">@FormatFileSize(image.FileSizeBytes)</span>
                                                 </div>
                                             </div>

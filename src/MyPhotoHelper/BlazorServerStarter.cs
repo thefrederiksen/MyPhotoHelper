@@ -237,6 +237,7 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IPhasedScanService, PhasedScanService>();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             builder.Services.AddScoped<IImageDetailsService, ImageDetailsService>();
+            builder.Services.AddSingleton<IHeicCacheService, HeicCacheService>();
             
             // Add Blazor services
             builder.Services.AddRazorPages();

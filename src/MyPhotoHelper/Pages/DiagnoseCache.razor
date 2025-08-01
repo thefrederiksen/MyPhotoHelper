@@ -1,0 +1,171 @@
+@page "/diagnose-cache"
+@using System.IO
+@inject IHeicCacheService HeicCacheService
+
+<h3>Cache Diagnostics</h3>
+
+<div class="container">
+    <h4>1. Cache Directory</h4>
+    <p><strong>Path:</strong> <code>@cacheDir</code></p>
+    <p><strong>Exists:</strong> @(dirExists ? "✅ YES" : "❌ NO")</p>
+    
+    @if (dirExists)
+    {
+        <h4>2. Directory Contents</h4>
+        @if (files.Any())
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>Size</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var file in files)
+                    {
+                        <tr>
+                            <td><code>@file.Name</code></td>
+                            <td>@FormatBytes(file.Length)</td>
+                            <td>@file.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="alert alert-warning">❌ Directory is empty - no cached files found!</p>
+        }
+        
+        <h4>3. Test Write Permission</h4>
+        <button class="btn btn-primary" @onclick="TestWritePermission">Test Writing to Cache Directory</button>
+        @if (!string.IsNullOrEmpty(writeTestResult))
+        {
+            <pre class="mt-3 p-3 bg-light">@writeTestResult</pre>
+        }
+    }
+    
+    <h4>4. Manual Cache Test</h4>
+    <button class="btn btn-success" @onclick="ManualCacheTest">Create Test Cache File</button>
+    @if (!string.IsNullOrEmpty(manualTestResult))
+    {
+        <pre class="mt-3 p-3 bg-light">@manualTestResult</pre>
+    }
+</div>
+
+@code {
+    private string cacheDir = "";
+    private bool dirExists = false;
+    private List<FileInfo> files = new();
+    private string writeTestResult = "";
+    private string manualTestResult = "";
+
+    protected override void OnInitialized()
+    {
+        RefreshDirInfo();
+    }
+
+    private void RefreshDirInfo()
+    {
+        cacheDir = HeicCacheService.GetCacheDirectory();
+        dirExists = Directory.Exists(cacheDir);
+        
+        if (dirExists)
+        {
+            var dirInfo = new DirectoryInfo(cacheDir);
+            files = dirInfo.GetFiles().OrderByDescending(f => f.CreationTime).ToList();
+        }
+    }
+
+    private async Task TestWritePermission()
+    {
+        writeTestResult = $"Testing write permission to: {cacheDir}\n\n";
+        
+        try
+        {
+            var testFile = Path.Combine(cacheDir, $"test_{DateTime.Now:yyyyMMddHHmmss}.txt");
+            writeTestResult += $"Creating test file: {testFile}\n";
+            
+            await File.WriteAllTextAsync(testFile, "This is a test file created by DiagnoseCache");
+            writeTestResult += "✅ File created successfully\n";
+            
+            if (File.Exists(testFile))
+            {
+                var info = new FileInfo(testFile);
+                writeTestResult += $"✅ File exists, size: {info.Length} bytes\n";
+                
+                // Clean up
+                File.Delete(testFile);
+                writeTestResult += "✅ File deleted successfully\n";
+                writeTestResult += "\n✅ WRITE PERMISSIONS ARE OK!";
+            }
+            else
+            {
+                writeTestResult += "❌ File was not created!";
+            }
+        }
+        catch (Exception ex)
+        {
+            writeTestResult += $"❌ ERROR: {ex.Message}\n{ex.StackTrace}";
+        }
+        
+        RefreshDirInfo();
+    }
+
+    private async Task ManualCacheTest()
+    {
+        manualTestResult = "Creating manual cache test file...\n\n";
+        
+        try
+        {
+            // Create a simple test file
+            var testCacheFile = Path.Combine(cacheDir, "thumb_MANUAL_TEST.txt");
+            manualTestResult += $"Target file: {testCacheFile}\n";
+            
+            // Create a simple test file
+            var testContent = "This is a test cache file created at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var bytes = System.Text.Encoding.UTF8.GetBytes(testContent);
+            manualTestResult += $"Generated test content: {bytes.Length} bytes\n";
+            
+            await File.WriteAllBytesAsync(testCacheFile, bytes);
+            manualTestResult += "✅ File written\n";
+            
+            // Verify
+            if (File.Exists(testCacheFile))
+            {
+                var info = new FileInfo(testCacheFile);
+                manualTestResult += $"✅ FILE EXISTS! Size: {info.Length} bytes\n";
+                manualTestResult += $"Full path: {info.FullName}\n";
+                manualTestResult += $"Content: {await File.ReadAllTextAsync(testCacheFile)}\n";
+                manualTestResult += "\n✅ MANUAL CACHE CREATION WORKS!";
+            }
+            else
+            {
+                manualTestResult += "❌ File was not created!";
+            }
+        }
+        catch (Exception ex)
+        {
+            manualTestResult += $"❌ ERROR: {ex.Message}\n{ex.StackTrace}";
+        }
+        
+        RefreshDirInfo();
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        
+        return $"{size:0.##} {sizes[order]}";
+    }
+}

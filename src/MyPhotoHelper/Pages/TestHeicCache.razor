@@ -1,0 +1,141 @@
+@page "/test-heic-cache"
+@using MyPhotoHelper.Models
+@using MyPhotoHelper.Services
+@using MyPhotoHelper.Data
+@using Microsoft.EntityFrameworkCore
+@inject IHeicCacheService HeicCacheService
+@inject MyPhotoHelperDbContext DbContext
+@inject IPathService PathService
+
+<h3>HEIC Cache Test</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h4>Cache Directory</h4>
+            <code>@HeicCacheService.GetCacheDirectory()</code>
+            <p>Directory Exists: @(Directory.Exists(HeicCacheService.GetCacheDirectory()) ? "Yes" : "No")</p>
+            
+            <h4>HEIC Files in Database</h4>
+            @if (heicFiles == null)
+            {
+                <p>Loading...</p>
+            }
+            else if (!heicFiles.Any())
+            {
+                <p>No HEIC files found in database.</p>
+            }
+            else
+            {
+                <p>Found @heicFiles.Count HEIC files</p>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Image ID</th>
+                            <th>File Name</th>
+                            <th>Path</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var heic in heicFiles.Take(5))
+                        {
+                            <tr>
+                                <td>@heic.ImageId</td>
+                                <td>@heic.FileName</td>
+                                <td class="small">@heic.RelativePath</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" @onclick="() => TestHeicConversion(heic)">
+                                        Test Conversion
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            
+            @if (!string.IsNullOrEmpty(testResult))
+            {
+                <h4>Test Result</h4>
+                <pre class="bg-light p-3">@testResult</pre>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<tbl_images>? heicFiles;
+    private string testResult = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        heicFiles = await DbContext.tbl_images
+            .Include(i => i.ScanDirectory)
+            .Where(i => (i.FileExtension == ".heic" || i.FileExtension == ".HEIC" || 
+                        i.FileExtension == ".heif" || i.FileExtension == ".HEIF") && 
+                       i.FileExists == 1 && i.IsDeleted == 0)
+            .Take(10)
+            .ToListAsync();
+    }
+
+    private async Task TestHeicConversion(tbl_images heicFile)
+    {
+        testResult = $"Testing HEIC conversion for: {heicFile.FileName}\n";
+        
+        try
+        {
+            // Get full path
+            var fullPath = Path.Combine(heicFile.ScanDirectory.DirectoryPath, heicFile.RelativePath);
+            testResult += $"Full path: {fullPath}\n";
+            testResult += $"File exists: {File.Exists(fullPath)}\n";
+            
+            if (!File.Exists(fullPath))
+            {
+                testResult += "ERROR: File not found!\n";
+                return;
+            }
+            
+            // Try to get cached thumbnail
+            testResult += "\nCalling GetCachedHeicThumbnailAsync...\n";
+            var jpegBytes = await HeicCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
+            
+            if (jpegBytes != null)
+            {
+                testResult += $"SUCCESS: Got JPEG bytes: {jpegBytes.Length} bytes\n";
+                
+                // Check if cache file exists
+                var cacheKey = GetCacheKey(fullPath, 250, 80);
+                var expectedCachePath = Path.Combine(HeicCacheService.GetCacheDirectory(), $"thumb_{cacheKey}.jpg");
+                testResult += $"\nExpected cache path: {expectedCachePath}\n";
+                testResult += $"Cache file exists: {File.Exists(expectedCachePath)}\n";
+                
+                if (File.Exists(expectedCachePath))
+                {
+                    var fileInfo = new FileInfo(expectedCachePath);
+                    testResult += $"Cache file size: {fileInfo.Length} bytes\n";
+                    testResult += $"Cache file date: {fileInfo.LastWriteTime}\n";
+                }
+            }
+            else
+            {
+                testResult += "FAILED: GetCachedHeicThumbnailAsync returned null\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"\nERROR: {ex.GetType().Name}: {ex.Message}\n";
+            testResult += $"Stack trace:\n{ex.StackTrace}\n";
+        }
+        
+        StateHasChanged();
+    }
+    
+    private string GetCacheKey(string filePath, int maxSize, int quality)
+    {
+        var input = $"{filePath.ToLowerInvariant()}|{maxSize}|{quality}";
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        return Convert.ToHexString(hashBytes).Substring(0, 16);
+    }
+}
