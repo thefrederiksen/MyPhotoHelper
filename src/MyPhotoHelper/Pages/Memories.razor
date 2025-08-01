@@ -4,6 +4,7 @@
 @using MyPhotoHelper.Components.Shared
 @using MyPhotoHelper.Data
 @using Microsoft.EntityFrameworkCore
+@using static MyPhotoHelper.Services.Logger
 @implements IDisposable
 @inject IMemoryService MemoryService
 @inject IJSRuntime JSRuntime
@@ -143,25 +144,41 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Check if any scan directories are configured
-        var hasScanDirectories = await DbContext.tbl_scan_directory.AnyAsync();
-        
-        if (!hasScanDirectories)
+        try
         {
-            // No directories configured, redirect to startup wizard
-            Navigation.NavigateTo("/startup-wizard", replace: true);
-            return;
+            // Check if any scan directories are configured
+            var hasScanDirectories = await DbContext.tbl_scan_directory.AnyAsync();
+            
+            if (!hasScanDirectories)
+            {
+                // No directories configured, redirect to startup wizard
+                Navigation.NavigateTo("/startup-wizard", replace: true);
+                return;
+            }
+            
+            // Subscribe to scan status changes first
+            ScanStatusService.StatusChanged += OnScanStatusChanged;
+            
+            // Load memories in background to not block page render
+            _ = Task.Run(async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadMemories();
+                });
+            });
+            
+            // Start auto-refresh timer if scanning
+            if (ScanStatusService.IsScanning)
+            {
+                StartAutoRefresh();
+            }
         }
-        
-        await LoadMemories();
-        
-        // Subscribe to scan status changes
-        ScanStatusService.StatusChanged += OnScanStatusChanged;
-        
-        // Start auto-refresh timer if scanning
-        if (ScanStatusService.IsScanning)
+        catch (Exception ex)
         {
-            StartAutoRefresh();
+            Logger.Error($"Error in Memories OnInitializedAsync: {ex.Message}");
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -172,13 +189,19 @@
         
         try
         {
+            Logger.Info($"Loading memories for {selectedDate:yyyy-MM-dd}");
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
             memories = await MemoryService.GetTodaysMemoriesAsync(selectedDate);
             hasPhotos = memories?.TotalPhotos > 0;
+            
+            stopwatch.Stop();
+            Logger.Info($"Loaded {memories?.TotalPhotos ?? 0} memories in {stopwatch.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
         {
-            // Log error but don't show to user
-            Console.WriteLine($"Error loading memories: {ex.Message}");
+            Logger.Error($"Error loading memories: {ex.Message}");
+            Logger.Error($"Stack trace: {ex.StackTrace}");
             memories = new MemoryCollection { Date = selectedDate };
         }
         finally

@@ -1,40 +1,50 @@
 @using MyPhotoHelper.Services
 @using MyPhotoHelper.Models
 
-@if (!string.IsNullOrEmpty(imageUrl))
-{
-    <img src="@imageUrl" 
-         class="@CssClass" 
-         alt="@Photo.FileName"
-         title="@GetPhotoTooltip()"
-         loading="lazy" />
-}
-else if (isLoading)
-{
-    <div class="card-img-top photo-placeholder d-flex align-items-center justify-content-center">
-        <div class="spinner-border spinner-border-sm text-muted" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-}
-else
-{
-    <div class="card-img-top photo-placeholder d-flex align-items-center justify-content-center">
+<div class="photo-thumbnail-container">
+    @if (imageLoaded && !string.IsNullOrEmpty(imageUrl))
+    {
+        <img src="@imageUrl" 
+             class="@CssClass photo-fade-in" 
+             alt="@Photo.FileName"
+             title="@GetPhotoTooltip()"
+             loading="lazy" />
+    }
+    
+    <div class="photo-placeholder d-flex align-items-center justify-content-center @(imageLoaded ? "photo-fade-out" : "")">
         <div class="text-center">
-            @if (IsHeicFile())
+            @if (isLoading && !imageLoaded)
             {
-                <span class="oi oi-camera-slr text-info mb-1" style="font-size: 2rem;" aria-hidden="true"></span>
-                <small class="d-block text-info fw-bold">HEIC</small>
-                <small class="d-block text-muted">Converting...</small>
+                <div class="spinner-border spinner-border-sm text-muted" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             }
-            else
+            else if (hasError || (!imageLoaded && !isLoading))
             {
-                <span class="oi oi-image text-muted mb-1" aria-hidden="true"></span>
-                <small class="d-block text-muted">No preview</small>
+                @if (IsHeicFile())
+                {
+                    <span class="oi oi-camera-slr text-info mb-1" style="font-size: 2rem;" aria-hidden="true"></span>
+                    <small class="d-block text-info fw-bold">HEIC</small>
+                    <small class="d-block text-muted">Click to view</small>
+                }
+                else
+                {
+                    <span class="oi oi-image text-muted mb-1" aria-hidden="true"></span>
+                    <small class="d-block text-muted">No preview</small>
+                }
             }
         </div>
     </div>
-}
+    
+    @if (!string.IsNullOrEmpty(imageUrl) && !imageLoaded)
+    {
+        <!-- Hidden image to preload -->
+        <img src="@imageUrl" 
+             style="display: none;"
+             @onload="OnImageLoaded"
+             @onerror="OnImageError" />
+    }
+</div>
 
 @code {
     [Parameter] public tbl_images Photo { get; set; } = default!;
@@ -43,22 +53,37 @@ else
     
     private string imageUrl = string.Empty;
     private bool isLoading = true;
+    private bool imageLoaded = false;
+    private bool hasError = false;
 
     protected override void OnInitialized()
     {
         try
         {
-            // Use the API endpoint for thumbnails
-            imageUrl = $"/api/images/{Photo.ImageId}/thumbnail";
+            // Use the raw image endpoint - serves files directly without processing
+            imageUrl = $"/api/images/{Photo.ImageId}/raw";
+            isLoading = true;
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Error setting thumbnail URL for {Photo.FileName}: {ex.Message}");
-        }
-        finally
-        {
+            Logger.Warning($"Error setting image URL for {Photo.FileName}: {ex.Message}");
             isLoading = false;
+            hasError = true;
         }
+    }
+
+    private void OnImageLoaded()
+    {
+        imageLoaded = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void OnImageError()
+    {
+        hasError = true;
+        isLoading = false;
+        StateHasChanged();
     }
 
     private bool IsHeicFile()
@@ -88,15 +113,49 @@ else
 }
 
 <style>
-    .photo-placeholder {
+    .photo-thumbnail-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
         aspect-ratio: 1;
-        background-color: #f8f9fa;
+        overflow: hidden;
         border-radius: 0.375rem;
+    }
+
+    .photo-placeholder {
+        background-color: #f8f9fa;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 1;
     }
 
     .photo-thumbnail {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        position: relative;
+        z-index: 2;
+    }
+
+    .photo-fade-in {
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    .photo-fade-out {
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+        pointer-events: none;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
     }
 </style>

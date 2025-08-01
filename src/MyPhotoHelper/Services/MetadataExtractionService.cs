@@ -83,6 +83,11 @@ namespace MyPhotoHelper.Services
             var totalErrorCount = 0;
             var batchSize = 1000;
             var hasMoreImages = true;
+            
+            // Throttle progress reporting to improve performance
+            var lastProgressReport = DateTime.UtcNow;
+            var progressReportInterval = TimeSpan.FromMilliseconds(500); // Report at most every 500ms
+            var progressUpdateCounter = 0;
 
             // Process all images in batches
             while (hasMoreImages && !cancellationToken.IsCancellationRequested)
@@ -108,7 +113,15 @@ namespace MyPhotoHelper.Services
                         break;
 
                     phaseProgress.CurrentItem = image.FileName;
-                    progress?.Report(phaseProgress);
+                    
+                    // Only report progress periodically to reduce UI overhead
+                    progressUpdateCounter++;
+                    var now = DateTime.UtcNow;
+                    if (progressUpdateCounter % 10 == 0 || now - lastProgressReport >= progressReportInterval)
+                    {
+                        lastProgressReport = now;
+                        progress?.Report(phaseProgress);
+                    }
 
                     try
                     {
@@ -135,11 +148,13 @@ namespace MyPhotoHelper.Services
                     }
 
                     phaseProgress.ProcessedItems = initialImagesWithMetadata + totalProcessedCount + totalErrorCount;
-                    progress?.Report(phaseProgress);
                 }
 
                 // Save any remaining in this batch
                 await dbContext.SaveChangesAsync(cancellationToken);
+                
+                // Report progress after batch completion
+                progress?.Report(phaseProgress);
 
                 // Check if we've processed fewer images than the batch size
                 if (imagesWithoutMetadata.Count < batchSize)

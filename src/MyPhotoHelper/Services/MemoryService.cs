@@ -30,31 +30,54 @@ public class MemoryService : IMemoryService
     {
         try
         {
-            // Get photos from this date across all years
+            // Get photos from this date across all years - optimize query
             var query = _context.tbl_images
                 .AsNoTracking()
-                .Include(img => img.tbl_image_metadata)
-                .Include(img => img.tbl_image_analysis)
-                .Include(img => img.ScanDirectory)
                 .Where(img => img.IsDeleted == 0 && 
-                             img.FileExists == 1 &&
-                             img.tbl_image_metadata != null &&
-                             img.tbl_image_metadata.DateTaken.HasValue && 
-                             img.tbl_image_metadata.DateTaken.Value.Month == date.Month && 
-                             img.tbl_image_metadata.DateTaken.Value.Day == date.Day);
+                             img.FileExists == 1)
+                .Join(_context.tbl_image_metadata
+                    .Where(m => m.DateTaken.HasValue && 
+                               m.DateTaken.Value.Month == date.Month && 
+                               m.DateTaken.Value.Day == date.Day),
+                    img => img.ImageId,
+                    meta => meta.ImageId,
+                    (img, meta) => new { Image = img, Metadata = meta })
+                .Select(x => x.Image);
+            
+            // Get the photos with basic data first
+            var photoIds = await query
+                .Select(img => img.ImageId)
+                .Take(200) // Limit to prevent performance issues
+                .ToListAsync();
+
+            if (!photoIds.Any())
+            {
+                return new List<YearGroup>();
+            }
+
+            // Now load the full photo data with necessary includes
+            var photos = await _context.tbl_images
+                .AsNoTracking()
+                .Where(img => photoIds.Contains(img.ImageId))
+                .Include(img => img.tbl_image_metadata)
+                .Include(img => img.ScanDirectory)
+                .ToListAsync();
             
             // Add screenshot filter if requested
             if (excludeScreenshots)
             {
-                // Filter out screenshots based on AI analysis
-                query = query.Where(img => img.tbl_image_analysis == null || 
-                                         img.tbl_image_analysis.ImageCategory != "screenshot");
+                // Load analysis data separately to avoid complex joins
+                var analysisData = await _context.tbl_image_analysis
+                    .Where(a => photoIds.Contains(a.ImageId))
+                    .ToListAsync();
+                
+                var screenshotIds = analysisData
+                    .Where(a => a.ImageCategory == "screenshot")
+                    .Select(a => a.ImageId)
+                    .ToHashSet();
+                
+                photos = photos.Where(p => !screenshotIds.Contains(p.ImageId)).ToList();
             }
-            
-            var photos = await query
-                .OrderByDescending(img => img.tbl_image_metadata!.DateTaken)
-                .Take(200) // Limit to prevent performance issues
-                .ToListAsync();
 
             // Group by year and create year groups
             var yearGroups = photos

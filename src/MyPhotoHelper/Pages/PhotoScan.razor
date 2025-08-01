@@ -9,6 +9,7 @@
 @inject MyPhotoHelperDbContext DbContext
 @inject MyPhotoHelper.Services.IScanStatusService ScanStatusService
 @inject MyPhotoHelper.Services.IMetadataExtractionService MetadataExtractionService
+@inject MyPhotoHelper.Services.IPhasedScanService PhasedScanService
 @inject IServiceProvider ServiceProvider
 @inject NavigationManager Navigation
 @inject ILogger<PhotoScan> Logger
@@ -277,16 +278,16 @@
                             <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
                         </button>
                         <div>
-                            <button class="btn btn-outline-warning me-2" @onclick="RescanMetadata" disabled="@(ScanStatusService.IsScanning || isRescanningMetadata)">
-                                @if (isRescanningMetadata)
+                            <button class="btn btn-outline-warning me-2" @onclick="RescanMetadata" disabled="@(PhasedScanService.IsScanning || isRescanningMetadata)">
+                                @if (isRescanningMetadata || PhasedScanService.IsScanning)
                                 {
                                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                    <span>Rescanning...</span>
+                                    <span>Scanning...</span>
                                 }
                                 else
                                 {
-                                    <span class="oi oi-data-transfer-download" aria-hidden="true"></span>
-                                    <span>Rescan Metadata</span>
+                                    <span class="oi oi-loop-circular" aria-hidden="true"></span>
+                                    <span>Run Full Scan</span>
                                 }
                             </button>
                             <button class="btn btn-outline-primary" @onclick="RefreshStats">
@@ -358,10 +359,17 @@
     private int imagesWithHashes = 0;
     private int imagesWithMetadata = 0;
     private bool isRescanningMetadata = false;
+    
+    // UI update throttling
+    private DateTime _lastUIUpdate = DateTime.UtcNow;
+    private readonly TimeSpan _uiUpdateInterval = TimeSpan.FromSeconds(1); // Update UI at most once per second
+    private bool _pendingUIUpdate = false;
 
     protected override async Task OnInitializedAsync()
     {
         ScanStatusService.StatusChanged += OnScanStatusChanged;
+        PhasedScanService.ProgressChanged += OnPhasedScanProgressChanged;
+        PhasedScanService.PhaseCompleted += OnPhaseCompleted;
         await LoadData();
     }
 
@@ -411,14 +419,14 @@
 
     private async Task RescanMetadata()
     {
-        if (ScanStatusService.IsScanning || isRescanningMetadata)
+        if (PhasedScanService.IsScanning || isRescanningMetadata)
         {
             return; // Already scanning
         }
 
         // Show confirmation dialog
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
-            "This will delete all existing image metadata and re-extract it using the latest Python-based extraction. This may take a while depending on your photo collection size. Continue?");
+            "This will run a complete phased scan: Phase 1 (File Discovery), Phase 2 (Metadata Extraction), and Phase 3 (Duplicate Detection). This may take a while depending on your photo collection size. Continue?");
         
         if (!confirmed)
         {
@@ -428,65 +436,22 @@
         isRescanningMetadata = true;
         StateHasChanged();
         
-        Logger.LogInformation("Starting metadata rescan from UI");
+        Logger.LogInformation("Starting phased scan from UI");
 
-        // Run the rescan in the background to avoid blocking the UI
-        _ = Task.Run(async () =>
+        // Start the phased scan
+        try
         {
-            try
-            {
-                // Create a progress reporter that updates the UI WITHOUT blocking database calls
-                var progress = new Progress<PhaseProgress>(phaseProgress =>
-                {
-                    // Don't use InvokeAsync here - just update the UI state
-                    // Database stats will be updated when the process completes
-                    _ = InvokeAsync(() =>
-                    {
-                        StateHasChanged();
-                        return Task.CompletedTask;
-                    });
-                });
-
-                using var scope = ServiceProvider.CreateScope();
-                var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
-                await metadataService.RescanAllMetadataAsync(progress);
-                
-                // Refresh stats after completion WITHOUT blocking the UI
-                _ = InvokeAsync(() =>
-                {
-                    Logger.LogInformation("Metadata rescan completed successfully");
-                    // Update database stats in the background
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(1000); // Small delay to let things settle
-                        await InvokeAsync(async () =>
-                        {
-                            await LoadDatabaseStats();
-                            StateHasChanged();
-                        });
-                    });
-                    return Task.CompletedTask;
-                });
-            }
-            catch (Exception ex)
-            {
-                await InvokeAsync(() =>
-                {
-                    Logger.LogError(ex, "Error during metadata rescan");
-                    StateHasChanged();
-                    return Task.CompletedTask;
-                });
-            }
-            finally
-            {
-                await InvokeAsync(() =>
-                {
-                    isRescanningMetadata = false;
-                    StateHasChanged();
-                    return Task.CompletedTask;
-                });
-            }
-        });
+            await PhasedScanService.StartPhasedScanAsync();
+            Logger.LogInformation("Phased scan started successfully");
+            
+            // The UI will be updated through the existing PhasedScanProgress event handlers
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error starting phased scan");
+            isRescanningMetadata = false;
+            StateHasChanged();
+        }
     }
 
     private void OnScanStatusChanged(object? sender, EventArgs e)
@@ -494,6 +459,52 @@
         InvokeAsync(async () =>
         {
             await LoadDatabaseStats();
+            StateHasChanged();
+        });
+    }
+
+    private void OnPhasedScanProgressChanged(object? sender, PhasedScanProgress e)
+    {
+        // If scan is complete, update immediately
+        if (!e.IsRunning)
+        {
+            InvokeAsync(() =>
+            {
+                isRescanningMetadata = false;
+                StateHasChanged();
+            });
+            return;
+        }
+        
+        // Otherwise, throttle updates
+        var now = DateTime.UtcNow;
+        if (now - _lastUIUpdate >= _uiUpdateInterval)
+        {
+            _lastUIUpdate = now;
+            InvokeAsync(() => StateHasChanged());
+        }
+        else
+        {
+            // Schedule an update if we don't have one pending
+            if (!_pendingUIUpdate)
+            {
+                _pendingUIUpdate = true;
+                var delay = _uiUpdateInterval - (now - _lastUIUpdate);
+                Task.Delay(delay).ContinueWith(_ =>
+                {
+                    _pendingUIUpdate = false;
+                    _lastUIUpdate = DateTime.UtcNow;
+                    InvokeAsync(() => StateHasChanged());
+                });
+            }
+        }
+    }
+
+    private void OnPhaseCompleted(object? sender, ScanPhase phase)
+    {
+        InvokeAsync(() =>
+        {
+            Logger.LogInformation($"Phase {phase} completed");
             StateHasChanged();
         });
     }
@@ -518,5 +529,7 @@
     public void Dispose()
     {
         ScanStatusService.StatusChanged -= OnScanStatusChanged;
+        PhasedScanService.ProgressChanged -= OnPhasedScanProgressChanged;
+        PhasedScanService.PhaseCompleted -= OnPhaseCompleted;
     }
 }

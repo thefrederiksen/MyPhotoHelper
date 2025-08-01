@@ -1233,9 +1233,8 @@
     
     private string GetThumbnailUrl(string imagePath)
     {
-        // For absolute paths, we'll pass them directly to the API
-        // The API will handle finding the file properly
-        return $"/api/images/thumbnail/{Uri.EscapeDataString(imagePath)}";
+        // Use raw image endpoint for better performance - no thumbnail processing needed
+        return $"/api/images/raw/{Uri.EscapeDataString(imagePath)}";
     }
     
     private void CancelFolderPreview()

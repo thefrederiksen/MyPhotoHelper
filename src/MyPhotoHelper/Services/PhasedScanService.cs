@@ -74,16 +74,34 @@ namespace MyPhotoHelper.Services
                 _logger.LogInformation("Starting phased scan");
 
                 // Phase 1: Discovery
+                _logger.LogInformation("=== PHASE 1: DISCOVERY - STARTING ===");
                 await ExecutePhase1DiscoveryAsync(cancellationToken);
-                if (cancellationToken.IsCancellationRequested) return;
+                _logger.LogInformation("=== PHASE 1: DISCOVERY - COMPLETED ===");
+                if (cancellationToken.IsCancellationRequested) 
+                {
+                    _logger.LogWarning("Scan cancelled after Phase 1");
+                    return;
+                }
 
                 // Phase 2: Metadata
+                _logger.LogInformation("=== PHASE 2: METADATA - STARTING ===");
                 await ExecutePhase2MetadataAsync(cancellationToken);
-                if (cancellationToken.IsCancellationRequested) return;
+                _logger.LogInformation("=== PHASE 2: METADATA - COMPLETED ===");
+                if (cancellationToken.IsCancellationRequested) 
+                {
+                    _logger.LogWarning("Scan cancelled after Phase 2");
+                    return;
+                }
 
                 // Phase 3: Hashing
+                _logger.LogInformation("=== PHASE 3: HASHING - STARTING ===");
                 await ExecutePhase3HashingAsync(cancellationToken);
-                if (cancellationToken.IsCancellationRequested) return;
+                _logger.LogInformation("=== PHASE 3: HASHING - COMPLETED ===");
+                if (cancellationToken.IsCancellationRequested) 
+                {
+                    _logger.LogWarning("Scan cancelled after Phase 3");
+                    return;
+                }
 
                 // Phase 4: AI Analysis (future)
                 // await ExecutePhase4AnalysisAsync(cancellationToken);
@@ -156,21 +174,34 @@ namespace MyPhotoHelper.Services
             }
 
             _logger.LogInformation($"Phase 1 completed. Found {phaseProgress.SuccessCount} new images");
+            _logger.LogInformation($"Phase 1 EndTime: {phaseProgress.EndTime}");
         }
 
         private async Task ExecutePhase2MetadataAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting Phase 2: Image Details Extraction");
+            _logger.LogInformation($"Cancellation requested: {cancellationToken.IsCancellationRequested}");
             _currentProgress!.CurrentPhase = ScanPhase.Phase2_Metadata;
             
             using var scope = _serviceProvider.CreateScope();
             var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
             
+            // Throttle progress updates to reduce UI overhead
+            var lastProgressUpdate = DateTime.UtcNow;
+            var updateInterval = TimeSpan.FromSeconds(1);
+            
             var progressReporter = new Progress<PhaseProgress>(progress =>
             {
                 _currentProgress.PhaseProgress[ScanPhase.Phase2_Metadata] = progress;
-                ProgressChanged?.Invoke(this, _currentProgress);
-                _scanStatusService.UpdatePhasedStatus(_currentProgress);
+                
+                // Only send updates every second, unless it's the final update
+                var now = DateTime.UtcNow;
+                if (progress.EndTime.HasValue || now - lastProgressUpdate >= updateInterval)
+                {
+                    lastProgressUpdate = now;
+                    ProgressChanged?.Invoke(this, _currentProgress);
+                    _scanStatusService.UpdatePhasedStatus(_currentProgress);
+                }
             });
 
             await metadataService.ExtractMetadataForNewImagesAsync(progressReporter, cancellationToken);
@@ -187,11 +218,22 @@ namespace MyPhotoHelper.Services
             using var scope = _serviceProvider.CreateScope();
             var hashService = scope.ServiceProvider.GetRequiredService<IHashCalculationService>();
             
+            // Throttle progress updates to reduce UI overhead
+            var lastProgressUpdate = DateTime.UtcNow;
+            var updateInterval = TimeSpan.FromSeconds(1);
+            
             var progressReporter = new Progress<PhaseProgress>(progress =>
             {
                 _currentProgress.PhaseProgress[ScanPhase.Phase3_Hashing] = progress;
-                ProgressChanged?.Invoke(this, _currentProgress);
-                _scanStatusService.UpdatePhasedStatus(_currentProgress);
+                
+                // Only send updates every second, unless it's the final update
+                var now = DateTime.UtcNow;
+                if (progress.EndTime.HasValue || now - lastProgressUpdate >= updateInterval)
+                {
+                    lastProgressUpdate = now;
+                    ProgressChanged?.Invoke(this, _currentProgress);
+                    _scanStatusService.UpdatePhasedStatus(_currentProgress);
+                }
             });
 
             await hashService.CalculateHashesForImagesAsync(progressReporter, cancellationToken);

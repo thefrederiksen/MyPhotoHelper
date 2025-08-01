@@ -302,6 +302,65 @@ namespace MyPhotoHelper
                     return Results.StatusCode(500);
                 }
             });
+
+            // Map raw image API endpoint for file paths (like thumbnail but serves raw files)
+            app.MapGet("/api/images/raw/{**path}", (string path) =>
+            {
+                try
+                {
+                    var decodedPath = Uri.UnescapeDataString(path);
+                    
+                    // Try to find the full path by checking scan directories
+                    string fullPath = decodedPath;
+                    if (!Path.IsPathRooted(decodedPath))
+                    {
+                        using var scope = app.Services.CreateScope();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                        var scanDirs = dbContext.tbl_scan_directory.ToList();
+                        
+                        foreach (var dir in scanDirs)
+                        {
+                            var testPath = Path.Combine(dir.DirectoryPath, decodedPath);
+                            if (File.Exists(testPath))
+                            {
+                                fullPath = testPath;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!File.Exists(fullPath))
+                    {
+                        return Results.NotFound();
+                    }
+                    
+                    // Serve the raw file directly
+                    var contentType = GetContentTypeForPath(fullPath);
+                    var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read);
+                    return Results.File(fileStream, contentType, enableRangeProcessing: true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex, "Error serving raw image by path");
+                    return Results.StatusCode(500);
+                }
+            });
+        }
+
+        private static string GetContentTypeForPath(string filePath)
+        {
+            var extension = Path.GetExtension(filePath).ToLower();
+            return extension switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".webp" => "image/webp",
+                ".heic" => "image/heic",
+                ".heif" => "image/heif",
+                _ => "application/octet-stream"
+            };
         }
         
         private async Task InitializePython(WebApplication app)
