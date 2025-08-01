@@ -7,26 +7,35 @@ using MyPhotoHelper.Models;
 
 namespace MyPhotoHelper.Services
 {
-    public interface IFastScreenshotDetectionService
+    public interface IFastImageCategorizationService
     {
-        Task DetectScreenshotsWithQueriesAsync(IProgress<PhaseProgress>? progress = null, CancellationToken cancellationToken = default);
-        Task<ScreenshotQueryResults> GetScreenshotStatisticsAsync();
+        Task CategorizeImagesAsync(IProgress<PhaseProgress>? progress = null, CancellationToken cancellationToken = default);
+        Task<ImageCategorizationResults> GetCategorizationStatisticsAsync();
     }
 
-    public class ScreenshotQueryResults
+    public class ImageCategorizationResults
     {
         public int TotalImages { get; set; }
+        public int CategorizedImages { get; set; }
+        public int UncategorizedImages { get; set; }
+        
+        // Screenshot stats
         public int FilenameScreenshots { get; set; }
         public int ResolutionScreenshots { get; set; }
-        public int NoExifScreenshots { get; set; }
-        public int TotalDetectedScreenshots { get; set; }
+        public int TotalScreenshots { get; set; }
+        
+        // Photo stats
+        public int PhotosWithCamera { get; set; }
+        public int TotalPhotos { get; set; }
+        
         public List<string> CommonScreenshotPatterns { get; set; } = new();
         public List<string> CommonResolutions { get; set; } = new();
+        public List<string> CommonCameraMakes { get; set; } = new();
     }
 
-    public class FastScreenshotDetectionService : IFastScreenshotDetectionService
+    public class FastImageCategorizationService : IFastImageCategorizationService
     {
-        private readonly ILogger<FastScreenshotDetectionService> _logger;
+        private readonly ILogger<FastImageCategorizationService> _logger;
         private readonly IServiceProvider _serviceProvider;
 
         // Common screenshot filename patterns
@@ -43,15 +52,15 @@ namespace MyPhotoHelper.Services
             (375, 667), (360, 800), (412, 915), (768, 1024), (834, 1194)
         };
 
-        public FastScreenshotDetectionService(
-            ILogger<FastScreenshotDetectionService> logger,
+        public FastImageCategorizationService(
+            ILogger<FastImageCategorizationService> logger,
             IServiceProvider serviceProvider)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
         }
 
-        public async Task DetectScreenshotsWithQueriesAsync(IProgress<PhaseProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task CategorizeImagesAsync(IProgress<PhaseProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
@@ -60,10 +69,10 @@ namespace MyPhotoHelper.Services
             {
                 Phase = ScanPhase.Phase3_ScreenshotDetection,
                 StartTime = DateTime.UtcNow,
-                CurrentItem = "Analyzing screenshot patterns..."
+                CurrentItem = "Analyzing image categories..."
             };
 
-            _logger.LogInformation("Starting fast screenshot detection using database queries");
+            _logger.LogInformation("Starting fast image categorization using database queries");
 
             try
             {
@@ -76,11 +85,11 @@ namespace MyPhotoHelper.Services
                     .CountAsync(cancellationToken);
 
                 phaseProgress.TotalItems = totalImages;
-                _logger.LogInformation($"Found {totalImages} images to analyze for screenshot detection");
+                _logger.LogInformation($"Found {totalImages} images to analyze for categorization");
                 
                 if (totalImages == 0)
                 {
-                    _logger.LogWarning("No images found to process - screenshot detection will be skipped");
+                    _logger.LogWarning("No images found to process - categorization will be skipped");
                     phaseProgress.ProcessedItems = 0;
                     phaseProgress.EndTime = DateTime.UtcNow;
                     phaseProgress.CurrentItem = "No images to process";
@@ -90,7 +99,7 @@ namespace MyPhotoHelper.Services
 
                 // Step 2: Detect screenshots by filename patterns (VERY fast)
                 phaseProgress.CurrentItem = "Detecting screenshots by filename...";
-                phaseProgress.ProcessedItems = totalImages / 4;
+                phaseProgress.ProcessedItems = totalImages / 5;
                 progress?.Report(phaseProgress);
 
                 var filenameScreenshots = 0;
@@ -99,8 +108,10 @@ namespace MyPhotoHelper.Services
                     try
                     {
                         var sql = $@"
-                            INSERT OR IGNORE INTO tbl_image_analysis (ImageId, ImageCategory, PhotoSubcategory, AIAnalyzedAt, AIModelUsed, AIAnalysisJson)
-                            SELECT i.ImageId, 'screenshot', 'filename_pattern', datetime('now'), 'screenshot_detector', json_object('confidence', 0.95, 'method', 'filename_pattern', 'pattern', '{pattern}')
+                            INSERT OR IGNORE INTO tbl_image_analysis (ImageId, ImageCategory, PhotoSubcategory, AIAnalyzedAt, AIModelUsed, AIAnalysisJson, AIDescription)
+                            SELECT i.ImageId, 'screenshot', 'filename_pattern', datetime('now'), 'fast_categorizer', 
+                                   json_object('confidence', 0.95, 'method', 'filename_pattern', 'pattern', '{pattern}'),
+                                   'Detected as screenshot: filename contains ''{pattern}'''
                             FROM tbl_images i
                             WHERE i.FileExists = 1 AND i.IsDeleted = 0
                             AND LOWER(i.FileName) LIKE '%{pattern.ToLower()}%'
@@ -122,12 +133,10 @@ namespace MyPhotoHelper.Services
                 }
 
                 _logger.LogInformation($"Found {filenameScreenshots} screenshots by filename patterns");
-                _logger.LogInformation($"Step 2 completed - filename detection finished");
 
                 // Step 3: Detect screenshots by common resolutions (fast)
-                _logger.LogInformation("Starting Step 3: Resolution-based detection");
                 phaseProgress.CurrentItem = "Detecting screenshots by resolution...";
-                phaseProgress.ProcessedItems = totalImages / 2;
+                phaseProgress.ProcessedItems = (totalImages * 2) / 5;
                 progress?.Report(phaseProgress);
 
                 var resolutionScreenshots = 0;
@@ -136,8 +145,10 @@ namespace MyPhotoHelper.Services
                     try
                     {
                         var sql = $@"
-                            INSERT OR IGNORE INTO tbl_image_analysis (ImageId, ImageCategory, PhotoSubcategory, AIAnalyzedAt, AIModelUsed, AIAnalysisJson)
-                            SELECT i.ImageId, 'screenshot', 'resolution_match', datetime('now'), 'screenshot_detector', json_object('confidence', 0.80, 'method', 'resolution_match', 'width', {width}, 'height', {height})
+                            INSERT OR IGNORE INTO tbl_image_analysis (ImageId, ImageCategory, PhotoSubcategory, AIAnalyzedAt, AIModelUsed, AIAnalysisJson, AIDescription)
+                            SELECT i.ImageId, 'screenshot', 'resolution_match', datetime('now'), 'fast_categorizer', 
+                                   json_object('confidence', 0.80, 'method', 'resolution_match', 'width', {width}, 'height', {height}),
+                                   'Detected as screenshot: resolution {width}×{height} matches common screen size'
                             FROM tbl_images i
                             INNER JOIN tbl_image_metadata m ON i.ImageId = m.ImageId
                             WHERE i.FileExists = 1 AND i.IsDeleted = 0
@@ -160,82 +171,80 @@ namespace MyPhotoHelper.Services
                 }
 
                 _logger.LogInformation($"Found {resolutionScreenshots} additional screenshots by resolution");
-                _logger.LogInformation($"Step 3 completed - resolution detection finished");
 
-                // Step 4: Detect screenshots by missing camera info (medium confidence)
-                _logger.LogInformation("Starting Step 4: No-camera-data detection");
-                phaseProgress.CurrentItem = "Detecting screenshots by missing camera data...";
-                phaseProgress.ProcessedItems = (totalImages * 3) / 4;
+                // Step 4: Detect photos by camera information (high confidence)
+                phaseProgress.CurrentItem = "Detecting photos with camera information...";
+                phaseProgress.ProcessedItems = (totalImages * 3) / 5;
                 progress?.Report(phaseProgress);
 
-                var noExifScreenshots = 0;
+                var photosWithCamera = 0;
                 try
                 {
-                    var noExifSql = @"
-                        INSERT OR IGNORE INTO tbl_image_analysis (ImageId, ImageCategory, PhotoSubcategory, AIAnalyzedAt, AIModelUsed, AIAnalysisJson)
-                        SELECT i.ImageId, 'screenshot', 'no_camera_data', datetime('now'), 'screenshot_detector', json_object('confidence', 0.60, 'method', 'no_camera_data', 'pixel_count', m.Width * m.Height)
+                    var photoSql = @"
+                        INSERT OR IGNORE INTO tbl_image_analysis (ImageId, ImageCategory, PhotoSubcategory, AIAnalyzedAt, AIModelUsed, AIAnalysisJson, AIDescription)
+                        SELECT i.ImageId, 'photo', 'has_camera_info', datetime('now'), 'fast_categorizer', 
+                               json_object('confidence', 0.95, 'method', 'camera_detection', 'camera_make', m.CameraMake, 'camera_model', m.CameraModel),
+                               'Detected as photo: contains camera metadata (' || m.CameraMake || ' ' || m.CameraModel || ')'
                         FROM tbl_images i
                         INNER JOIN tbl_image_metadata m ON i.ImageId = m.ImageId
                         WHERE i.FileExists = 1 AND i.IsDeleted = 0
-                        AND (m.CameraMake IS NULL OR m.CameraMake = '')
-                        AND (m.CameraModel IS NULL OR m.CameraModel = '')
-                        AND (m.Width * m.Height) > 100000  -- Reasonable size
+                        AND m.CameraMake IS NOT NULL AND m.CameraMake != ''
+                        AND m.CameraModel IS NOT NULL AND m.CameraModel != ''
                         AND NOT EXISTS (
                             SELECT 1 FROM tbl_image_analysis a 
                             WHERE a.ImageId = i.ImageId AND a.ImageCategory IS NOT NULL
                         )";
 
-                    noExifScreenshots = await dbContext.Database.ExecuteSqlRawAsync(noExifSql, cancellationToken);
+                    photosWithCamera = await dbContext.Database.ExecuteSqlRawAsync(photoSql, cancellationToken);
+                    _logger.LogInformation($"Found {photosWithCamera} photos with camera information");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Error processing no-camera-data detection: {ex.Message}");
-                    phaseProgress.AddError($"No-camera-data detection failed: {ex.Message}");
+                    _logger.LogError(ex, $"Error processing camera detection: {ex.Message}");
+                    phaseProgress.AddError($"Camera detection failed: {ex.Message}");
                     progress?.Report(phaseProgress);
                 }
-                _logger.LogInformation($"Found {noExifScreenshots} additional screenshots by missing camera data");
-                _logger.LogInformation($"Step 4 completed - no-camera-data detection finished");
 
-                // Step 5: Complete detection (no need to mark non-screenshots)
-                _logger.LogInformation("Step 5: Screenshot detection completed - only detected screenshots have analysis records");
-                phaseProgress.CurrentItem = "Screenshot detection completed";
+                // Complete categorization
+                _logger.LogInformation("Image categorization completed");
+                phaseProgress.CurrentItem = "Image categorization completed";
                 phaseProgress.ProcessedItems = totalImages;
                 progress?.Report(phaseProgress);
 
-                var totalDetected = filenameScreenshots + resolutionScreenshots + noExifScreenshots;
+                var totalCategorized = filenameScreenshots + resolutionScreenshots + photosWithCamera;
                 
-                _logger.LogInformation($"Screenshot detection summary:");
-                _logger.LogInformation($"  - By filename patterns: {filenameScreenshots}");
-                _logger.LogInformation($"  - By resolution match: {resolutionScreenshots}");
-                _logger.LogInformation($"  - By missing camera data: {noExifScreenshots}");
-                _logger.LogInformation($"  - Total screenshots detected: {totalDetected}");
+                _logger.LogInformation($"Image categorization summary:");
+                _logger.LogInformation($"  - Screenshots by filename: {filenameScreenshots}");
+                _logger.LogInformation($"  - Screenshots by resolution: {resolutionScreenshots}");
+                _logger.LogInformation($"  - Photos with camera info: {photosWithCamera}");
+                _logger.LogInformation($"  - Total categorized: {totalCategorized}");
                 _logger.LogInformation($"  - Total images scanned: {totalImages}");
-                _logger.LogInformation($"  - Regular photos: {totalImages - totalDetected} (no analysis record created)");
+                _logger.LogInformation($"  - Uncategorized images: {totalImages - totalCategorized} (no analysis record created)");
                 
-                phaseProgress.SuccessCount = totalDetected;
+                phaseProgress.SuccessCount = totalCategorized;
                 phaseProgress.EndTime = DateTime.UtcNow;
-                phaseProgress.CurrentItem = "Screenshot detection completed";
+                phaseProgress.CurrentItem = "Image categorization completed";
                 progress?.Report(phaseProgress);
 
-                _logger.LogInformation($"Fast screenshot detection completed successfully in {(phaseProgress.EndTime - phaseProgress.StartTime)?.TotalSeconds:F1} seconds");
+                _logger.LogInformation($"Fast image categorization completed successfully in {(phaseProgress.EndTime - phaseProgress.StartTime)?.TotalSeconds:F1} seconds");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during fast screenshot detection");
+                _logger.LogError(ex, "Error during fast image categorization");
                 phaseProgress.ErrorCount = 1;
                 phaseProgress.EndTime = DateTime.UtcNow;
-                phaseProgress.CurrentItem = "Screenshot detection failed";
+                phaseProgress.CurrentItem = "Image categorization failed";
                 progress?.Report(phaseProgress);
                 throw;
             }
         }
 
-        public async Task<ScreenshotQueryResults> GetScreenshotStatisticsAsync()
+        public async Task<ImageCategorizationResults> GetCategorizationStatisticsAsync()
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
 
-            var results = new ScreenshotQueryResults();
+            var results = new ImageCategorizationResults();
 
             // Total images
             results.TotalImages = await dbContext.tbl_images
@@ -252,15 +261,27 @@ namespace MyPhotoHelper.Services
                 .Where(a => a.ImageCategory == "screenshot" && a.PhotoSubcategory == "resolution_match")
                 .CountAsync();
 
-            // Screenshots by missing EXIF
-            results.NoExifScreenshots = await dbContext.tbl_image_analysis
-                .Where(a => a.ImageCategory == "screenshot" && a.PhotoSubcategory == "no_camera_data")
-                .CountAsync();
-
-            // Total detected screenshots
-            results.TotalDetectedScreenshots = await dbContext.tbl_image_analysis
+            // Total screenshots
+            results.TotalScreenshots = await dbContext.tbl_image_analysis
                 .Where(a => a.ImageCategory == "screenshot")
                 .CountAsync();
+
+            // Photos with camera info
+            results.PhotosWithCamera = await dbContext.tbl_image_analysis
+                .Where(a => a.ImageCategory == "photo" && a.PhotoSubcategory == "has_camera_info")
+                .CountAsync();
+
+            // Total photos
+            results.TotalPhotos = await dbContext.tbl_image_analysis
+                .Where(a => a.ImageCategory == "photo")
+                .CountAsync();
+
+            // Total categorized
+            results.CategorizedImages = await dbContext.tbl_image_analysis
+                .Where(a => a.ImageCategory != null)
+                .CountAsync();
+
+            results.UncategorizedImages = results.TotalImages - results.CategorizedImages;
 
             // Common patterns found (samples)
             results.CommonScreenshotPatterns = await dbContext.tbl_images
@@ -289,6 +310,20 @@ namespace MyPhotoHelper.Services
                 .Select(x => $"{x.Width}x{x.Height}")
                 .Distinct()
                 .Take(10)
+                .ToListAsync();
+
+            // Common camera makes
+            results.CommonCameraMakes = await dbContext.tbl_image_metadata
+                .Where(m => m.CameraMake != null && m.CameraMake != "")
+                .Join(dbContext.tbl_image_analysis,
+                    m => m.ImageId,
+                    a => a.ImageId,
+                    (m, a) => new { m.CameraMake, a.ImageCategory })
+                .Where(x => x.ImageCategory == "photo")
+                .GroupBy(x => x.CameraMake)
+                .OrderByDescending(g => g.Count())
+                .Take(10)
+                .Select(g => $"{g.Key} ({g.Count()})")
                 .ToListAsync();
 
             return results;

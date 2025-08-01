@@ -93,14 +93,19 @@ namespace MyPhotoHelper.Services
                     ExecutePhase1DiscoveryAsync,
                     cancellationToken);
                     
+                _logger.LogInformation($"Phase 1 result: success={phase1Success}, cancellationRequested={cancellationToken.IsCancellationRequested}");
+                    
                 if (!phase1Success || cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogWarning("Scan stopped after Phase 1");
+                    _logger.LogWarning($"Scan stopped after Phase 1. Success: {phase1Success}, Cancelled: {cancellationToken.IsCancellationRequested}");
                     return;
                 }
 
                 // Phase 2: Metadata - only if Phase 1 found images
-                if (await HasImagesToProcess())
+                var hasImages = await HasImagesToProcess();
+                _logger.LogInformation($"Checking for images to process: {hasImages}");
+                
+                if (hasImages)
                 {
                     _logger.LogInformation("=== PHASE 2: METADATA - STARTING ===");
                     var phase2Success = await ExecutePhaseWithErrorHandling(
@@ -142,7 +147,8 @@ namespace MyPhotoHelper.Services
                 }
                 else
                 {
-                    _logger.LogInformation("No images to process - skipping Phases 2, 3, and 4");
+                    _logger.LogWarning("=== NO IMAGES FOUND - SKIPPING PHASES 2, 3, AND 4 ===");
+                    _logger.LogWarning($"HasImagesToProcess returned false. Database may not have saved images from Phase 1.");
                 }
 
                 // Phase 5: AI Analysis (future)
@@ -175,7 +181,10 @@ namespace MyPhotoHelper.Services
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
             
-            return await dbContext.tbl_images.AnyAsync();
+            var imageCount = await dbContext.tbl_images.CountAsync();
+            _logger.LogInformation($"HasImagesToProcess: Found {imageCount} images in database");
+            
+            return imageCount > 0;
         }
         
         private async Task<bool> ExecutePhaseWithErrorHandling(
@@ -236,10 +245,19 @@ namespace MyPhotoHelper.Services
                 await photoScanService.StartScanAsync(cancellationToken);
                 
                 // Wait for completion
+                var waitStartTime = DateTime.UtcNow;
                 while (photoScanService.IsScanning && !cancellationToken.IsCancellationRequested)
                 {
                     await Task.Delay(500, cancellationToken);
+                    var elapsed = DateTime.UtcNow - waitStartTime;
+                    if (elapsed.TotalSeconds > 5) // Log every 5 seconds
+                    {
+                        _logger.LogInformation($"Still waiting for Phase 1 scan to complete... IsScanning: {photoScanService.IsScanning}");
+                        waitStartTime = DateTime.UtcNow;
+                    }
                 }
+                
+                _logger.LogInformation($"Phase 1 scan wait completed. IsScanning: {photoScanService.IsScanning}");
             }
             finally
             {
@@ -291,7 +309,7 @@ namespace MyPhotoHelper.Services
             _currentProgress!.CurrentPhase = ScanPhase.Phase3_ScreenshotDetection;
             
             using var scope = _serviceProvider.CreateScope();
-            var fastScreenshotService = scope.ServiceProvider.GetRequiredService<IFastScreenshotDetectionService>();
+            var imageCategorizationService = scope.ServiceProvider.GetRequiredService<IFastImageCategorizationService>();
             
             // Throttle progress updates to reduce UI overhead
             var lastProgressUpdate = DateTime.UtcNow;
@@ -311,7 +329,7 @@ namespace MyPhotoHelper.Services
                 }
             });
 
-            await fastScreenshotService.DetectScreenshotsWithQueriesAsync(progressReporter, cancellationToken);
+            await imageCategorizationService.CategorizeImagesAsync(progressReporter, cancellationToken);
             
             PhaseCompleted?.Invoke(this, ScanPhase.Phase3_ScreenshotDetection);
             _logger.LogInformation("Phase 3 completed");

@@ -2,7 +2,7 @@
 @using MyPhotoHelper.Services
 @using MyPhotoHelper.Models
 @inject IScreenshotAnalysisService AnalysisService
-@inject IFastScreenshotDetectionService FastDetectionService
+@inject IFastImageCategorizationService FastCategorizationService
 
 <PageTitle>Screenshot Analysis</PageTitle>
 
@@ -294,7 +294,7 @@
                 InvokeAsync(StateHasChanged);
             });
 
-            await FastDetectionService.DetectScreenshotsWithQueriesAsync(progress);
+            await FastCategorizationService.CategorizeImagesAsync(progress);
             detectionResult = "✅ Fast screenshot detection completed! Refresh the analysis to see results.";
         }
         catch (Exception ex)

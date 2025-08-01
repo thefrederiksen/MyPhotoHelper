@@ -192,7 +192,7 @@
             Logger.Info($"Loading memories for {selectedDate:yyyy-MM-dd}");
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             
-            memories = await MemoryService.GetTodaysMemoriesAsync(selectedDate);
+            memories = await MemoryService.GetTodaysMemoriesAsync(selectedDate, excludeScreenshots: true);
             hasPhotos = memories?.TotalPhotos > 0;
             
             stopwatch.Stop();

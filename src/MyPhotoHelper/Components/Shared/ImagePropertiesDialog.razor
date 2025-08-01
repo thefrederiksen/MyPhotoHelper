@@ -29,27 +29,22 @@
                                         <th colspan="2">File Information</th>
                                     </tr>
                                     <tr>
-                                        <td><strong>File Name:</strong></td>
+                                        <td><strong>Name:</strong></td>
                                         <td>@Image.FileName</td>
                                     </tr>
                                     <tr>
-                                        <td><strong>Relative Path:</strong></td>
-                                        <td class="text-break small">@Image.RelativePath</td>
-                                    </tr>
-                                    <tr class="@(!fileExists ? "table-danger" : "")">
-                                        <td><strong>Full Path:</strong></td>
+                                        <td><strong>Path:</strong></td>
                                         <td class="text-break small">
-                                            @fullPath
+                                            @Image.RelativePath
                                             @if (!string.IsNullOrEmpty(fullPath))
                                             {
-                                                <br/>
                                                 @if (fileExists)
                                                 {
-                                                    <span class="badge bg-success">File Exists</span>
+                                                    <span class="badge bg-success ms-2">Found</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-danger">File Not Found</span>
+                                                    <span class="badge bg-danger ms-2">Missing</span>
                                                 }
                                             }
                                         </td>
@@ -62,18 +57,18 @@
                                         </tr>
                                     }
                                     <tr>
-                                        <td><strong>File Size:</strong></td>
+                                        <td><strong>Size:</strong></td>
                                         <td>@FormatFileSize(Image.FileSizeBytes)</td>
                                     </tr>
                                     @if (Image.tbl_image_metadata != null)
                                     {
                                         <tr>
                                             <td><strong>Dimensions:</strong></td>
-                                            <td>@Image.tbl_image_metadata.Width × @Image.tbl_image_metadata.Height pixels</td>
+                                            <td>@Image.tbl_image_metadata.Width×@Image.tbl_image_metadata.Height</td>
                                         </tr>
                                     }
                                     <tr>
-                                        <td><strong>File Type:</strong></td>
+                                        <td><strong>Type:</strong></td>
                                         <td>@(Image.FileExtension?.ToUpper() ?? "Unknown")</td>
                                     </tr>
                                     
@@ -86,6 +81,13 @@
                                             <td><strong>Category:</strong></td>
                                             <td>@(Image.tbl_image_analysis.ImageCategory ?? "Not analyzed")</td>
                                         </tr>
+                                        @if (!string.IsNullOrEmpty(Image.tbl_image_analysis.PhotoSubcategory))
+                                        {
+                                            <tr>
+                                                <td><strong>Subcategory:</strong></td>
+                                                <td>@Image.tbl_image_analysis.PhotoSubcategory</td>
+                                            </tr>
+                                        }
                                         @if (!string.IsNullOrEmpty(Image.tbl_image_analysis.AIDescription))
                                         {
                                             <tr>
@@ -122,22 +124,12 @@
                                         <th colspan="2">Technical Details</th>
                                     </tr>
                                     <tr>
-                                        <td><strong>Database ID:</strong></td>
+                                        <td><strong>ID:</strong></td>
                                         <td>@Image.ImageId</td>
                                     </tr>
                                     <tr>
-                                        <td><strong>API Raw URL:</strong></td>
-                                        <td class="text-break small">
-                                            <code>/api/images/@Image.ImageId/raw</code>
-                                            <br/>
-                                            <a href="/api/images/@Image.ImageId/raw" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
-                                                View Full Image
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>File Hash:</strong></td>
-                                        <td class="text-break small font-monospace">@Image.FileHash</td>
+                                        <td><strong>Hash:</strong></td>
+                                        <td class="text-break small font-monospace" title="@Image.FileHash">@Image.FileHash.Substring(0, 12)...</td>
                                     </tr>
                                     @if (IsHeicFile())
                                     {
@@ -168,6 +160,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <a href="/api/images/@Image.ImageId/raw" target="_blank" class="btn btn-primary">
+                        <i class="oi oi-external-link"></i> View Full Image
+                    </a>
                     <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
                 </div>
             </div>

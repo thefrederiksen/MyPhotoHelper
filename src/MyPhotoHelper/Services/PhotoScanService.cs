@@ -130,6 +130,25 @@ namespace MyPhotoHelper.Services
                         if (Directory.Exists(scanDir.DirectoryPath))
                         {
                             var files = GetImageFiles(scanDir.DirectoryPath).ToList();
+                            _logger.LogInformation($"Scanning {scanDir.DirectoryPath}: Found {files.Count} image files");
+                            
+                            if (files.Count == 0)
+                            {
+                                _logger.LogWarning($"No image files found in: {scanDir.DirectoryPath}");
+                                try 
+                                {
+                                    var allFiles = Directory.GetFiles(scanDir.DirectoryPath, "*.*", SearchOption.AllDirectories);
+                                    _logger.LogWarning($"Total files in directory: {allFiles.Length}");
+                                    if (allFiles.Length > 0)
+                                    {
+                                        _logger.LogWarning($"Sample files: {string.Join(", ", allFiles.Take(5).Select(Path.GetFileName))}");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Error listing directory contents");
+                                }
+                            }
                             
                             // Update total file count as we go
                             totalFileCount += files.Count;
@@ -159,7 +178,7 @@ namespace MyPhotoHelper.Services
                                         {
                                             RelativePath = relativePath,
                                             FileName = fileInfo.Name,
-                                            FileExtension = fileInfo.Extension,
+                                            FileExtension = fileInfo.Extension.ToLower(), // Normalize to lowercase
                                             FileHash = "", // Will be calculated later if needed
                                             FileSizeBytes = (int)Math.Min(fileInfo.Length, int.MaxValue),
                                             DateCreated = DateTime.UtcNow,
@@ -297,7 +316,7 @@ namespace MyPhotoHelper.Services
         {
             var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) 
             { 
-                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic" 
+                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".heic", ".heif", ".tiff", ".tif"
             };
             
             // Use EnumerateFiles for better memory efficiency with large directories
