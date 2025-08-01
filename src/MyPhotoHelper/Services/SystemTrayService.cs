@@ -24,8 +24,7 @@ namespace MyPhotoHelper.Services
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly IScanStatusService _scanStatusService;
         private readonly IServiceProvider _serviceProvider;
-        private bool _disposed = false;
-        private Thread? _trayThread;
+        private volatile bool _disposed = false;
         private ToolStripMenuItem? _scanStatusMenuItem;
         private ToolStripMenuItem? _scanProgressMenuItem;
         private System.Windows.Forms.Timer? _statusUpdateTimer;
@@ -34,6 +33,7 @@ namespace MyPhotoHelper.Services
         private bool _lastScanningState = false;
         private string _lastTooltipText = "MyPhotoHelper - Ready";
         private ScanPhase _lastPhase = ScanPhase.None;
+        private readonly object _updateLock = new object();
 
         public SystemTrayService(
             ILogger<SystemTrayService> logger,
@@ -56,22 +56,10 @@ namespace MyPhotoHelper.Services
                 // Add to startup automatically (user-level, no admin required)
                 AddToStartup();
 
-                // Create system tray icon on a separate STA thread for Windows Forms
-                _trayThread = new Thread(() =>
-                {
-                    Application.EnableVisualStyles();
-                    Application.SetCompatibleTextRenderingDefault(false);
-                    
-                    CreateSystemTrayIcon();
-                    SetupScanStatusMonitoring();
-                    
-                    // Run Windows Forms message loop
-                    Application.Run();
-                });
-                
-                _trayThread.SetApartmentState(ApartmentState.STA);
-                _trayThread.IsBackground = true;
-                _trayThread.Start();
+                // Create system tray icon on the main UI thread
+                // Since we're called from the main WinForms app, we're already on the UI thread
+                CreateSystemTrayIcon();
+                SetupScanStatusMonitoring();
 
                 _logger.LogInformation("System tray service initialized successfully");
             }
@@ -409,6 +397,9 @@ namespace MyPhotoHelper.Services
             {
                 _logger.LogInformation("Exiting MyPhotoHelper application...");
                 
+                // Mark as disposed to prevent further updates
+                _disposed = true;
+                
                 // Hide and dispose tray icon first
                 if (_trayIcon != null)
                 {
@@ -417,11 +408,11 @@ namespace MyPhotoHelper.Services
                     _trayIcon = null;
                 }
                 
-                // Exit the Windows Forms application loop on the tray thread
-                Application.Exit();
-                
                 // Stop the ASP.NET Core application
                 _applicationLifetime.StopApplication();
+                
+                // Exit the Windows Forms application loop (main message pump)
+                Application.Exit();
             }
             catch (Exception ex)
             {
@@ -440,16 +431,30 @@ namespace MyPhotoHelper.Services
         {
             if (!_disposed)
             {
-                _trayIcon?.Dispose();
-                
-                // Stop the tray thread
-                if (_trayThread != null && _trayThread.IsAlive)
-                {
-                    Application.Exit();
-                    _trayThread.Join(1000);
-                }
-                
                 _disposed = true;
+                
+                // Unsubscribe event handlers
+                _scanStatusService.StatusChanged -= OnScanStatusChanged;
+                _scanStatusService.PhasedStatusChanged -= OnPhasedStatusChanged;
+                
+                // Stop and dispose timer
+                _statusUpdateTimer?.Stop();
+                _statusUpdateTimer?.Dispose();
+                _statusUpdateTimer = null;
+                
+                // Dispose icons
+                _defaultIcon?.Dispose();
+                _defaultIcon = null;
+                _scanningIcon?.Dispose();
+                _scanningIcon = null;
+                
+                // Dispose tray icon
+                if (_trayIcon != null)
+                {
+                    _trayIcon.Visible = false;
+                    _trayIcon.Dispose();
+                    _trayIcon = null;
+                }
             }
         }
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
@@ -507,53 +512,75 @@ namespace MyPhotoHelper.Services
             // Setup timer for UI updates - ONLY for progress menu, not the icon
             _statusUpdateTimer = new System.Windows.Forms.Timer();
             _statusUpdateTimer.Interval = 5000; // Update every 5 seconds instead of 1
-            _statusUpdateTimer.Tick += (s, e) => UpdateScanProgressMenu(); // Only update menu, not whole display
+            _statusUpdateTimer.Tick += (s, e) => 
+            {
+                lock (_updateLock)
+                {
+                    if (!_disposed && _trayIcon != null)
+                    {
+                        UpdateScanProgressMenu();
+                    }
+                }
+            };
             _statusUpdateTimer.Start();
         }
         
         private void OnScanStatusChanged(object? sender, EventArgs e)
         {
-            if (_trayIcon != null && _trayThread != null)
+            if (_disposed || _trayIcon == null) return;
+            
+            try
             {
-                // Use the context menu strip to invoke on UI thread
-                if (_trayIcon.ContextMenuStrip?.InvokeRequired == true)
+                // Always use BeginInvoke to avoid deadlocks
+                if (_trayIcon.ContextMenuStrip?.IsHandleCreated == true)
                 {
-                    _trayIcon.ContextMenuStrip.Invoke(new Action(() =>
+                    _trayIcon.ContextMenuStrip.BeginInvoke(new Action(() =>
                     {
-                        UpdateScanDisplay();
-                        
-                        // Only show balloon tip when scan starts (not on every status update)
-                        if (_scanStatusService.IsScanning && !_lastScanningState)
+                        lock (_updateLock)
                         {
-                            ShowBalloonTip("Photo Scan Started", "MyPhotoHelper is scanning for new photos...", ToolTipIcon.Info);
+                            if (!_disposed && _trayIcon != null)
+                            {
+                                UpdateScanDisplay();
+                                
+                                // Only show balloon tip when scan starts (not on every status update)
+                                if (_scanStatusService.IsScanning && !_lastScanningState)
+                                {
+                                    ShowBalloonTip("Photo Scan Started", "MyPhotoHelper is scanning for new photos...", ToolTipIcon.Info);
+                                }
+                            }
                         }
                     }));
                 }
-                else
-                {
-                    UpdateScanDisplay();
-                    
-                    // Only show balloon tip when scan starts (not on every status update)
-                    if (_scanStatusService.IsScanning && !_lastScanningState)
-                    {
-                        ShowBalloonTip("Photo Scan Started", "MyPhotoHelper is scanning for new photos...", ToolTipIcon.Info);
-                    }
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in OnScanStatusChanged");
             }
         }
         
         private void OnPhasedStatusChanged(object? sender, PhasedScanProgress progress)
         {
-            if (_trayIcon != null && _trayIcon.ContextMenuStrip != null)
+            if (_disposed || _trayIcon == null) return;
+            
+            try
             {
-                if (_trayIcon.ContextMenuStrip.InvokeRequired)
+                if (_trayIcon.ContextMenuStrip?.IsHandleCreated == true)
                 {
-                    _trayIcon.ContextMenuStrip.Invoke(new Action(() => UpdateScanDisplay()));
+                    _trayIcon.ContextMenuStrip.BeginInvoke(new Action(() =>
+                    {
+                        lock (_updateLock)
+                        {
+                            if (!_disposed && _trayIcon != null)
+                            {
+                                UpdateScanDisplay();
+                            }
+                        }
+                    }));
                 }
-                else
-                {
-                    UpdateScanDisplay();
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in OnPhasedStatusChanged");
             }
         }
         

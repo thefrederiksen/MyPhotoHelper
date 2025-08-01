@@ -32,7 +32,7 @@ namespace MyPhotoHelper
             }
             
             // Start initialization on background thread
-            Task.Run(async () =>
+            var initTask = Task.Run(async () =>
             {
                 try
                 {
@@ -41,12 +41,15 @@ namespace MyPhotoHelper
                 catch (Exception ex)
                 {
                     Logger.LogException(ex, "Failed to start Blazor server");
-                    ShowError("Startup Failed", ex.Message);
-                    Application.Exit();
+                    startupForm?.Invoke(new Action(() =>
+                    {
+                        ShowError("Startup Failed", ex.Message);
+                        Application.Exit();
+                    }));
                 }
             });
             
-            // Run Windows Forms message loop
+            // Run Windows Forms message loop - this keeps the app running
             Application.Run();
         }
         
@@ -110,11 +113,22 @@ namespace MyPhotoHelper
             
             UpdateStatus("Starting system tray...", 85);
             
-            // Initialize system tray
-            var systemTrayService = app.Services.GetRequiredService<SystemTrayService>();
-            systemTrayService.Initialize();
+            // Initialize system tray on UI thread
+            if (startupForm?.InvokeRequired == true)
+            {
+                startupForm.Invoke(new Action(() =>
+                {
+                    var systemTrayService = app.Services.GetRequiredService<SystemTrayService>();
+                    systemTrayService.Initialize();
+                }));
+            }
+            else
+            {
+                var systemTrayService = app.Services.GetRequiredService<SystemTrayService>();
+                systemTrayService.Initialize();
+            }
             
-            UpdateStatus("Starting web server...", 95);
+            UpdateStatus("Starting web server...", 90);
             
             // Start the Blazor server in background
             _ = Task.Run(async () =>
@@ -125,38 +139,40 @@ namespace MyPhotoHelper
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogException(ex, "Blazor server error");
+                    Logger.LogException(ex, "Blazor server stopped");
                 }
             });
             
             // Wait for server to be ready
-            await Task.Delay(1000);
+            await Task.Delay(2000);
             
             UpdateStatus("Ready!", 100);
             await Task.Delay(500);
             
-            // Hide startup form and open browser
-            startupForm?.Invoke(new Action(() =>
+            // Close startup form and open browser if needed
+            if (startupForm?.InvokeRequired == true)
             {
-                startupForm.Hide();
+                startupForm.Invoke(new Action(() =>
+                {
+                    startupForm.Close();
+                    startupForm = null;
+                    
+                    if (!startMinimized)
+                    {
+                        OpenBrowser();
+                    }
+                }));
+            }
+            else
+            {
+                startupForm?.Close();
+                startupForm = null;
                 
                 if (!startMinimized)
                 {
-                    try
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = "http://localhost:5113",
-                            UseShellExecute = true
-                        });
-                        Logger.Info("Opened browser to Blazor application");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warning($"Failed to open browser: {ex.Message}");
-                    }
+                    OpenBrowser();
                 }
-            }));
+            }
             }
             catch (Exception ex)
             {
@@ -424,6 +440,23 @@ namespace MyPhotoHelper
         private void ShowError(string title, string message)
         {
             MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        
+        private void OpenBrowser()
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "http://localhost:5113",
+                    UseShellExecute = true
+                });
+                Logger.Info("Opened browser to Blazor application");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Failed to open browser: {ex.Message}");
+            }
         }
     }
 }
