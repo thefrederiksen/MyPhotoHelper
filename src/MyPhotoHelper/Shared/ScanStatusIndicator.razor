@@ -1,16 +1,44 @@
 @using MyPhotoHelper.Services
+@using MyPhotoHelper.Models
 @inject IScanStatusService ScanStatusService
 @implements IDisposable
 
-@if (ScanStatusService.IsScanning && ScanStatusService.CurrentProgress != null)
+@if (ScanStatusService.IsScanning)
 {
     <div class="scan-status-indicator">
         <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
             <span class="visually-hidden">Scanning...</span>
         </div>
         <span class="scan-text">
-            Scanning: @ScanStatusService.CurrentProgress.ProcessedFiles / @ScanStatusService.CurrentProgress.TotalFiles photos
-            (@ScanStatusService.CurrentProgress.PercentComplete.ToString("F0")%)
+            @if (ScanStatusService.CurrentPhasedProgress != null)
+            {
+                var progress = ScanStatusService.CurrentPhasedProgress;
+                @if (progress.CurrentPhase == ScanPhase.Phase1_Discovery)
+                {
+                    <text>Finding new photos...</text>
+                }
+                else if (progress.CurrentPhase == ScanPhase.Phase2_Metadata)
+                {
+                    <text>Reading photo details...</text>
+                }
+                else if (progress.CurrentPhase == ScanPhase.Phase3_Hashing)
+                {
+                    <text>Checking for duplicates...</text>
+                }
+                else
+                {
+                    <text>Scanning photos...</text>
+                }
+            }
+            else if (ScanStatusService.CurrentProgress != null)
+            {
+                <text>Scanning: @ScanStatusService.CurrentProgress.ProcessedFiles / @ScanStatusService.CurrentProgress.TotalFiles photos
+                (@ScanStatusService.CurrentProgress.PercentComplete.ToString("F0")%)</text>
+            }
+            else
+            {
+                <text>Starting scan...</text>
+            }
         </span>
     </div>
 }

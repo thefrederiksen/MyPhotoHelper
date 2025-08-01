@@ -7,7 +7,8 @@ namespace MyPhotoHelper.Models
         Phase2_Metadata = 2,        // Extract EXIF and image metadata
         Phase3_Hashing = 3,         // Calculate file hashes for duplicate detection
         Phase4_Analysis = 4,        // AI analysis and categorization
-        Completed = 5
+        Completed = 5,
+        Failed = 6                  // Scan failed with errors
     }
 
     public class PhasedScanProgress
@@ -23,7 +24,7 @@ namespace MyPhotoHelper.Models
             // Initialize all phases
             foreach (ScanPhase phase in Enum.GetValues<ScanPhase>())
             {
-                if (phase != ScanPhase.None && phase != ScanPhase.Completed)
+                if (phase != ScanPhase.None && phase != ScanPhase.Completed && phase != ScanPhase.Failed)
                 {
                     PhaseProgress[phase] = new PhaseProgress { Phase = phase };
                 }

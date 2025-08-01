@@ -6,6 +6,7 @@ namespace MyPhotoHelper.Services
     public interface IScanStatusService
     {
         event EventHandler? StatusChanged;
+        event EventHandler<PhasedScanProgress>? PhasedStatusChanged;
         
         bool IsScanning { get; }
         ScanProgress? CurrentProgress { get; }
@@ -27,6 +28,7 @@ namespace MyPhotoHelper.Services
         private ScanCompletedEventArgs? _lastScanResult;
         
         public event EventHandler? StatusChanged;
+        public event EventHandler<PhasedScanProgress>? PhasedStatusChanged;
         
         public bool IsScanning => _isScanning || (_currentPhasedProgress?.IsRunning ?? false);
         public ScanProgress? CurrentProgress => _currentProgress;
@@ -46,6 +48,10 @@ namespace MyPhotoHelper.Services
             _currentPhasedProgress = progress;
             _isScanning = progress?.IsRunning ?? false;
             StatusChanged?.Invoke(this, EventArgs.Empty);
+            if (progress != null)
+            {
+                PhasedStatusChanged?.Invoke(this, progress);
+            }
         }
         
         public void UpdateLastScan(DateTime scanTime, ScanCompletedEventArgs result)

@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MyPhotoHelper.Models;
+using MyPhotoHelper.Data;
+using Microsoft.EntityFrameworkCore;
+using MyPhotoHelper.Services;
 
 namespace MyPhotoHelper.Services
 {
@@ -22,16 +25,16 @@ namespace MyPhotoHelper.Services
             _logger = logger;
             _serviceProvider = serviceProvider;
             _scanStatusService = scanStatusService;
+            _logger.LogInformation("BackgroundTaskService constructor called");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Background task service started");
-
-            // Wait a bit for the application to fully start
-            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-
-            // Perform initial scan on startup
+            _logger.LogInformation("===== BACKGROUND TASK SERVICE STARTED =====");
+            
+            // Start scan IMMEDIATELY on startup
+            _logger.LogInformation("===== STARTING AUTOMATIC SCAN NOW =====");
+            _logger.LogInformation("This scan runs ALWAYS on startup, regardless of settings or directories");
             await PerformBackgroundScan();
 
             // Start periodic scanning (every hour)
@@ -48,11 +51,15 @@ namespace MyPhotoHelper.Services
             }
         }
 
+        // Removed ShouldPerformInitialScan - we always scan on startup now
+        
         private async Task PerformBackgroundScan()
         {
+            _logger.LogInformation("===== PerformBackgroundScan CALLED =====");
             try
             {
                 _logger.LogInformation("Starting background photo scan");
+                _scanStatusService.UpdateStatus(true);
                 
                 using var scope = _serviceProvider.CreateScope();
                 var phasedScanService = scope.ServiceProvider.GetRequiredService<IPhasedScanService>();

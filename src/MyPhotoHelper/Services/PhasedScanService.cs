@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MyPhotoHelper.Models;
+using MyPhotoHelper.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace MyPhotoHelper.Services
 {
@@ -73,34 +75,61 @@ namespace MyPhotoHelper.Services
             {
                 _logger.LogInformation("Starting phased scan");
 
+                // Log if no directories configured but continue anyway
+                using (var scope = _serviceProvider.CreateScope())
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                    var hasDirectories = await dbContext.tbl_scan_directory.AnyAsync();
+                    if (!hasDirectories)
+                    {
+                        _logger.LogWarning("No scan directories configured - scan will complete with no results");
+                    }
+                }
+
                 // Phase 1: Discovery
                 _logger.LogInformation("=== PHASE 1: DISCOVERY - STARTING ===");
-                await ExecutePhase1DiscoveryAsync(cancellationToken);
-                _logger.LogInformation("=== PHASE 1: DISCOVERY - COMPLETED ===");
-                if (cancellationToken.IsCancellationRequested) 
+                var phase1Success = await ExecutePhaseWithErrorHandling(
+                    ScanPhase.Phase1_Discovery,
+                    ExecutePhase1DiscoveryAsync,
+                    cancellationToken);
+                    
+                if (!phase1Success || cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogWarning("Scan cancelled after Phase 1");
+                    _logger.LogWarning("Scan stopped after Phase 1");
                     return;
                 }
 
-                // Phase 2: Metadata
-                _logger.LogInformation("=== PHASE 2: METADATA - STARTING ===");
-                await ExecutePhase2MetadataAsync(cancellationToken);
-                _logger.LogInformation("=== PHASE 2: METADATA - COMPLETED ===");
-                if (cancellationToken.IsCancellationRequested) 
+                // Phase 2: Metadata - only if Phase 1 found images
+                if (await HasImagesToProcess())
                 {
-                    _logger.LogWarning("Scan cancelled after Phase 2");
-                    return;
-                }
+                    _logger.LogInformation("=== PHASE 2: METADATA - STARTING ===");
+                    var phase2Success = await ExecutePhaseWithErrorHandling(
+                        ScanPhase.Phase2_Metadata,
+                        ExecutePhase2MetadataAsync,
+                        cancellationToken);
+                        
+                    if (!phase2Success || cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogWarning("Scan stopped after Phase 2");
+                        return;
+                    }
 
-                // Phase 3: Hashing
-                _logger.LogInformation("=== PHASE 3: HASHING - STARTING ===");
-                await ExecutePhase3HashingAsync(cancellationToken);
-                _logger.LogInformation("=== PHASE 3: HASHING - COMPLETED ===");
-                if (cancellationToken.IsCancellationRequested) 
+                    // Phase 3: Hashing - only if Phase 2 succeeded
+                    _logger.LogInformation("=== PHASE 3: HASHING - STARTING ===");
+                    var phase3Success = await ExecutePhaseWithErrorHandling(
+                        ScanPhase.Phase3_Hashing,
+                        ExecutePhase3HashingAsync,
+                        cancellationToken);
+                        
+                    if (!phase3Success || cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogWarning("Scan stopped after Phase 3");
+                        return;
+                    }
+                }
+                else
                 {
-                    _logger.LogWarning("Scan cancelled after Phase 3");
-                    return;
+                    _logger.LogInformation("No images to process - skipping Phases 2 and 3");
                 }
 
                 // Phase 4: AI Analysis (future)
@@ -116,11 +145,43 @@ namespace MyPhotoHelper.Services
             {
                 _logger.LogError(ex, "Phased scan failed");
                 _currentProgress.IsRunning = false;
+                _currentProgress.CurrentPhase = ScanPhase.Failed;
+                _currentProgress.EndTime = DateTime.UtcNow;
             }
             finally
             {
                 ProgressChanged?.Invoke(this, _currentProgress);
                 _scanStatusService.UpdatePhasedStatus(_currentProgress);
+            }
+        }
+        
+        // Removed ValidatePrerequisites - we always run scans now
+        
+        private async Task<bool> HasImagesToProcess()
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+            
+            return await dbContext.tbl_images.AnyAsync();
+        }
+        
+        private async Task<bool> ExecutePhaseWithErrorHandling(
+            ScanPhase phase,
+            Func<CancellationToken, Task> phaseExecution,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await phaseExecution(cancellationToken);
+                _logger.LogInformation($"=== {phase} - COMPLETED ===");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Phase {phase} failed");
+                _currentProgress!.PhaseProgress[phase].ErrorCount++;
+                _currentProgress.PhaseProgress[phase].EndTime = DateTime.UtcNow;
+                return false;
             }
         }
 

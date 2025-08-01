@@ -5,6 +5,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.Hosting
 @using Microsoft.JSInterop
+@using System.Linq
 @implements IDisposable
 @inject MyPhotoHelperDbContext DbContext
 @inject MyPhotoHelper.Services.IScanStatusService ScanStatusService
@@ -82,10 +83,47 @@
                     @if (!ScanStatusService.IsScanning)
                     {
                         <div class="text-center py-3">
-                            <p class="text-muted mb-0">
-                                <i class="oi oi-info"></i> No scan is currently running. 
-                                Scans run automatically in the background based on your settings.
+                            <p class="text-muted mb-2">
+                                <i class="oi oi-info"></i> No scan is currently running.
                             </p>
+                            @if (timeSinceStartup < TimeSpan.FromSeconds(5))
+                            {
+                                <p class="text-primary small mb-0">
+                                    <i class="oi oi-clock"></i> Automatic scan will start in a moment...
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">
+                                    Scans run automatically in the background based on your settings.
+                                </p>
+                                <div class="mt-3">
+                                    <button class="btn btn-primary btn-sm" @onclick="TriggerBackgroundScan">
+                                        <i class="oi oi-play-circle"></i> Start Scan Now
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm ms-2" @onclick="ShowDiagnostics">
+                                        <i class="oi oi-bug"></i> Diagnostics
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    
+                    @if (showDiagnostics)
+                    {
+                        <div class="alert alert-info mt-3">
+                            <h6>Diagnostics Information:</h6>
+                            <ul class="mb-0">
+                                <li>Directories configured: @(scanDirectories?.Count ?? 0)</li>
+                                <li>App Settings exist: @(appSettings != null ? "Yes" : "No")</li>
+                                @if (appSettings != null)
+                                {
+                                    <li>AutoScanOnStartup: @(appSettings.AutoScanOnStartup)</li>
+                                }
+                                <li>Background Service Status: @backgroundServiceStatus</li>
+                                <li>Is Scanning: @ScanStatusService.IsScanning</li>
+                                <li>Time since startup: @timeSinceStartup.TotalSeconds.ToString("F1") seconds</li>
+                            </ul>
                         </div>
                     }
                 </div>
@@ -359,6 +397,11 @@
     private int imagesWithHashes = 0;
     private int imagesWithMetadata = 0;
     private bool isRescanningMetadata = false;
+    private DateTime appStartTime = DateTime.UtcNow;
+    private TimeSpan timeSinceStartup => DateTime.UtcNow - appStartTime;
+    private bool showDiagnostics = false;
+    private tbl_app_settings? appSettings;
+    private string backgroundServiceStatus = "Unknown";
     
     // UI update throttling
     private DateTime _lastUIUpdate = DateTime.UtcNow;
@@ -512,6 +555,73 @@
     private void GoBack()
     {
         Navigation.NavigateTo("/");
+    }
+    
+    private async Task TriggerBackgroundScan()
+    {
+        Logger.LogInformation("Manual scan triggered from UI");
+        
+        try
+        {
+            // Get the background task service
+            using var scope = ServiceProvider.CreateScope();
+            var backgroundTaskService = scope.ServiceProvider
+                .GetServices<IHostedService>()
+                .OfType<BackgroundTaskService>()
+                .FirstOrDefault();
+                
+            if (backgroundTaskService != null)
+            {
+                await backgroundTaskService.TriggerScanAsync();
+                Logger.LogInformation("Background scan triggered successfully");
+            }
+            else
+            {
+                Logger.LogError("BackgroundTaskService not found!");
+                
+                // As a fallback, start phased scan directly
+                Logger.LogInformation("Starting phased scan directly as fallback");
+                await PhasedScanService.StartPhasedScanAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error triggering background scan");
+        }
+    }
+    
+    private async Task ShowDiagnostics()
+    {
+        showDiagnostics = true;
+        
+        try
+        {
+            // Load app settings
+            appSettings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
+            
+            // Check background service
+            using var scope = ServiceProvider.CreateScope();
+            var backgroundTaskService = scope.ServiceProvider
+                .GetServices<IHostedService>()
+                .OfType<BackgroundTaskService>()
+                .FirstOrDefault();
+                
+            if (backgroundTaskService != null)
+            {
+                backgroundServiceStatus = "Found and running";
+            }
+            else
+            {
+                backgroundServiceStatus = "NOT FOUND!";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting diagnostics");
+            backgroundServiceStatus = $"Error: {ex.Message}";
+        }
+        
+        StateHasChanged();
     }
 
     private string GetPhaseDisplayName(ScanPhase phase)

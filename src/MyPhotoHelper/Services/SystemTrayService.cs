@@ -8,6 +8,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
+using MyPhotoHelper.Models;
+using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace MyPhotoHelper.Services
 {
@@ -18,15 +22,29 @@ namespace MyPhotoHelper.Services
         private NotifyIcon? _trayIcon;
         private readonly ILogger<SystemTrayService> _logger;
         private readonly IHostApplicationLifetime _applicationLifetime;
+        private readonly IScanStatusService _scanStatusService;
+        private readonly IServiceProvider _serviceProvider;
         private bool _disposed = false;
         private Thread? _trayThread;
+        private ToolStripMenuItem? _scanStatusMenuItem;
+        private ToolStripMenuItem? _scanProgressMenuItem;
+        private System.Windows.Forms.Timer? _statusUpdateTimer;
+        private Icon? _defaultIcon;
+        private Icon? _scanningIcon;
+        private bool _lastScanningState = false;
+        private string _lastTooltipText = "MyPhotoHelper - Ready";
+        private ScanPhase _lastPhase = ScanPhase.None;
 
         public SystemTrayService(
             ILogger<SystemTrayService> logger,
-            IHostApplicationLifetime applicationLifetime)
+            IHostApplicationLifetime applicationLifetime,
+            IScanStatusService scanStatusService,
+            IServiceProvider serviceProvider)
         {
             _logger = logger;
             _applicationLifetime = applicationLifetime;
+            _scanStatusService = scanStatusService;
+            _serviceProvider = serviceProvider;
         }
 
         public void Initialize()
@@ -45,6 +63,7 @@ namespace MyPhotoHelper.Services
                     Application.SetCompatibleTextRenderingDefault(false);
                     
                     CreateSystemTrayIcon();
+                    SetupScanStatusMonitoring();
                     
                     // Run Windows Forms message loop
                     Application.Run();
@@ -156,6 +175,9 @@ namespace MyPhotoHelper.Services
                     _logger.LogInformation("Using programmatically created icon");
                 }
                 
+                _defaultIcon = icon;
+                _scanningIcon = CreateScanningIcon();
+                
                 _trayIcon = new NotifyIcon
                 {
                     Icon = icon,
@@ -176,6 +198,25 @@ namespace MyPhotoHelper.Services
                 openMenuItem.Click += (s, e) => OpenApplication();
                 openMenuItem.Font = new Font(openMenuItem.Font, FontStyle.Bold); // Make default action bold
                 contextMenu.Items.Add(openMenuItem);
+                
+                contextMenu.Items.Add(new ToolStripSeparator());
+                
+                // Scan Status
+                _scanStatusMenuItem = new ToolStripMenuItem("Scan Status: Idle");
+                _scanStatusMenuItem.Enabled = false;
+                contextMenu.Items.Add(_scanStatusMenuItem);
+                
+                // Scan Progress (submenu)
+                _scanProgressMenuItem = new ToolStripMenuItem("Scan Progress");
+                UpdateScanProgressMenu();
+                contextMenu.Items.Add(_scanProgressMenuItem);
+                
+                // Manual Scan Trigger
+                var scanNowMenuItem = new ToolStripMenuItem("Start Scan Now");
+                scanNowMenuItem.Click += async (s, e) => await TriggerManualScan();
+                contextMenu.Items.Add(scanNowMenuItem);
+                
+                contextMenu.Items.Add(new ToolStripSeparator());
                 
                 // View Logs - Opens log file
                 var logsMenuItem = new ToolStripMenuItem("View Logs");
@@ -267,7 +308,17 @@ namespace MyPhotoHelper.Services
                 g.FillEllipse(new SolidBrush(Color.FromArgb(241, 196, 15)), 9, 5, 3, 3); // Yellow
             }
             
-            return Icon.FromHandle(bitmap.GetHicon());
+            var hIcon = bitmap.GetHicon();
+            var icon = Icon.FromHandle(hIcon);
+            
+            // Clone the icon to avoid GDI+ errors
+            var clonedIcon = (Icon)icon.Clone();
+            
+            // Clean up
+            DestroyIcon(hIcon);
+            bitmap.Dispose();
+            
+            return clonedIcon;
         }
 
         private void OpenLogFile()
@@ -399,6 +450,245 @@ namespace MyPhotoHelper.Services
                 }
                 
                 _disposed = true;
+            }
+        }
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool DestroyIcon(IntPtr handle);
+        
+        private Icon CreateScanningIcon()
+        {
+            // Create animated scanning icon (with progress indicator)
+            var bitmap = new Bitmap(16, 16);
+            using (var g = Graphics.FromImage(bitmap))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+                
+                // Photo frame
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    path.AddRectangle(new Rectangle(2, 3, 12, 10));
+                    
+                    // Orange gradient for scanning
+                    using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        new Point(2, 3), new Point(14, 13),
+                        Color.FromArgb(230, 126, 34),  // Orange
+                        Color.FromArgb(241, 196, 15))) // Yellow
+                    {
+                        g.FillPath(brush, path);
+                    }
+                }
+                
+                // Inner photo area (white)
+                g.FillRectangle(Brushes.White, 3, 4, 10, 8);
+                
+                // Scanning line animation (we'll update position in timer)
+                using (var pen = new Pen(Color.FromArgb(200, 52, 152, 219), 2))
+                {
+                    g.DrawLine(pen, 4, 8, 12, 8);
+                }
+            }
+            
+            var hIcon = bitmap.GetHicon();
+            var icon = Icon.FromHandle(hIcon);
+            var clonedIcon = (Icon)icon.Clone();
+            DestroyIcon(hIcon);
+            bitmap.Dispose();
+            
+            return clonedIcon;
+        }
+        
+        private void SetupScanStatusMonitoring()
+        {
+            // Subscribe to scan status changes
+            _scanStatusService.StatusChanged += OnScanStatusChanged;
+            _scanStatusService.PhasedStatusChanged += OnPhasedStatusChanged;
+            
+            // Setup timer for UI updates - ONLY for progress menu, not the icon
+            _statusUpdateTimer = new System.Windows.Forms.Timer();
+            _statusUpdateTimer.Interval = 5000; // Update every 5 seconds instead of 1
+            _statusUpdateTimer.Tick += (s, e) => UpdateScanProgressMenu(); // Only update menu, not whole display
+            _statusUpdateTimer.Start();
+        }
+        
+        private void OnScanStatusChanged(object? sender, EventArgs e)
+        {
+            if (_trayIcon != null && _trayThread != null)
+            {
+                // Use the context menu strip to invoke on UI thread
+                if (_trayIcon.ContextMenuStrip?.InvokeRequired == true)
+                {
+                    _trayIcon.ContextMenuStrip.Invoke(new Action(() =>
+                    {
+                        UpdateScanDisplay();
+                        
+                        // Only show balloon tip when scan starts (not on every status update)
+                        if (_scanStatusService.IsScanning && !_lastScanningState)
+                        {
+                            ShowBalloonTip("Photo Scan Started", "MyPhotoHelper is scanning for new photos...", ToolTipIcon.Info);
+                        }
+                    }));
+                }
+                else
+                {
+                    UpdateScanDisplay();
+                    
+                    // Only show balloon tip when scan starts (not on every status update)
+                    if (_scanStatusService.IsScanning && !_lastScanningState)
+                    {
+                        ShowBalloonTip("Photo Scan Started", "MyPhotoHelper is scanning for new photos...", ToolTipIcon.Info);
+                    }
+                }
+            }
+        }
+        
+        private void OnPhasedStatusChanged(object? sender, PhasedScanProgress progress)
+        {
+            if (_trayIcon != null && _trayIcon.ContextMenuStrip != null)
+            {
+                if (_trayIcon.ContextMenuStrip.InvokeRequired)
+                {
+                    _trayIcon.ContextMenuStrip.Invoke(new Action(() => UpdateScanDisplay()));
+                }
+                else
+                {
+                    UpdateScanDisplay();
+                }
+            }
+        }
+        
+        private void UpdateScanDisplay()
+        {
+            if (_trayIcon == null) return;
+            
+            var isScanning = _scanStatusService.IsScanning;
+            var phasedProgress = _scanStatusService.CurrentPhasedProgress;
+            var currentPhase = phasedProgress?.CurrentPhase ?? ScanPhase.None;
+            
+            // Only update icon if state changed
+            if (isScanning != _lastScanningState)
+            {
+                _trayIcon.Icon = isScanning ? _scanningIcon : _defaultIcon;
+                _lastScanningState = isScanning;
+            }
+            
+            // Generate tooltip text
+            string newTooltipText;
+            if (isScanning && phasedProgress != null)
+            {
+                var phaseText = phasedProgress.CurrentPhase switch
+                {
+                    ScanPhase.Phase1_Discovery => "Finding new photos",
+                    ScanPhase.Phase2_Metadata => "Reading photo details",
+                    ScanPhase.Phase3_Hashing => "Checking for duplicates",
+                    _ => "Scanning"
+                };
+                newTooltipText = $"MyPhotoHelper - {phaseText}...";
+            }
+            else
+            {
+                newTooltipText = "MyPhotoHelper - Ready";
+            }
+            
+            // Only update tooltip if text changed
+            if (newTooltipText != _lastTooltipText)
+            {
+                _trayIcon.Text = newTooltipText;
+                _lastTooltipText = newTooltipText;
+            }
+            
+            // Only update menu items if phase changed
+            if (currentPhase != _lastPhase || isScanning != _lastScanningState)
+            {
+                _lastPhase = currentPhase;
+                
+                // Update menu items
+                if (_scanStatusMenuItem != null)
+                {
+                    _scanStatusMenuItem.Text = isScanning ? "Scan Status: Running" : "Scan Status: Idle";
+                    _scanStatusMenuItem.ForeColor = isScanning ? Color.Green : Color.Gray;
+                }
+                
+                UpdateScanProgressMenu();
+            }
+        }
+        
+        private void UpdateScanProgressMenu()
+        {
+            if (_scanProgressMenuItem == null) return;
+            
+            _scanProgressMenuItem.DropDownItems.Clear();
+            
+            var isScanning = _scanStatusService.IsScanning;
+            var phasedProgress = _scanStatusService.CurrentPhasedProgress;
+            
+            if (!isScanning || phasedProgress == null)
+            {
+                _scanProgressMenuItem.DropDownItems.Add(new ToolStripMenuItem("No scan in progress") { Enabled = false });
+                return;
+            }
+            
+            // Current phase
+            var phaseItem = new ToolStripMenuItem($"Current Phase: {phasedProgress.CurrentPhase}") { Enabled = false };
+            phaseItem.Font = new Font(phaseItem.Font, FontStyle.Bold);
+            _scanProgressMenuItem.DropDownItems.Add(phaseItem);
+            
+            _scanProgressMenuItem.DropDownItems.Add(new ToolStripSeparator());
+            
+            // Phase details
+            foreach (var phase in phasedProgress.PhaseProgress)
+            {
+                var progress = phase.Value;
+                var statusText = progress.IsComplete ? "✓" : (progress.ProcessedItems > 0 ? "→" : "○");
+                var phaseText = $"{statusText} {phase.Key}: {progress.ProcessedItems}/{progress.TotalItems}";
+                
+                var item = new ToolStripMenuItem(phaseText) { Enabled = false };
+                if (phase.Key == phasedProgress.CurrentPhase)
+                {
+                    item.ForeColor = Color.Blue;
+                }
+                else if (progress.IsComplete)
+                {
+                    item.ForeColor = Color.Green;
+                }
+                
+                _scanProgressMenuItem.DropDownItems.Add(item);
+            }
+            
+            // Scan duration
+            if (phasedProgress.StartTime != default)
+            {
+                var duration = (phasedProgress.EndTime ?? DateTime.UtcNow) - phasedProgress.StartTime;
+                _scanProgressMenuItem.DropDownItems.Add(new ToolStripSeparator());
+                _scanProgressMenuItem.DropDownItems.Add(new ToolStripMenuItem($"Duration: {duration:mm\\:ss}") { Enabled = false });
+            }
+        }
+        
+        private async Task TriggerManualScan()
+        {
+            try
+            {
+                _logger.LogInformation("Manual scan triggered from system tray");
+                
+                // Get the background task service and trigger scan
+                var hostedServices = _serviceProvider.GetServices<IHostedService>();
+                var backgroundService = hostedServices.OfType<BackgroundTaskService>().FirstOrDefault();
+                    
+                if (backgroundService != null)
+                {
+                    await backgroundService.TriggerScanAsync();
+                    ShowBalloonTip("Scan Started", "Manual photo scan has been triggered.", ToolTipIcon.Info);
+                }
+                else
+                {
+                    _logger.LogError("Could not find BackgroundTaskService");
+                    ShowBalloonTip("Scan Failed", "Could not start scan. Check logs for details.", ToolTipIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error triggering manual scan");
+                ShowBalloonTip("Scan Error", ex.Message, ToolTipIcon.Error);
             }
         }
     }
