@@ -216,11 +216,54 @@ namespace MyPhotoHelper.Services
                             DateTime? GetDateTime(string key)
                             {
                                 var dateStr = GetString(key);
-                                if (!string.IsNullOrEmpty(dateStr) && DateTime.TryParse(dateStr, out var parsedDate))
+                                if (string.IsNullOrEmpty(dateStr)) return null;
+                                
+                                // Try parsing ISO format first (from Python: 2014-10-25T15:30:45)
+                                if (DateTime.TryParse(dateStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var isoDate))
                                 {
+                                    return isoDate;
+                                }
+                                
+                                // Try parsing EXIF format (2014:10:25 15:30:45)
+                                if (DateTime.TryParseExact(dateStr, "yyyy:MM:dd HH:mm:ss", 
+                                    System.Globalization.CultureInfo.InvariantCulture, 
+                                    System.Globalization.DateTimeStyles.None, out var exifDate))
+                                {
+                                    return exifDate;
+                                }
+                                
+                                // Try general parse as last resort
+                                if (DateTime.TryParse(dateStr, out var parsedDate))
+                                {
+                                    // Sanity check - reject obviously wrong dates
+                                    if (parsedDate.Year < 1990 || parsedDate > DateTime.Now.AddDays(1))
+                                    {
+                                        _logger.LogWarning($"Rejected suspicious date for {key}: {dateStr} -> {parsedDate}");
+                                        return null;
+                                    }
                                     return parsedDate;
                                 }
+                                
+                                _logger.LogWarning($"Failed to parse date for {key}: {dateStr}");
                                 return null;
+                            }
+                            
+                            DateTime GetOldestDate(params DateTime?[] dates)
+                            {
+                                var validDates = dates.Where(d => d.HasValue && d.Value.Year >= 1990 && d.Value <= DateTime.Now.AddDays(1))
+                                                     .Select(d => d!.Value)
+                                                     .ToList();
+                                
+                                if (validDates.Any())
+                                {
+                                    var oldest = validDates.Min();
+                                    _logger.LogInformation($"Selected oldest date for {image.FileName}: {oldest:yyyy-MM-dd HH:mm:ss} from {validDates.Count} options");
+                                    return oldest;
+                                }
+                                
+                                // If no valid dates, use file creation date as fallback
+                                _logger.LogWarning($"No valid dates found for {image.FileName}, using DateCreated: {image.DateCreated}");
+                                return image.DateCreated;
                             }
                             
                             var metadata = new tbl_image_metadata
@@ -237,8 +280,14 @@ namespace MyPhotoHelper.Services
                                 ResolutionY = GetValue("resolution_y", double.Parse),
                                 ResolutionUnit = GetString("resolution_unit"),
                                 
-                                // Date/Time Information
-                                DateTaken = GetDateTime("date_taken") ?? image.DateModified,
+                                // Date/Time Information - ALWAYS use the OLDEST date available
+                                DateTaken = GetOldestDate(
+                                    GetDateTime("date_taken"),
+                                    GetDateTime("date_digitized"), 
+                                    GetDateTime("date_modified"),
+                                    image.DateCreated,
+                                    image.DateModified
+                                ),
                                 DateDigitized = GetDateTime("date_digitized"),
                                 DateModified = GetDateTime("date_modified"),
                                 TimeZone = GetString("time_zone"),
@@ -321,7 +370,7 @@ namespace MyPhotoHelper.Services
                     ImageId = image.ImageId,
                     Width = 0,
                     Height = 0,
-                    DateTaken = image.DateModified,
+                    DateTaken = image.DateCreated, // Always use oldest date
                     Latitude = null,
                     Longitude = null,
                     LocationName = null
@@ -337,7 +386,7 @@ namespace MyPhotoHelper.Services
                     ImageId = image.ImageId,
                     Width = 0,
                     Height = 0,
-                    DateTaken = image.DateModified,
+                    DateTaken = image.DateCreated, // Always use oldest date
                     Latitude = null,
                     Longitude = null,
                     LocationName = null

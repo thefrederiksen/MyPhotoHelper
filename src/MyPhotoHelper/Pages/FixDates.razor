@@ -1,0 +1,265 @@
+@page "/fix-dates"
+@using MyPhotoHelper.Data
+@using Microsoft.EntityFrameworkCore
+@inject MyPhotoHelperDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>Fix Photo Dates - MyPhotoHelper</PageTitle>
+
+<div class="container">
+    <h1>Fix Photo Dates</h1>
+    <p class="text-muted">This utility will fix incorrect dates in your photo collection.</p>
+
+    <div class="alert alert-warning">
+        <h5>⚠️ Warning</h5>
+        <p>This will modify dates in your database. Make sure you have a backup before proceeding.</p>
+    </div>
+
+    @if (!isProcessing)
+    {
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Fix Missing DateTaken</h5>
+                        <p class="card-text">For photos without DateTaken, use the file creation date.</p>
+                        <button class="btn btn-primary" @onclick="FixMissingDates">Fix Missing Dates</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Fix Invalid DateTaken</h5>
+                        <p class="card-text">Remove dates that are in the future or before 1990.</p>
+                        <button class="btn btn-warning" @onclick="FixInvalidDates">Fix Invalid Dates</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Fix Swapped Month/Day</h5>
+                        <p class="card-text">Fix dates where month and day might be swapped (US vs EU format).</p>
+                        <button class="btn btn-info" @onclick="FixSwappedDates">Fix Swapped Dates</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Rescan All Metadata</h5>
+                        <p class="card-text">Re-extract metadata for all images with improved date parsing.</p>
+                        <button class="btn btn-danger" @onclick="RescanAllDates">Rescan All Dates</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+            <p>@currentStatus</p>
+            @if (totalToProcess > 0)
+            {
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: @((processed * 100.0 / totalToProcess).ToString("F0"))%">
+                        @processed / @totalToProcess
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (results.Any())
+    {
+        <div class="mt-4">
+            <h3>Results</h3>
+            <div class="alert alert-success">
+                <ul class="mb-0">
+                    @foreach (var result in results)
+                    {
+                        <li>@result</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    <div class="mt-4">
+        <a href="/gallery" class="btn btn-secondary">Back to Gallery</a>
+        <a href="/date-diagnostics" class="btn btn-outline-secondary">View Date Diagnostics</a>
+    </div>
+</div>
+
+@code {
+    private bool isProcessing = false;
+    private string currentStatus = "";
+    private int processed = 0;
+    private int totalToProcess = 0;
+    private List<string> results = new();
+
+    private async Task FixMissingDates()
+    {
+        isProcessing = true;
+        currentStatus = "Fixing missing dates...";
+        results.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var updated = await DbContext.Database.ExecuteSqlRawAsync(@"
+                UPDATE tbl_image_metadata
+                SET DateTaken = (
+                    SELECT DateCreated 
+                    FROM tbl_images 
+                    WHERE tbl_images.ImageId = tbl_image_metadata.ImageId
+                )
+                WHERE DateTaken IS NULL
+            ");
+
+            results.Add($"✅ Updated {updated} images with missing DateTaken values.");
+        }
+        catch (Exception ex)
+        {
+            results.Add($"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FixInvalidDates()
+    {
+        isProcessing = true;
+        currentStatus = "Fixing invalid dates...";
+        results.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var tomorrow = DateTime.Now.AddDays(1);
+            var oldestValid = new DateTime(1990, 1, 1);
+
+            // First, count how many will be affected
+            var invalidCount = await DbContext.tbl_image_metadata
+                .Where(m => m.DateTaken.HasValue && 
+                           (m.DateTaken > tomorrow || m.DateTaken < oldestValid))
+                .CountAsync();
+
+            results.Add($"Found {invalidCount} images with invalid dates.");
+
+            // Set them to use file creation date instead
+            var updated = await DbContext.Database.ExecuteSqlRawAsync($@"
+                UPDATE tbl_image_metadata
+                SET DateTaken = (
+                    SELECT DateCreated 
+                    FROM tbl_images 
+                    WHERE tbl_images.ImageId = tbl_image_metadata.ImageId
+                )
+                WHERE DateTaken > '{tomorrow:yyyy-MM-dd}'
+                   OR DateTaken < '{oldestValid:yyyy-MM-dd}'
+            ");
+
+            results.Add($"✅ Fixed {updated} images with invalid dates.");
+        }
+        catch (Exception ex)
+        {
+            results.Add($"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FixSwappedDates()
+    {
+        isProcessing = true;
+        currentStatus = "Analyzing dates for potential swaps...";
+        results.Clear();
+        processed = 0;
+        StateHasChanged();
+
+        try
+        {
+            // Find images where swapping month/day would make more sense
+            var candidates = await DbContext.tbl_image_metadata
+                .Where(m => m.DateTaken.HasValue && 
+                           m.DateTaken.Value.Month <= 12 && 
+                           m.DateTaken.Value.Day <= 12 &&
+                           m.DateTaken.Value.Month != m.DateTaken.Value.Day)
+                .Join(DbContext.tbl_images,
+                      meta => meta.ImageId,
+                      img => img.ImageId,
+                      (meta, img) => new { meta, img })
+                .ToListAsync();
+
+            totalToProcess = candidates.Count;
+            var swapped = 0;
+
+            foreach (var item in candidates)
+            {
+                processed++;
+                if (processed % 100 == 0)
+                {
+                    StateHasChanged();
+                }
+
+                var currentDate = item.meta.DateTaken!.Value;
+                var swappedDate = new DateTime(currentDate.Year, currentDate.Day, currentDate.Month, 
+                                             currentDate.Hour, currentDate.Minute, currentDate.Second);
+
+                // Check if swapped date makes more sense compared to file date
+                var fileDateDiff = Math.Abs((currentDate - item.img.DateCreated).TotalDays);
+                var swappedDateDiff = Math.Abs((swappedDate - item.img.DateCreated).TotalDays);
+
+                if (swappedDateDiff < fileDateDiff - 30) // Swapped date is at least 30 days closer
+                {
+                    item.meta.DateTaken = swappedDate;
+                    swapped++;
+                }
+            }
+
+            if (swapped > 0)
+            {
+                await DbContext.SaveChangesAsync();
+            }
+
+            results.Add($"✅ Fixed {swapped} images with potentially swapped month/day.");
+        }
+        catch (Exception ex)
+        {
+            results.Add($"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RescanAllDates()
+    {
+        isProcessing = true;
+        currentStatus = "This will rescan all images. Please use the Photo Scan page instead.";
+        results.Clear();
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        
+        results.Add("Please go to the Photo Scan page and run a metadata rescan.");
+        isProcessing = false;
+        StateHasChanged();
+    }
+}

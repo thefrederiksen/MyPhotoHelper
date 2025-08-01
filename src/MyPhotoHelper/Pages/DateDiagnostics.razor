@@ -1,0 +1,276 @@
+@page "/date-diagnostics"
+@using MyPhotoHelper.Models
+@using MyPhotoHelper.Data
+@using Microsoft.EntityFrameworkCore
+@inject MyPhotoHelperDbContext DbContext
+
+<PageTitle>Date Diagnostics - MyPhotoHelper</PageTitle>
+
+<div class="container-fluid">
+    <h1>Date Diagnostics</h1>
+    <p class="text-muted">Analyzing date issues in your photo collection</p>
+
+    @if (isLoading)
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-12">
+                <h3>Date Statistics</h3>
+                <table class="table">
+                    <tr>
+                        <td>Total Images:</td>
+                        <td>@totalImages</td>
+                    </tr>
+                    <tr>
+                        <td>Images with DateTaken:</td>
+                        <td>@imagesWithDateTaken (@((imagesWithDateTaken * 100.0 / totalImages).ToString("F1"))%)</td>
+                    </tr>
+                    <tr>
+                        <td>Images without DateTaken:</td>
+                        <td>@imagesWithoutDateTaken (@((imagesWithoutDateTaken * 100.0 / totalImages).ToString("F1"))%)</td>
+                    </tr>
+                </table>
+
+                <h3 class="mt-4">Sample Date Issues</h3>
+                <p>Showing images where DateTaken might be wrong (very different from file dates):</p>
+                
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>DateTaken (Metadata)</th>
+                            <th>DateCreated (File)</th>
+                            <th>DateModified (File)</th>
+                            <th>Difference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var issue in dateIssues.Take(20))
+                        {
+                            <tr class="@(issue.DifferenceYears > 5 ? "table-danger" : "")">
+                                <td class="text-truncate" style="max-width: 300px;" title="@issue.FileName">@issue.FileName</td>
+                                <td>@issue.DateTaken?.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>@issue.DateCreated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>@issue.DateModified.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>
+                                    @if (issue.DateTaken.HasValue)
+                                    {
+                                        <span class="badge @(issue.DifferenceYears > 5 ? "bg-danger" : "bg-warning")">
+                                            @issue.DifferenceYears.ToString("F1") years
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">No DateTaken</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <h3 class="mt-4">Recent Photos (According to DateTaken)</h3>
+                <p>Photos that the system thinks are from the last 30 days:</p>
+                
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>DateTaken</th>
+                            <th>Actual File Date</th>
+                            <th>Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var recent in recentPhotos.Take(20))
+                        {
+                            <tr>
+                                <td>@recent.FileName</td>
+                                <td>@recent.DateTaken?.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>@recent.DateCreated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td class="text-truncate small" style="max-width: 400px;" title="@recent.RelativePath">@recent.RelativePath</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <h3 class="mt-4">Fix Options</h3>
+                <div class="alert alert-info">
+                    <h5>Possible Solutions:</h5>
+                    <ul>
+                        <li>Re-scan photos with better date extraction</li>
+                        <li>Use file creation date when EXIF DateTaken is missing or invalid</li>
+                        <li>Implement date validation during scanning</li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-warning" @onclick="FixDatesUsingFileDate">
+                    Fix Missing DateTaken (Use File Creation Date)
+                </button>
+                <button class="btn btn-danger ms-2" @onclick="RemoveInvalidDates">
+                    Remove Obviously Wrong DateTaken Values
+                </button>
+
+                @if (!string.IsNullOrEmpty(fixResult))
+                {
+                    <div class="alert alert-success mt-3">
+                        @fixResult
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private class DateIssue
+    {
+        public string FileName { get; set; } = "";
+        public DateTime? DateTaken { get; set; }
+        public DateTime DateCreated { get; set; }
+        public DateTime DateModified { get; set; }
+        public double DifferenceYears { get; set; }
+    }
+
+    private class RecentPhoto
+    {
+        public string FileName { get; set; } = "";
+        public DateTime? DateTaken { get; set; }
+        public DateTime DateCreated { get; set; }
+        public string RelativePath { get; set; } = "";
+    }
+
+    private bool isLoading = true;
+    private int totalImages = 0;
+    private int imagesWithDateTaken = 0;
+    private int imagesWithoutDateTaken = 0;
+    private List<DateIssue> dateIssues = new();
+    private List<RecentPhoto> recentPhotos = new();
+    private string fixResult = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AnalyzeDates();
+    }
+
+    private async Task AnalyzeDates()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Get total counts
+            totalImages = await DbContext.tbl_images
+                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                .CountAsync();
+
+            // Count images with/without DateTaken
+            var metadataStats = await DbContext.tbl_image_metadata
+                .GroupBy(m => m.DateTaken.HasValue)
+                .Select(g => new { HasDate = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            imagesWithDateTaken = metadataStats.FirstOrDefault(x => x.HasDate)?.Count ?? 0;
+            imagesWithoutDateTaken = metadataStats.FirstOrDefault(x => !x.HasDate)?.Count ?? 0;
+
+            // Find date issues - where DateTaken is very different from file dates
+            var potentialIssues = await DbContext.tbl_images
+                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                .Join(DbContext.tbl_image_metadata.Where(m => m.DateTaken.HasValue),
+                      img => img.ImageId,
+                      meta => meta.ImageId,
+                      (img, meta) => new { img, meta })
+                .Select(x => new DateIssue
+                {
+                    FileName = x.img.FileName,
+                    DateTaken = x.meta.DateTaken,
+                    DateCreated = x.img.DateCreated,
+                    DateModified = x.img.DateModified,
+                    DifferenceYears = Math.Abs((x.meta.DateTaken!.Value - x.img.DateCreated).TotalDays / 365.25)
+                })
+                .Where(x => x.DifferenceYears > 1) // More than 1 year difference
+                .OrderByDescending(x => x.DifferenceYears)
+                .Take(100)
+                .ToListAsync();
+
+            dateIssues = potentialIssues;
+
+            // Find "recent" photos according to DateTaken
+            var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+            recentPhotos = await DbContext.tbl_images
+                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                .Join(DbContext.tbl_image_metadata.Where(m => m.DateTaken >= thirtyDaysAgo),
+                      img => img.ImageId,
+                      meta => meta.ImageId,
+                      (img, meta) => new RecentPhoto
+                      {
+                          FileName = img.FileName,
+                          DateTaken = meta.DateTaken,
+                          DateCreated = img.DateCreated,
+                          RelativePath = img.RelativePath
+                      })
+                .OrderByDescending(x => x.DateTaken)
+                .Take(50)
+                .ToListAsync();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FixDatesUsingFileDate()
+    {
+        try
+        {
+            // Update metadata where DateTaken is null to use file creation date
+            var updated = await DbContext.Database.ExecuteSqlRawAsync(@"
+                UPDATE tbl_image_metadata
+                SET DateTaken = (
+                    SELECT DateCreated 
+                    FROM tbl_images 
+                    WHERE tbl_images.ImageId = tbl_image_metadata.ImageId
+                )
+                WHERE DateTaken IS NULL
+            ");
+
+            fixResult = $"Updated {updated} images with missing DateTaken values.";
+            await AnalyzeDates();
+        }
+        catch (Exception ex)
+        {
+            fixResult = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task RemoveInvalidDates()
+    {
+        try
+        {
+            // Set DateTaken to NULL where it's obviously wrong (future dates or too old)
+            var futureDate = DateTime.Now.AddDays(1);
+            var tooOldDate = new DateTime(1990, 1, 1); // Photos before 1990 are suspicious for digital photos
+
+            var updated = await DbContext.Database.ExecuteSqlRawAsync($@"
+                UPDATE tbl_image_metadata
+                SET DateTaken = NULL
+                WHERE DateTaken > '{futureDate:yyyy-MM-dd}'
+                   OR DateTaken < '{tooOldDate:yyyy-MM-dd}'
+            ");
+
+            fixResult = $"Removed {updated} invalid DateTaken values.";
+            await AnalyzeDates();
+        }
+        catch (Exception ex)
+        {
+            fixResult = $"Error: {ex.Message}";
+        }
+    }
+}
