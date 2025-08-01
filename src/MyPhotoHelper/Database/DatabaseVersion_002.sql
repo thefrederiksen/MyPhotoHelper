@@ -1,5 +1,6 @@
 -- Database Version 002: Fix DateTaken to never be null
 -- This ensures DateTaken always has a value by using the oldest available date
+-- This script is idempotent - safe to run multiple times
 
 -- First, update any NULL DateTaken values to use the image's DateCreated
 UPDATE tbl_image_metadata
@@ -28,6 +29,5 @@ SET DateTaken = (
 )
 WHERE DateTaken < '1990-01-01';
 
--- Update the database version
-INSERT OR REPLACE INTO tbl_app_settings (SettingKey, SettingValue, LastModified)
-VALUES ('DatabaseVersion', '002', datetime('now'));
+-- Update the database version (idempotent - won't fail if already at version 2)
+UPDATE tbl_version SET Version = 2;

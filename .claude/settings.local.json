@@ -16,7 +16,8 @@
       "Bash(dotnet test:*)",
       "Bash(pip install:*)",
       "Bash(dotnet add package:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }

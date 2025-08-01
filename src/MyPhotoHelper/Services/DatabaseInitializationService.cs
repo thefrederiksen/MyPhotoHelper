@@ -65,7 +65,44 @@ public class DatabaseInitializationService : IDatabaseInitializationService
                 var currentVersion = await GetCurrentVersionAsync(connection);
                 _logger.LogDebug("Current database version: {Version}", currentVersion);
                 
-                // TODO: Apply any pending migration scripts here
+                // Apply any pending migration scripts
+                var migrationFiles = Directory.GetFiles(_databaseScriptsPath, "DatabaseVersion_*.sql")
+                    .Where(f => !f.EndsWith("_001.sql")) // Skip initial script
+                    .Select(f => new 
+                    { 
+                        Path = f, 
+                        FileName = Path.GetFileNameWithoutExtension(f),
+                        Version = int.Parse(Path.GetFileNameWithoutExtension(f).Split('_')[1])
+                    })
+                    .Where(m => m.Version > currentVersion)
+                    .OrderBy(m => m.Version) // Ensure sequential execution
+                    .ToList();
+                
+                _logger.LogInformation($"Current database version: {currentVersion}. Found {migrationFiles.Count} pending migrations.");
+                
+                foreach (var migration in migrationFiles)
+                {
+                    _logger.LogInformation($"Applying migration version {migration.Version}: {Path.GetFileName(migration.Path)}");
+                    
+                    var script = await File.ReadAllTextAsync(migration.Path);
+                    var success = await ExecuteSqlScriptAsync(connection, script);
+                    
+                    if (!success)
+                    {
+                        _logger.LogError($"Failed to apply migration version {migration.Version}");
+                        return false;
+                    }
+                    
+                    // Verify the version was updated correctly
+                    var newVersion = await GetCurrentVersionAsync(connection);
+                    if (newVersion != migration.Version)
+                    {
+                        _logger.LogError($"Migration {migration.Version} did not update version correctly. Expected {migration.Version}, got {newVersion}");
+                        return false;
+                    }
+                    
+                    _logger.LogInformation($"Successfully applied migration version {migration.Version}");
+                }
                 
                 return true;
             }

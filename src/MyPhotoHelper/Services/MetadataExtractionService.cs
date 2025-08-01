@@ -59,10 +59,15 @@ namespace MyPhotoHelper.Services
                 .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
                 .CountAsync(cancellationToken);
 
-            // Get initial count of images that already have metadata
-            var initialImagesWithMetadata = await dbContext.tbl_images
-                .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
-                .Where(img => dbContext.tbl_image_metadata.Any(meta => meta.ImageId == img.ImageId))
+            // Get initial count of images that already have metadata using JOIN for better performance
+            var initialImagesWithMetadata = await dbContext.tbl_image_metadata
+                .Join(
+                    dbContext.tbl_images.Where(img => img.FileExists == 1 && img.IsDeleted == 0),
+                    meta => meta.ImageId,
+                    img => img.ImageId,
+                    (meta, img) => img.ImageId
+                )
+                .Distinct()
                 .CountAsync(cancellationToken);
 
             _logger.LogInformation($"Metadata extraction starting: {initialImagesWithMetadata}/{totalImages} already have metadata");
@@ -92,10 +97,17 @@ namespace MyPhotoHelper.Services
             // Process all images in batches
             while (hasMoreImages && !cancellationToken.IsCancellationRequested)
             {
-                // Get next batch of images without metadata
+                // Get next batch of images without metadata using LEFT JOIN for better performance
                 var imagesWithoutMetadata = await dbContext.tbl_images
                     .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
-                    .Where(img => !dbContext.tbl_image_metadata.Any(meta => meta.ImageId == img.ImageId))
+                    .GroupJoin(
+                        dbContext.tbl_image_metadata,
+                        img => img.ImageId,
+                        meta => meta.ImageId,
+                        (img, metas) => new { Image = img, HasMetadata = metas.Any() }
+                    )
+                    .Where(x => !x.HasMetadata)
+                    .Select(x => x.Image)
                     .Take(batchSize)
                     .ToListAsync(cancellationToken);
 

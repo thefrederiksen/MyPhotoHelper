@@ -129,7 +129,20 @@
                                     </tr>
                                     <tr>
                                         <td><strong>Hash:</strong></td>
-                                        <td class="text-break small font-monospace" title="@Image.FileHash">@Image.FileHash.Substring(0, 12)...</td>
+                                        <td class="text-break small font-monospace" title="@(Image.FileHash ?? "Not computed")">
+                                            @if (!string.IsNullOrEmpty(Image.FileHash) && Image.FileHash.Length > 12)
+                                            {
+                                                @(Image.FileHash.Substring(0, 12) + "...")
+                                            }
+                                            else if (!string.IsNullOrEmpty(Image.FileHash))
+                                            {
+                                                @Image.FileHash
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not computed</span>
+                                            }
+                                        </td>
                                     </tr>
                                     @if (IsHeicFile())
                                     {
