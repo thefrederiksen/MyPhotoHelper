@@ -114,11 +114,11 @@ namespace MyPhotoHelper.Services
                         return;
                     }
 
-                    // Phase 3: Hashing - only if Phase 2 succeeded
-                    _logger.LogInformation("=== PHASE 3: HASHING - STARTING ===");
+                    // Phase 3: Screenshot Detection - only if Phase 2 succeeded
+                    _logger.LogInformation("=== PHASE 3: SCREENSHOT DETECTION - STARTING ===");
                     var phase3Success = await ExecutePhaseWithErrorHandling(
-                        ScanPhase.Phase3_Hashing,
-                        ExecutePhase3HashingAsync,
+                        ScanPhase.Phase3_ScreenshotDetection,
+                        ExecutePhase3ScreenshotDetectionAsync,
                         cancellationToken);
                         
                     if (!phase3Success || cancellationToken.IsCancellationRequested)
@@ -126,14 +126,27 @@ namespace MyPhotoHelper.Services
                         _logger.LogWarning("Scan stopped after Phase 3");
                         return;
                     }
+
+                    // Phase 4: Hashing - only if Phase 3 succeeded
+                    _logger.LogInformation("=== PHASE 4: HASHING - STARTING ===");
+                    var phase4Success = await ExecutePhaseWithErrorHandling(
+                        ScanPhase.Phase4_Hashing,
+                        ExecutePhase4HashingAsync,
+                        cancellationToken);
+                        
+                    if (!phase4Success || cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogWarning("Scan stopped after Phase 4");
+                        return;
+                    }
                 }
                 else
                 {
-                    _logger.LogInformation("No images to process - skipping Phases 2 and 3");
+                    _logger.LogInformation("No images to process - skipping Phases 2, 3, and 4");
                 }
 
-                // Phase 4: AI Analysis (future)
-                // await ExecutePhase4AnalysisAsync(cancellationToken);
+                // Phase 5: AI Analysis (future)
+                // await ExecutePhase5AnalysisAsync(cancellationToken);
 
                 _currentProgress.CurrentPhase = ScanPhase.Completed;
                 _currentProgress.EndTime = DateTime.UtcNow;
@@ -271,10 +284,43 @@ namespace MyPhotoHelper.Services
             _logger.LogInformation("Phase 2 completed");
         }
 
-        private async Task ExecutePhase3HashingAsync(CancellationToken cancellationToken)
+        private async Task ExecutePhase3ScreenshotDetectionAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting Phase 3: Hashing for Duplicate Detection");
-            _currentProgress!.CurrentPhase = ScanPhase.Phase3_Hashing;
+            _logger.LogInformation("Starting Phase 3: Screenshot Detection");
+            _logger.LogInformation($"Cancellation requested: {cancellationToken.IsCancellationRequested}");
+            _currentProgress!.CurrentPhase = ScanPhase.Phase3_ScreenshotDetection;
+            
+            using var scope = _serviceProvider.CreateScope();
+            var fastScreenshotService = scope.ServiceProvider.GetRequiredService<IFastScreenshotDetectionService>();
+            
+            // Throttle progress updates to reduce UI overhead
+            var lastProgressUpdate = DateTime.UtcNow;
+            var updateInterval = TimeSpan.FromSeconds(1);
+            
+            var progressReporter = new Progress<PhaseProgress>(progress =>
+            {
+                _currentProgress.PhaseProgress[ScanPhase.Phase3_ScreenshotDetection] = progress;
+                
+                // Only send updates every second, unless it's the final update
+                var now = DateTime.UtcNow;
+                if (progress.EndTime.HasValue || now - lastProgressUpdate >= updateInterval)
+                {
+                    lastProgressUpdate = now;
+                    ProgressChanged?.Invoke(this, _currentProgress);
+                    _scanStatusService.UpdatePhasedStatus(_currentProgress);
+                }
+            });
+
+            await fastScreenshotService.DetectScreenshotsWithQueriesAsync(progressReporter, cancellationToken);
+            
+            PhaseCompleted?.Invoke(this, ScanPhase.Phase3_ScreenshotDetection);
+            _logger.LogInformation("Phase 3 completed");
+        }
+
+        private async Task ExecutePhase4HashingAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Starting Phase 4: Hashing for Duplicate Detection");
+            _currentProgress!.CurrentPhase = ScanPhase.Phase4_Hashing;
             
             using var scope = _serviceProvider.CreateScope();
             var hashService = scope.ServiceProvider.GetRequiredService<IHashCalculationService>();
@@ -285,7 +331,7 @@ namespace MyPhotoHelper.Services
             
             var progressReporter = new Progress<PhaseProgress>(progress =>
             {
-                _currentProgress.PhaseProgress[ScanPhase.Phase3_Hashing] = progress;
+                _currentProgress.PhaseProgress[ScanPhase.Phase4_Hashing] = progress;
                 
                 // Only send updates every second, unless it's the final update
                 var now = DateTime.UtcNow;
@@ -299,8 +345,8 @@ namespace MyPhotoHelper.Services
 
             await hashService.CalculateHashesForImagesAsync(progressReporter, cancellationToken);
             
-            PhaseCompleted?.Invoke(this, ScanPhase.Phase3_Hashing);
-            _logger.LogInformation("Phase 3 completed");
+            PhaseCompleted?.Invoke(this, ScanPhase.Phase4_Hashing);
+            _logger.LogInformation("Phase 4 completed");
         }
     }
 }

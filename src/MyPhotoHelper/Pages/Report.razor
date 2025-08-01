@@ -9,6 +9,8 @@
 @inject NavigationManager Navigation
 @inject ILogger<Report> Logger
 @inject IImageDetailsService ImageDetailsService
+@inject IScreenshotAnalysisService ScreenshotAnalysisService
+@inject IFastScreenshotDetectionService FastScreenshotDetectionService
 
 <PageTitle>Library Report - FaceVault</PageTitle>
 
@@ -42,7 +44,7 @@
     {
         <!-- Summary Cards -->
         <div class="row mb-4">
-            <div class="col-md-3 mb-3">
+            <div class="col-lg-2 col-md-4 mb-3">
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <h5 class="card-title">Total Images</h5>
@@ -51,7 +53,16 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="col-lg-2 col-md-4 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Screenshots</h5>
+                        <h2 class="text-warning">@screenshotCount.ToString("N0")</h2>
+                        <small class="text-muted">@screenshotPercentage% detected</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 mb-3">
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <h5 class="card-title">AI Analyzed</h5>
@@ -60,21 +71,30 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="col-lg-2 col-md-4 mb-3">
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <h5 class="card-title">Duplicates</h5>
-                        <h2 class="text-warning">@duplicateCount.ToString("N0")</h2>
+                        <h2 class="text-danger">@duplicateCount.ToString("N0")</h2>
                         <small class="text-muted">Files found</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="col-lg-2 col-md-4 mb-3">
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <h5 class="card-title">Storage Used</h5>
                         <h2 class="text-info">@totalSizeStr</h2>
                         <small class="text-muted">Total size</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 mb-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Real Photos</h5>
+                        <h2 class="text-success">@realPhotoCount.ToString("N0")</h2>
+                        <small class="text-muted">@realPhotoPercentage% of library</small>
                     </div>
                 </div>
             </div>
@@ -106,6 +126,83 @@
                             </div>
                         }
                     </div>
+                </div>
+            </div>
+        }
+
+        <!-- Screenshot Analysis Summary -->
+        @if (screenshotStats != null)
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><span class="oi oi-monitor" aria-hidden="true"></span> Screenshot Detection Summary</h5>
+                        <small class="text-muted">Automated screenshot filtering results</small>
+                    </div>
+                    <a href="/screenshot-analysis" class="btn btn-sm btn-outline-primary">
+                        <span class="oi oi-external-link" aria-hidden="true"></span> View Details
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">@screenshotStats.FilenameScreenshots.ToString("N0")</h4>
+                                <h6 class="text-muted">By Filename</h6>
+                                <small class="text-muted">Contains "screenshot", "capture", etc.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h4 class="text-info">@screenshotStats.ResolutionScreenshots.ToString("N0")</h4>
+                                <h6 class="text-muted">By Resolution</h6>
+                                <small class="text-muted">Common screen sizes (1920×1080, etc.)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h4 class="text-secondary">@screenshotStats.NoExifScreenshots.ToString("N0")</h4>
+                                <h6 class="text-muted">By Missing EXIF</h6>
+                                <small class="text-muted">No camera information</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h4 class="text-success">@screenshotStats.TotalDetectedScreenshots.ToString("N0")</h4>
+                                <h6 class="text-muted">Total Screenshots</h6>
+                                <small class="text-muted">@((screenshotStats.TotalImages > 0 ? screenshotStats.TotalDetectedScreenshots * 100.0 / screenshotStats.TotalImages : 0).ToString("F1"))% of library</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    @if (screenshotSamples.Any())
+                    {
+                        <hr>
+                        <h6>Sample Screenshots Detected</h6>
+                        <div class="row">
+                            @foreach (var sample in screenshotSamples.Take(6))
+                            {
+                                <div class="col-md-2 mb-2">
+                                    <div class="card">
+                                        <img src="/api/images/thumbnail/@(Uri.EscapeDataString(sample.RelativePath))" 
+                                             class="card-img-top" 
+                                             alt="@sample.FileName"
+                                             style="height: 100px; object-fit: cover;">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted d-block text-truncate" title="@sample.FileName">
+                                                @sample.FileName
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="text-center mt-2">
+                            <a href="/gallery?filter=screenshots" class="btn btn-sm btn-outline-warning">
+                                <span class="oi oi-layers" aria-hidden="true"></span> View All Screenshots
+                            </a>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -594,6 +691,14 @@
     private long totalSize = 0;
     private string totalSizeStr = "0 B";
     
+    // Screenshot stats
+    private int screenshotCount = 0;
+    private int screenshotPercentage = 0;
+    private int realPhotoCount = 0;
+    private int realPhotoPercentage = 0;
+    private ScreenshotQueryResults? screenshotStats = null;
+    private List<tbl_images> screenshotSamples = new();
+    
     // Category statistics
     private List<CategoryStat> categoryStats = new();
     
@@ -721,6 +826,24 @@
                     Category = g.Key, 
                     Count = g.Count() 
                 })
+                .ToListAsync();
+            
+            // Load screenshot statistics
+            screenshotStats = await FastScreenshotDetectionService.GetScreenshotStatisticsAsync();
+            screenshotCount = screenshotStats?.TotalDetectedScreenshots ?? 0;
+            screenshotPercentage = totalImages > 0 ? (screenshotCount * 100 / totalImages) : 0;
+            realPhotoCount = totalImages - screenshotCount;
+            realPhotoPercentage = totalImages > 0 ? (realPhotoCount * 100 / totalImages) : 0;
+            
+            // Load screenshot samples
+            screenshotSamples = await DbContext.tbl_images
+                .Join(DbContext.tbl_image_analysis,
+                    img => img.ImageId,
+                    analysis => analysis.ImageId,
+                    (img, analysis) => new { Image = img, Analysis = analysis })
+                .Where(x => x.Analysis.ImageCategory == "screenshot" && x.Image.IsDeleted == 0)
+                .Select(x => x.Image)
+                .Take(12)
                 .ToListAsync();
             
             // Load ALL AI analysis samples

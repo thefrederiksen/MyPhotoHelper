@@ -4,8 +4,8 @@ namespace MyPhotoHelper.Services;
 
 public interface IMemoryService
 {
-    Task<MemoryCollection> GetTodaysMemoriesAsync(DateTime date, bool excludeScreenshots = true);
-    Task<List<YearGroup>> GetPhotosByDateAsync(DateTime date, bool excludeScreenshots = true);
+    Task<MemoryCollection> GetTodaysMemoriesAsync(DateTime date, bool excludeScreenshots = false);
+    Task<List<YearGroup>> GetPhotosByDateAsync(DateTime date, bool excludeScreenshots = false);
     Task<int> GetTotalPhotosForDateAsync(DateTime date);
 }
 

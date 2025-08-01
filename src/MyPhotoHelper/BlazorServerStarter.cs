@@ -249,6 +249,8 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IPhotoScanService, PhotoScanService>();
             builder.Services.AddSingleton<IScanStatusService, ScanStatusService>();
             builder.Services.AddScoped<IMetadataExtractionService, MetadataExtractionService>();
+            builder.Services.AddScoped<IFastScreenshotDetectionService, FastScreenshotDetectionService>();
+            builder.Services.AddScoped<IScreenshotAnalysisService, ScreenshotAnalysisService>();
             builder.Services.AddScoped<IHashCalculationService, HashCalculationService>();
             builder.Services.AddScoped<IPhasedScanService, PhasedScanService>();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();

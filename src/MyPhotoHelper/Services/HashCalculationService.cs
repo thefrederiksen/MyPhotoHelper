@@ -79,7 +79,7 @@ namespace MyPhotoHelper.Services
 
             var phaseProgress = new PhaseProgress
             {
-                Phase = ScanPhase.Phase3_Hashing,
+                Phase = ScanPhase.Phase4_Hashing,
                 TotalItems = totalImages,
                 ProcessedItems = imagesWithHash,
                 StartTime = DateTime.UtcNow

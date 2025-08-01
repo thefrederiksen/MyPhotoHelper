@@ -17,9 +17,15 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h1 class="display-5">📸 Gallery</h1>
-                    <p class="lead text-muted">Browse all your photos by date</p>
+                    <p class="lead text-muted">
+                        Browse all your photos by date
+                        @if (totalImagesCount > 0)
+                        {
+                            <span class="badge bg-secondary ms-2">@totalImagesCount.ToString("N0") items</span>
+                        }
+                    </p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 align-items-center">
                     <button class="btn btn-outline-secondary" @onclick="ToggleView">
                         <i class="oi @(isCompactView ? "oi-grid-four-up" : "oi-list")"></i> 
                         @(isCompactView ? "Grid View" : "Compact View")
@@ -221,6 +227,7 @@
     private bool isLoading = true;
     private bool isCompactView = false;
     private int totalPhotos = 0;
+    private int totalImagesCount = 0;
     private DateTime? oldestPhoto;
     private DateTime? newestPhoto;
     private bool showScrollTop = false;
@@ -277,6 +284,7 @@
 
             // Calculate totals
             totalPhotos = photoStats.Sum(x => x.Count);
+            totalImagesCount = totalPhotos;
             
             // Get date range
             if (photoStats.Any())
@@ -353,6 +361,7 @@
                 .OrderByDescending(x => x.meta.DateTaken ?? x.img.DateCreated)
                 .Select(x => x.img)
                 .Include(img => img.tbl_image_metadata)
+                .Include(img => img.tbl_image_analysis)
                 .Include(img => img.ScanDirectory)
                 .ToListAsync();
 

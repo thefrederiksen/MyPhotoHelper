@@ -13,7 +13,7 @@ public class MemoryService : IMemoryService
         _context = context;
     }
 
-    public async Task<MemoryCollection> GetTodaysMemoriesAsync(DateTime date, bool excludeScreenshots = true)
+    public async Task<MemoryCollection> GetTodaysMemoriesAsync(DateTime date, bool excludeScreenshots = false)
     {
         var yearGroups = await GetPhotosByDateAsync(date, excludeScreenshots);
         var totalPhotos = yearGroups.Sum(g => g.PhotoCount);
@@ -26,7 +26,7 @@ public class MemoryService : IMemoryService
         };
     }
 
-    public async Task<List<YearGroup>> GetPhotosByDateAsync(DateTime date, bool excludeScreenshots = true)
+    public async Task<List<YearGroup>> GetPhotosByDateAsync(DateTime date, bool excludeScreenshots = false)
     {
         try
         {

@@ -10,6 +10,16 @@
         <div class="photo-container position-relative" @onclick="() => OpenImage()" @onclick:stopPropagation="true">
             <ImageThumbnail Photo="Photo" Size="ThumbnailSize" />
             
+            <!-- Screenshot indicator -->
+            @if (IsScreenshot)
+            {
+                <div class="screenshot-badge position-absolute top-0 start-0 m-1">
+                    <span class="badge bg-warning text-dark">
+                        <i class="oi oi-monitor"></i>
+                    </span>
+                </div>
+            }
+            
             <!-- Photo overlay with info -->
             <div class="photo-overlay">
                 <div class="d-flex flex-column align-items-center justify-content-center h-100">
@@ -272,6 +282,9 @@
     [Parameter] public string ContainerClass { get; set; } = "col-3 col-sm-2 col-md-2 col-lg-1";
     [Parameter] public int ThumbnailSize { get; set; } = 250;
     [Parameter] public RenderFragment? AdditionalContent { get; set; }
+    
+    // Check if this image is a screenshot by looking at the analysis data
+    private bool IsScreenshot => Photo.tbl_image_analysis?.ImageCategory == "screenshot";
     
     private bool isDropdownOpen = false;
     private bool showPropertiesDialog = false;

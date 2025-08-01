@@ -202,6 +202,36 @@
                                         <i class="oi oi-file"></i> @phase.CurrentItem
                                     </div>
                                 }
+                                
+                                @* Show recent errors if any *@
+                                @if (phase.ErrorCount > 0 && phase.RecentErrors.Any())
+                                {
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-danger" type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#errors-@phase.Phase" 
+                                                aria-expanded="false">
+                                            <i class="oi oi-warning"></i> View @phase.ErrorCount Error@(phase.ErrorCount > 1 ? "s" : "")
+                                        </button>
+                                        <div class="collapse mt-2" id="errors-@phase.Phase">
+                                            <div class="card card-body bg-light border-danger">
+                                                <h6 class="text-danger">Recent Errors:</h6>
+                                                @foreach (var error in phase.RecentErrors)
+                                                {
+                                                    <div class="small text-danger mb-1">
+                                                        <i class="oi oi-bug"></i> @error
+                                                    </div>
+                                                }
+                                                <div class="mt-2">
+                                                    <button class="btn btn-sm btn-secondary" 
+                                                            @onclick="() => CopyErrorsToClipboard(phase)">
+                                                        <i class="oi oi-clipboard"></i> Copy to Clipboard
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
                         
@@ -630,10 +660,32 @@
         {
             ScanPhase.Phase1_Discovery => "Phase 1: File Discovery",
             ScanPhase.Phase2_Metadata => "Phase 2: Getting Image Details",
-            ScanPhase.Phase3_Hashing => "Phase 3: Duplicate Detection",
-            ScanPhase.Phase4_Analysis => "Phase 4: AI Analysis",
+            ScanPhase.Phase3_ScreenshotDetection => "Phase 3: Screenshot Detection",
+            ScanPhase.Phase4_Hashing => "Phase 4: Duplicate Detection",
+            ScanPhase.Phase5_Analysis => "Phase 5: AI Analysis",
             _ => phase.ToString()
         };
+    }
+
+    private async Task CopyErrorsToClipboard(PhaseProgress phase)
+    {
+        try
+        {
+            var errorText = $"Errors from {GetPhaseDisplayName(phase.Phase)}:\n\n";
+            errorText += string.Join("\n", phase.RecentErrors);
+            errorText += $"\n\nTotal errors: {phase.ErrorCount}";
+            errorText += $"\nPhase progress: {phase.ProcessedItems}/{phase.TotalItems} ({phase.ProgressPercentage:F1}%)";
+            errorText += $"\nGenerated at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", errorText);
+            
+            // You could add a toast notification here if you have one implemented
+            Logger.LogInformation("Error details copied to clipboard");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to copy errors to clipboard");
+        }
     }
 
     public void Dispose()

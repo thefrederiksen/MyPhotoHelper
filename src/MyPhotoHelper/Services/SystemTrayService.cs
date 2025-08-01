@@ -607,7 +607,8 @@ namespace MyPhotoHelper.Services
                 {
                     ScanPhase.Phase1_Discovery => "Finding new photos",
                     ScanPhase.Phase2_Metadata => "Reading photo details",
-                    ScanPhase.Phase3_Hashing => "Checking for duplicates",
+                    ScanPhase.Phase3_ScreenshotDetection => "Filtering screenshots",
+                    ScanPhase.Phase4_Hashing => "Checking for duplicates",
                     _ => "Scanning"
                 };
                 newTooltipText = $"MyPhotoHelper - {phaseText}...";

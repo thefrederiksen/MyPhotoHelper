@@ -1,0 +1,310 @@
+@page "/screenshot-analysis"
+@using MyPhotoHelper.Services
+@using MyPhotoHelper.Models
+@inject IScreenshotAnalysisService AnalysisService
+@inject IFastScreenshotDetectionService FastDetectionService
+
+<PageTitle>Screenshot Analysis</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="mb-0">Screenshot Analysis</h1>
+                <button class="btn btn-primary" @onclick="RefreshAnalysis" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Refresh Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center p-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Analyzing screenshot patterns...</p>
+        </div>
+    }
+    else if (patterns != null && resolutionStats != null && cameraStats != null)
+    {
+        <div class="row">
+            <!-- Filename Patterns -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Filename Patterns Found</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (patterns.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Pattern</th>
+                                            <th>Count</th>
+                                            <th>%</th>
+                                            <th>Examples</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var pattern in patterns.Take(10))
+                                        {
+                                            <tr class="@(pattern.Pattern.Contains("screenshot") ? "table-warning" : "")">
+                                                <td><code>@pattern.Pattern</code></td>
+                                                <td><strong>@pattern.Count</strong></td>
+                                                <td>@pattern.Percentage.ToString("F1")%</td>
+                                                <td>
+                                                    @if (pattern.Examples.Any())
+                                                    {
+                                                        <small class="text-muted">
+                                                            @string.Join(", ", pattern.Examples.Take(2))
+                                                            @if (pattern.Examples.Count > 2)
+                                                            {
+                                                                <span>...</span>
+                                                            }
+                                                        </small>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No common filename patterns found.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resolution Stats -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Common Image Resolutions</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (resolutionStats.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Resolution</th>
+                                            <th>Count</th>
+                                            <th>%</th>
+                                            <th>Screenshot?</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var resolution in resolutionStats.Take(15))
+                                        {
+                                            <tr class="@(resolution.LikelyScreenshot ? "table-warning" : "")">
+                                                <td><code>@resolution.Width×@resolution.Height</code></td>
+                                                <td><strong>@resolution.Count</strong></td>
+                                                <td>@resolution.Percentage.ToString("F1")%</td>
+                                                <td>
+                                                    @if (resolution.LikelyScreenshot)
+                                                    {
+                                                        <span class="badge bg-warning">📱 Likely</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">📸 Photo</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No resolution data available.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Camera Data Stats -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Camera Data Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Total Images</h6>
+                                    <h3 class="text-primary">@cameraStats.TotalImages.ToString("N0")</h3>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">With Camera Data</h6>
+                                    <h3 class="text-success">@cameraStats.WithExifData.ToString("N0")</h3>
+                                    <small class="text-muted">(@((cameraStats.TotalImages > 0 ? cameraStats.WithExifData * 100.0 / cameraStats.TotalImages : 0).ToString("F1"))%)</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Likely Screenshots</h6>
+                                    <h3 class="text-warning">@cameraStats.LikelyScreenshots.ToString("N0")</h3>
+                                    <small class="text-muted">(@((cameraStats.TotalImages > 0 ? cameraStats.LikelyScreenshots * 100.0 / cameraStats.TotalImages : 0).ToString("F1"))%)</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">With Camera Make</h6>
+                                    <h3 class="text-info">@cameraStats.WithCameraMake.ToString("N0")</h3>
+                                    <small class="text-muted">(@((cameraStats.TotalImages > 0 ? cameraStats.WithCameraMake * 100.0 / cameraStats.TotalImages : 0).ToString("F1"))%)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (cameraStats.CommonCameraMakes.Any())
+                        {
+                            <hr>
+                            <h6>Top Camera Brands</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var make in cameraStats.CommonCameraMakes.Take(5))
+                                {
+                                    <span class="badge bg-primary">@make</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" @onclick="RunFastDetection" disabled="@isRunningDetection">
+                                @if (isRunningDetection)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                🚀 Run Fast Screenshot Detection
+                            </button>
+                            
+                            @if (!string.IsNullOrEmpty(detectionResult))
+                            {
+                                <div class="alert alert-success">
+                                    @detectionResult
+                                </div>
+                            }
+
+                            <hr>
+                            
+                            <h6>Manual SQL Queries</h6>
+                            <small class="text-muted">You can run these in your database to find screenshots:</small>
+                            
+                            <div class="mt-2">
+                                <code class="small">
+                                    SELECT COUNT(*) FROM tbl_images WHERE LOWER(FileName) LIKE '%screenshot%';
+                                </code>
+                            </div>
+                            <div class="mt-2">
+                                <code class="small">
+                                    SELECT m.Width, m.Height, COUNT(*) FROM tbl_image_metadata m WHERE m.Width = 1920 AND m.Height = 1080 GROUP BY m.Width, m.Height;
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            <h6>Error</h6>
+            <p>@errorMessage</p>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ScreenshotPattern>? patterns;
+    private List<ResolutionStats>? resolutionStats;
+    private CameraDataStats? cameraStats;
+    private bool isLoading = true;
+    private bool isRunningDetection = false;
+    private string? errorMessage;
+    private string? detectionResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAnalysis();
+    }
+
+    private async Task RefreshAnalysis()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            patterns = await AnalysisService.AnalyzeExistingPatternsAsync();
+            resolutionStats = await AnalysisService.GetResolutionStatsAsync();
+            cameraStats = await AnalysisService.GetCameraDataStatsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RunFastDetection()
+    {
+        isRunningDetection = true;
+        detectionResult = null;
+        StateHasChanged();
+
+        try
+        {
+            var progress = new Progress<PhaseProgress>(p =>
+            {
+                detectionResult = $"Progress: {p.CurrentItem} ({p.ProcessedItems}/{p.TotalItems})";
+                InvokeAsync(StateHasChanged);
+            });
+
+            await FastDetectionService.DetectScreenshotsWithQueriesAsync(progress);
+            detectionResult = "✅ Fast screenshot detection completed! Refresh the analysis to see results.";
+        }
+        catch (Exception ex)
+        {
+            detectionResult = $"❌ Error: {ex.Message}";
+        }
+        finally
+        {
+            isRunningDetection = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -21,7 +21,11 @@
                 {
                     <text>Reading photo details...</text>
                 }
-                else if (progress.CurrentPhase == ScanPhase.Phase3_Hashing)
+                else if (progress.CurrentPhase == ScanPhase.Phase3_ScreenshotDetection)
+                {
+                    <text>Filtering screenshots...</text>
+                }
+                else if (progress.CurrentPhase == ScanPhase.Phase4_Hashing)
                 {
                     <text>Checking for duplicates...</text>
                 }

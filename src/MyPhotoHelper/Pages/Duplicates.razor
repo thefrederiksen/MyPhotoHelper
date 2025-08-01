@@ -71,11 +71,11 @@
             @if (ScanStatusService.IsScanning && ScanStatusService.CurrentPhasedProgress != null)
             {
                 var phasedProgress = ScanStatusService.CurrentPhasedProgress;
-                var hashingPhase = phasedProgress.PhaseProgress.ContainsKey(ScanPhase.Phase3_Hashing) 
-                    ? phasedProgress.PhaseProgress[ScanPhase.Phase3_Hashing] 
+                var hashingPhase = phasedProgress.PhaseProgress.ContainsKey(ScanPhase.Phase4_Hashing) 
+                    ? phasedProgress.PhaseProgress[ScanPhase.Phase4_Hashing] 
                     : null;
 
-                @if (hashingPhase != null && (phasedProgress.CurrentPhase == ScanPhase.Phase3_Hashing || !hashingPhase.IsComplete))
+                @if (hashingPhase != null && (phasedProgress.CurrentPhase == ScanPhase.Phase4_Hashing || !hashingPhase.IsComplete))
                 {
                     <div class="alert alert-info mb-4">
                         <div class="d-flex align-items-center">
