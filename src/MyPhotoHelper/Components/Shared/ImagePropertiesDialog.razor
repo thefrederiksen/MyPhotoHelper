@@ -207,10 +207,9 @@
         var cacheKey = GetCacheKey(fullPath, 250, 80);
         
         // Use same subdirectory structure as HeicCacheService
-        var subDir1 = cacheKey.Substring(0, 2).ToLower();
-        var subDir2 = cacheKey.Substring(2, 2).ToLower();
+        var subDir = cacheKey.Substring(0, 2).ToLower();
         
-        return Path.Combine(HeicCacheService.GetCacheDirectory(), subDir1, subDir2, $"thumb_{cacheKey}.jpg");
+        return Path.Combine(HeicCacheService.GetCacheDirectory(), subDir, $"thumb_{cacheKey}.jpg");
     }
 
     private string GetCacheKey(string filePath, int maxSize, int quality)

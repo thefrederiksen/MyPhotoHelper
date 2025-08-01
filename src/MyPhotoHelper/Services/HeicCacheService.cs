@@ -179,13 +179,10 @@ public class HeicCacheService : IHeicCacheService
     private string GetCachedFilePath(string cacheKey)
     {
         // Use first 2 characters of hash for subdirectory (256 possible subdirs)
-        var subDir1 = cacheKey.Substring(0, 2).ToLower();
-        
-        // Use next 2 characters for second level subdirectory (65536 possible paths)
-        var subDir2 = cacheKey.Substring(2, 2).ToLower();
+        var subDir = cacheKey.Substring(0, 2).ToLower();
         
         // Create subdirectory path
-        var subDirPath = Path.Combine(_cacheDirectory, subDir1, subDir2);
+        var subDirPath = Path.Combine(_cacheDirectory, subDir);
         
         // Ensure subdirectory exists
         if (!Directory.Exists(subDirPath))
