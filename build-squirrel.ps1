@@ -101,9 +101,9 @@ if (-not $squirrelExe) {
 } else {
     # Use the found Squirrel.exe with releasify command
     Write-Host "Creating Squirrel package using releasify..." -ForegroundColor Yellow
-    & $squirrelExe --releasify "MyPhotoHelper.$Version.nupkg" `
-        --releaseDir ".\Releases" `
-        --no-msi
+    & $squirrelExe releasify `
+        --package "MyPhotoHelper.$Version.nupkg" `
+        --releaseDir ".\Releases"
 }
 
 if ($LASTEXITCODE -ne 0) {
