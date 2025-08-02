@@ -12,6 +12,7 @@ namespace MyPhotoHelper.Forms
         private TextBox logTextBox = null!;
         private ProgressBar progressBar = null!;
         private Button updateButton = null!;
+        private Button forceUpdateButton = null!;
         private Button closeButton = null!;
         private Button copyLogButton = null!;
         private Label statusLabel = null!;
@@ -71,13 +72,24 @@ namespace MyPhotoHelper.Forms
                 Size = new System.Drawing.Size(150, 35),
                 Font = new System.Drawing.Font("Segoe UI", 10F)
             };
-            updateButton.Click += async (s, e) => await UpdateDatabase();
+            updateButton.Click += async (s, e) => await UpdateDatabase(false);
+
+            // Force Update Button
+            forceUpdateButton = new Button
+            {
+                Text = "Force Update (v2+)",
+                Location = new System.Drawing.Point(172, 515),
+                Size = new System.Drawing.Size(150, 35),
+                Font = new System.Drawing.Font("Segoe UI", 10F),
+                ForeColor = System.Drawing.Color.DarkOrange
+            };
+            forceUpdateButton.Click += async (s, e) => await UpdateDatabase(true);
 
             // Copy Log Button
             copyLogButton = new Button
             {
                 Text = "Copy Log",
-                Location = new System.Drawing.Point(172, 515),
+                Location = new System.Drawing.Point(332, 515),
                 Size = new System.Drawing.Size(100, 35),
                 Font = new System.Drawing.Font("Segoe UI", 10F),
                 Enabled = false
@@ -99,13 +111,15 @@ namespace MyPhotoHelper.Forms
             this.Controls.Add(progressBar);
             this.Controls.Add(logTextBox);
             this.Controls.Add(updateButton);
+            this.Controls.Add(forceUpdateButton);
             this.Controls.Add(copyLogButton);
             this.Controls.Add(closeButton);
         }
 
-        private async Task UpdateDatabase()
+        private async Task UpdateDatabase(bool forceUpdate)
         {
             updateButton.Enabled = false;
+            forceUpdateButton.Enabled = false;
             copyLogButton.Enabled = false;
             progressBar.Value = 0;
             logTextBox.Clear();
@@ -164,21 +178,40 @@ namespace MyPhotoHelper.Forms
                     }
                     LogMessage("");
 
-                    var pendingMigrations = scriptFiles.Where(s => s.Version > currentVersion).ToList();
-                    LogMessage($"Pending Migrations: {pendingMigrations.Count}");
-
-                    if (pendingMigrations.Count == 0)
+                    var migrationsToRun = forceUpdate
+                        ? scriptFiles.Where(s => s.Version >= 2).ToList()
+                        : scriptFiles.Where(s => s.Version > currentVersion).ToList();
+                    
+                    if (forceUpdate)
                     {
-                        LogMessage($"Database is already up to date!");
-                        UpdateProgress(100, "Database is up to date");
-                        return;
+                        LogMessage($"FORCE UPDATE MODE: Will re-run all migrations from version 2 onwards");
+                        LogMessage($"Migrations to re-run: {migrationsToRun.Count}");
+                        
+                        if (migrationsToRun.Count == 0)
+                        {
+                            LogMessage($"No migrations to run (version 2 or higher not found)");
+                            UpdateProgress(100, "No migrations to run");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        // Normal update: Only run pending migrations
+                        LogMessage($"Pending Migrations: {migrationsToRun.Count}");
+
+                        if (migrationsToRun.Count == 0)
+                        {
+                            LogMessage($"Database is already up to date!");
+                            UpdateProgress(100, "Database is up to date");
+                            return;
+                        }
                     }
 
                     // Apply migrations
-                    var progressPerMigration = 60 / pendingMigrations.Count;
+                    var progressPerMigration = 60 / migrationsToRun.Count;
                     var currentProgress = 30;
 
-                    foreach (var migration in pendingMigrations)
+                    foreach (var migration in migrationsToRun)
                     {
                         LogMessage($"");
                         LogMessage($"Applying Migration: {migration.FileName}");
@@ -222,6 +255,7 @@ namespace MyPhotoHelper.Forms
             finally
             {
                 updateButton.Enabled = true;
+                forceUpdateButton.Enabled = true;
                 copyLogButton.Enabled = true;
             }
         }

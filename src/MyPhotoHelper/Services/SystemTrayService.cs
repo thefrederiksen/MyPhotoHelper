@@ -294,8 +294,14 @@ namespace MyPhotoHelper.Services
                 
                 // Update Database - Opens database update tool
                 var updateDbMenuItem = new ToolStripMenuItem("Update Database...");
-                updateDbMenuItem.Click += (s, e) => OpenDatabaseUpdateTool();
+                updateDbMenuItem.Click += (s, e) => OpenDatabaseUpdateTool(false);
                 contextMenu.Items.Add(updateDbMenuItem);
+                
+                // Force Update Database - Opens database update tool in force mode
+                var forceUpdateDbMenuItem = new ToolStripMenuItem("Force Database Update (v2+)...");
+                forceUpdateDbMenuItem.ForeColor = System.Drawing.Color.DarkOrange;
+                forceUpdateDbMenuItem.Click += (s, e) => OpenDatabaseUpdateTool(true);
+                contextMenu.Items.Add(forceUpdateDbMenuItem);
                 
                 contextMenu.Items.Add(new ToolStripSeparator());
                 
@@ -453,14 +459,30 @@ namespace MyPhotoHelper.Services
             }
         }
 
-        private void OpenDatabaseUpdateTool()
+        private void OpenDatabaseUpdateTool(bool forceUpdate)
         {
             try
             {
-                _logger.LogInformation("Opening database update tool");
+                _logger.LogInformation($"Opening database update tool (force mode: {forceUpdate})");
                 
                 // Create and show the database update form
                 var updateForm = new MyPhotoHelper.Forms.DatabaseUpdateForm(_serviceProvider);
+                
+                // If force update is requested, automatically trigger it after form loads
+                if (forceUpdate)
+                {
+                    updateForm.Load += async (s, e) =>
+                    {
+                        // Small delay to ensure form is fully loaded
+                        await Task.Delay(100);
+                        
+                        // Click the force update button programmatically
+                        var forceButton = updateForm.Controls.OfType<Button>()
+                            .FirstOrDefault(b => b.Text.Contains("Force Update"));
+                        forceButton?.PerformClick();
+                    };
+                }
+                
                 updateForm.ShowDialog();
                 
                 _logger.LogInformation("Database update tool closed");
