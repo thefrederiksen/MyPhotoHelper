@@ -36,42 +36,31 @@ jobs:
       shell: pwsh
     
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        name: Release ${{ github.ref }}
         draft: false
         prerelease: false
-    
-    - name: Upload Setup.exe
-      uses: actions/upload-release-asset@v1
+        files: |
+          ./Releases/Setup.exe
+          ./Releases/RELEASES
+          ./Releases/MyPhotoHelper-${{ steps.version.outputs.VERSION }}-full.nupkg
+        body: |
+          ## Release v${{ steps.version.outputs.VERSION }}
+          
+          ### What's New
+          - Flexible settings system with key-value architecture
+          - Fixed all build errors and improved stability
+          - Enhanced database management tools
+          - Improved Settings page functionality
+          
+          ### Installation
+          - Download `Setup.exe` below to install MyPhotoHelper
+          - The application will automatically check for updates
+          
+          ### Notes
+          - AI features are temporarily disabled during system upgrade
+          - Core photo management features remain fully functional
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./Releases/Setup.exe
-        asset_name: MyPhotoHelper-Setup.exe
-        asset_content_type: application/octet-stream
-    
-    - name: Upload RELEASES file
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./Releases/RELEASES
-        asset_name: RELEASES
-        asset_content_type: text/plain
-    
-    - name: Upload NuGet Package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./Releases/MyPhotoHelper-${{ steps.version.outputs.VERSION }}-full.nupkg
-        asset_name: MyPhotoHelper-${{ steps.version.outputs.VERSION }}-full.nupkg
-        asset_content_type: application/octet-stream
