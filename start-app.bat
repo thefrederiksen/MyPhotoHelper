@@ -17,14 +17,11 @@ echo Building and starting the application...
 echo This may take a moment on first run.
 echo.
 
-REM Run the application
-dotnet run --project src\MyPhotoHelper
+REM Run the application in a new window
+start "MyPhotoHelper" dotnet run --project src\MyPhotoHelper
 
-REM If the app exits, pause so user can see any error messages
-if errorlevel 1 (
-    echo.
-    echo ========================================
-    echo   Application exited with errors
-    echo ========================================
-    pause
-)
+echo.
+echo ========================================
+echo   MyPhotoHelper is starting...
+echo ========================================
+echo Check the new window for application output.

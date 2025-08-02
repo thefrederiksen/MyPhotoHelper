@@ -130,6 +130,172 @@
             </div>
         }
 
+        <!-- Image Classification Tracking -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><span class="oi oi-beaker" aria-hidden="true"></span> Classification Method Breakdown</h5>
+                        <small class="text-muted">Track how images are classified by different methods</small>
+                    </div>
+                    <a href="/test-image-analysis-ai" class="btn btn-sm btn-outline-primary">
+                        <span class="oi oi-external-link" aria-hidden="true"></span> Test Metadata Classifier
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <!-- Phase 1: Initial Categorization (Fast) -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 border-info">
+                            <div class="card-header bg-info bg-opacity-10 text-center">
+                                <h6 class="mb-0">📁 Phase 1: Fast Analysis</h6>
+                                <small class="text-muted">Filename & Resolution</small>
+                            </div>
+                            <div class="card-body text-center">
+                                <h4 class="text-info">@(categorizationStats?.FilenameScreenshots + categorizationStats?.ResolutionScreenshots ?? 0)</h4>
+                                <small class="text-muted">Screenshots Detected</small>
+                                <hr>
+                                <div class="small">
+                                    <div>📝 Filename: @(categorizationStats?.FilenameScreenshots ?? 0)</div>
+                                    <div>📐 Resolution: @(categorizationStats?.ResolutionScreenshots ?? 0)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2: Metadata Analysis -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 border-success">
+                            <div class="card-header bg-success bg-opacity-10 text-center">
+                                <h6 class="mb-0">📷 Phase 2: Camera Metadata</h6>
+                                <small class="text-muted">EXIF Data Analysis</small>
+                            </div>
+                            <div class="card-body text-center">
+                                <h4 class="text-success">@(categorizationStats?.TotalPhotos ?? 0)</h4>
+                                <small class="text-muted">Photos with Camera Data</small>
+                                <hr>
+                                <div class="small">
+                                    <div>📸 Camera make/model</div>
+                                    <div>⚙️ Settings (f-stop, ISO, etc.)</div>
+                                    <div>📍 GPS coordinates</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 3: AI Vision Analysis -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 border-primary">
+                            <div class="card-header bg-primary bg-opacity-10 text-center">
+                                <h6 class="mb-0">🤖 Phase 3: AI Vision</h6>
+                                <small class="text-muted">Deep Learning Analysis</small>
+                            </div>
+                            <div class="card-body text-center">
+                                <h4 class="text-primary">@analyzedImages</h4>
+                                <small class="text-muted">AI Analyzed Images</small>
+                                <hr>
+                                <div class="small">
+                                    <div>🔍 Visual content analysis</div>
+                                    <div>📝 Scene description</div>
+                                    <div>🏷️ Object detection</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Remaining Unclassified -->
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 border-warning">
+                            <div class="card-header bg-warning bg-opacity-10 text-center">
+                                <h6 class="mb-0">❓ Unclassified</h6>
+                                <small class="text-muted">Need More Analysis</small>
+                            </div>
+                            <div class="card-body text-center">
+                                <h4 class="text-warning">@(categorizationStats?.UncategorizedImages ?? 0)</h4>
+                                <small class="text-muted">Images Remaining</small>
+                                <hr>
+                                <div class="small">
+                                    <div>🔬 Awaiting metadata classification</div>
+                                    <div>🤖 Or AI vision analysis</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classification Progress Bar -->
+                <div class="mb-4">
+                    <h6>Overall Classification Progress</h6>
+                    @{
+                        var fastClassified = (categorizationStats?.FilenameScreenshots + categorizationStats?.ResolutionScreenshots ?? 0);
+                        var metadataClassified = (categorizationStats?.TotalPhotos ?? 0);
+                        var aiClassified = analyzedImages;
+                        var totalClassified = fastClassified + metadataClassified + aiClassified;
+                        var unclassified = totalImages - totalClassified;
+                        
+                        var fastPercent = totalImages > 0 ? (double)fastClassified / totalImages * 100 : 0;
+                        var metadataPercent = totalImages > 0 ? (double)metadataClassified / totalImages * 100 : 0; 
+                        var aiPercent = totalImages > 0 ? (double)aiClassified / totalImages * 100 : 0;
+                        var unclassifiedPercent = totalImages > 0 ? (double)unclassified / totalImages * 100 : 0;
+                    }
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: @fastPercent%" title="Fast Analysis: @fastClassified images (@fastPercent.ToString("F1")%)">
+                            @if (fastPercent > 8) { <small>Fast: @fastClassified</small> }
+                        </div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: @metadataPercent%" title="Metadata Analysis: @metadataClassified images (@metadataPercent.ToString("F1")%)">
+                            @if (metadataPercent > 8) { <small>Meta: @metadataClassified</small> }
+                        </div>
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: @aiPercent%" title="AI Analysis: @aiClassified images (@aiPercent.ToString("F1")%)">
+                            @if (aiPercent > 8) { <small>AI: @aiClassified</small> }
+                        </div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: @unclassifiedPercent%" title="Unclassified: @unclassified images (@unclassifiedPercent.ToString("F1")%)">
+                            @if (unclassifiedPercent > 8) { <small>Unknown: @unclassified</small> }
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>📁 Fast: @fastPercent.ToString("F1")%</span>
+                        <span>📷 Metadata: @metadataPercent.ToString("F1")%</span>
+                        <span>🤖 AI Vision: @aiPercent.ToString("F1")%</span>
+                        <span>❓ Unknown: @unclassifiedPercent.ToString("F1")%</span>
+                    </div>
+                </div>
+
+                <!-- Next Steps Recommendations -->
+                @if (unclassified > 0)
+                {
+                    <div class="alert alert-info">
+                        <h6><span class="oi oi-lightbulb" aria-hidden="true"></span> Next Steps for @unclassified Unclassified Images:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ol class="mb-0">
+                                    <li><strong>Try Metadata Classification:</strong> Use the new rule-based classifier to analyze metadata patterns</li>
+                                    <li><strong>Run AI Vision Analysis:</strong> For remaining images that need visual analysis</li>
+                                </ol>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-2">
+                                    <a href="/test-image-analysis-ai" class="btn btn-sm btn-primary">
+                                        <span class="oi oi-beaker" aria-hidden="true"></span> Test Metadata Classifier
+                                    </a>
+                                    <a href="/database-scan" class="btn btn-sm btn-outline-primary">
+                                        <span class="oi oi-eye" aria-hidden="true"></span> AI Vision Analysis
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success">
+                        <h6><span class="oi oi-check" aria-hidden="true"></span> All Images Classified!</h6>
+                        <p class="mb-0">Great job! All @totalImages images have been analyzed and classified using various methods.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
         <!-- Screenshot Analysis Summary -->
         @if (categorizationStats != null)
         {

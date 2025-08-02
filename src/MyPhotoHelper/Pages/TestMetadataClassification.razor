@@ -1,0 +1,206 @@
+@page "/test-metadata-classification"
+@using MyPhotoHelper.Services
+@inject IMetadataClassificationTestService TestService
+@inject IMetadataClassificationService ClassificationService
+@inject IJSRuntime JS
+
+<PageTitle>Test Metadata Classification</PageTitle>
+
+<div class="container-fluid">
+    <h2>🧪 Metadata Classification Test</h2>
+    <p class="text-muted">Test the LLM-based metadata classification system</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>API Configuration</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">OpenAI API Key:</label>
+                        <input @bind="apiKey" type="password" class="form-control" placeholder="sk-..." />
+                        <small class="form-text text-muted">Your API key is not stored - only used for this test</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Model:</label>
+                        <select @bind="selectedModel" class="form-control">
+                            <option value="gpt-4o-mini">gpt-4o-mini (Recommended - Cheapest)</option>
+                            <option value="gpt-4o">gpt-4o (More Expensive)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sample Size:</label>
+                        <input @bind="sampleSize" type="number" class="form-control" min="1" max="50" />
+                        <small class="form-text text-muted">Number of images to test (costs ~$0.0001 per image)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Test Actions</h4>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary mb-2 d-block w-100" @onclick="RunAccuracyTest" disabled="@isRunning">
+                        @if (isRunning) 
+                        { 
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Running Accuracy Test...</span> 
+                        } 
+                        else 
+                        { 
+                            <span>🎯 Run Accuracy Test</span> 
+                        }
+                    </button>
+
+                    <button class="btn btn-secondary mb-2 d-block w-100" @onclick="TestSinglePhoto" disabled="@isRunning">
+                        📷 Test Single Photo Metadata
+                    </button>
+
+                    <button class="btn btn-secondary mb-2 d-block w-100" @onclick="TestSingleScreenshot" disabled="@isRunning">
+                        🖥️ Test Single Screenshot Metadata
+                    </button>
+
+                    @if (isRunning)
+                    {
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 style="width: 100%">Processing...</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(results))
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <h4>Test Results</h4>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearResults">Clear</button>
+                    </div>
+                    <div class="card-body">
+                        <pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; background: #f8f9fa; padding: 1rem; border-radius: 4px;">@results</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <h5>Error</h5>
+                    <p>@errorMessage</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string apiKey = "";
+    private string selectedModel = "gpt-4o-mini";
+    private int sampleSize = 10;
+    private string results = "";
+    private string errorMessage = "";
+    private bool isRunning = false;
+
+    private async Task RunAccuracyTest()
+    {
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            errorMessage = "Please enter your OpenAI API key";
+            return;
+        }
+
+        await ExecuteTest(async () =>
+        {
+            var testResults = await TestService.RunAccuracyTestAsync(apiKey, sampleSize, selectedModel);
+            return $"=== ACCURACY TEST RESULTS ===\n\n{testResults.Summary}\n\n" +
+                   $"=== DETAILED RESULTS ===\n" +
+                   string.Join("\n", testResults.DetailedResults.Select(r => 
+                       $"Image {r.ImageId}: {r.Category} (confidence: {r.Confidence:F2}) - {(r.IsCorrect ? "✅ CORRECT" : "❌ WRONG")}\n" +
+                       $"  Reasoning: {r.Reasoning}\n"));
+        });
+    }
+
+    private Task TestSinglePhoto()
+    {
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            errorMessage = "Please enter your OpenAI API key";
+            return Task.CompletedTask;
+        }
+
+        return ExecuteTest(() => Task.FromResult(
+            "=== SINGLE PHOTO TEST ===\n" +
+            "Testing sample photo metadata:\n" +
+            "Camera: Canon EOS R5\n" +
+            "Settings: 85mm, f/2.8, ISO 400, 1/200s\n" +
+            "GPS: 40.7128, -74.0060\n" +
+            "Dimensions: 4000x3000\n\n" +
+            "This should be classified as 'photo' with high confidence.\n" +
+            "(Note: Direct Python call needs to be implemented)"
+        ));
+    }
+
+    private Task TestSingleScreenshot()
+    {
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            errorMessage = "Please enter your OpenAI API key";
+            return Task.CompletedTask;
+        }
+
+        return ExecuteTest(() => Task.FromResult(
+            "=== SINGLE SCREENSHOT TEST ===\n" +
+                   "Testing sample screenshot metadata:\n" +
+                   $"Software: Snipping Tool\n" +
+                   $"Dimensions: 1920x1080 (common screen resolution)\n" +
+                   $"No camera metadata\n" +
+                   $"No GPS data\n" +
+                   $"No EXIF date taken\n\n" +
+                   "This should be classified as 'screenshot' with high confidence.\n" +
+                   "(Note: Direct Python call needs to be implemented)"
+        ));
+    }
+
+    private async Task ExecuteTest(Func<Task<string>> testAction)
+    {
+        isRunning = true;
+        results = "";
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            results = await testAction();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Test failed: {ex.Message}\n\nStack trace:\n{ex.StackTrace}";
+        }
+        finally
+        {
+            isRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearResults()
+    {
+        results = "";
+        errorMessage = "";
+    }
+}
