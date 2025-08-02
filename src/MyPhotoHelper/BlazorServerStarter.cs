@@ -228,7 +228,11 @@ namespace MyPhotoHelper
             var dbPath = pathService.GetDatabasePath();
             var connectionString = $"Data Source={dbPath};Cache=Shared;";
             
-            builder.Services.AddDbContext<MyPhotoHelperDbContext>(options =>
+            // Add services
+            builder.Services.AddMemoryCache();
+            
+            // Use DbContextFactory for both singleton and scoped access
+            builder.Services.AddDbContextFactory<MyPhotoHelperDbContext>(options =>
                 options.UseSqlite(connectionString, sqliteOptions =>
                 {
                     sqliteOptions.CommandTimeout(30);
@@ -236,13 +240,20 @@ namespace MyPhotoHelper
                 .EnableSensitiveDataLogging(builder.Environment.IsDevelopment())
                 .EnableDetailedErrors(builder.Environment.IsDevelopment()));
             
-            // Add services
+            // Register a scoped DbContext that uses the factory (for components that inject DbContext directly)
+            builder.Services.AddScoped<MyPhotoHelperDbContext>(provider =>
+            {
+                var factory = provider.GetRequiredService<IDbContextFactory<MyPhotoHelperDbContext>>();
+                return factory.CreateDbContext();
+            });
+            
             builder.Services.AddSingleton<IPathService>(pathService);
             builder.Services.AddScoped<IDatabaseInitializationService, DatabaseInitializationService>();
             builder.Services.AddSingleton<IDatabaseChangeNotificationService, DatabaseChangeNotificationService>();
             builder.Services.AddSingleton<SystemTrayService>();
             builder.Services.AddHostedService<BackgroundTaskService>();
             builder.Services.AddHostedService<AppUpdateService>();
+            builder.Services.AddScoped<ISettingsService, SettingsService>();
             builder.Services.AddScoped<IMemoryService, MemoryService>();
             builder.Services.AddScoped<IPhotoPathService, PhotoPathService>();
             builder.Services.AddScoped<IFolderDialogService, FolderDialogService>();

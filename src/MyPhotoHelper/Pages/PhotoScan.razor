@@ -118,7 +118,8 @@
                                 <li>App Settings exist: @(appSettings != null ? "Yes" : "No")</li>
                                 @if (appSettings != null)
                                 {
-                                    <li>AutoScanOnStartup: @(appSettings.AutoScanOnStartup)</li>
+                                    @* AutoScanOnStartup property no longer exists in new settings model *@
+                                    <li>AutoScanOnStartup: Not available</li>
                                 }
                                 <li>Background Service Status: @backgroundServiceStatus</li>
                                 <li>Is Scanning: @ScanStatusService.IsScanning</li>
@@ -620,14 +621,14 @@
         }
     }
     
-    private async Task ShowDiagnostics()
+    private Task ShowDiagnostics()
     {
         showDiagnostics = true;
         
         try
         {
-            // Load app settings
-            appSettings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
+            // Load app settings - temporarily disabled during database migration
+            appSettings = null;
             
             // Check background service
             using var scope = ServiceProvider.CreateScope();
@@ -652,6 +653,7 @@
         }
         
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private string GetPhaseDisplayName(ScanPhase phase)

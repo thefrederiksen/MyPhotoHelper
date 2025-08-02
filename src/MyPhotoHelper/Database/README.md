@@ -2,10 +2,19 @@
 
 This directory contains the database schema and tools for FaceVault.
 
+## ⚠️ BREAKING CHANGE - Version 1
+
+The database schema has been updated to use a flexible key-value settings table.
+**This requires deleting your existing database and letting the application recreate it.**
+
+See [BREAKING_CHANGE_V1.md](BREAKING_CHANGE_V1.md) for details.
+
 ## Files
 
-- **`DatabaseVersion_001.sql`** - Initial database schema (version 1)
+- **`DatabaseVersion_001.sql`** - Consolidated database schema (version 1)
 - **`SCHEMA.md`** - Detailed documentation of all tables and relationships  
+- **`DATABASE_SCHEMA_CHANGES.md`** - Guide for making database schema changes
+- **`BREAKING_CHANGE_V1.md`** - Details about the v1 settings table refactoring
 - **`GenerateEFModels.bat`** - Windows batch script to generate EF Core models
 - **`GenerateEFModels.ps1`** - PowerShell script to generate EF Core models (recommended)
 - **`dev_facevault.db`** - Development database (created by running database_manager.py)

@@ -26,7 +26,10 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh issue list:*)",
-      "Bash(dotnet tool list:*)"
+      "Bash(dotnet tool list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(del:*)",
+      "Bash(dotnet ef dbcontext scaffold:*)"
     ],
     "deny": []
   }

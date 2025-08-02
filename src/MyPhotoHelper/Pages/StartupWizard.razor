@@ -602,7 +602,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load settings
+        // Load settings - temporarily disabled during database migration
+        /*
         settings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
         if (settings == null)
         {
@@ -615,6 +616,10 @@
             DbContext.tbl_app_settings.Add(settings);
             await DbContext.SaveChangesAsync();
         }
+        */
+        
+        // Create empty settings object to prevent null reference errors
+        settings = new tbl_app_settings();
         
         // Check for existing scan directories
         var existingDirs = await DbContext.tbl_scan_directory.ToListAsync();
@@ -1185,7 +1190,8 @@
                 DbContext.tbl_scan_directory.Add(scanDir);
             }
             
-            // 3. Save AI settings
+            // 3. Save AI settings - temporarily disabled during database migration
+            /*
             if (settings != null)
             {
                 settings.EnableAIImageAnalysis = enableAI ? 1 : 0;
@@ -1210,6 +1216,7 @@
                 
                 settings.DateModified = DateTime.UtcNow;
             }
+            */
             
             // Save all changes
             await DbContext.SaveChangesAsync();

@@ -1,367 +1,61 @@
 @page "/test-image-analysis-ai"
-@using MyPhotoHelper.Services
-@using MyPhotoHelper.Models
-@using MyPhotoHelper.Components.Shared
-@using Microsoft.EntityFrameworkCore
-@inject IMetadataClassificationService ClassificationService
-@inject MyPhotoHelper.Data.MyPhotoHelperDbContext DbContext
-@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
-<PageTitle>Test Image Analysis with AI</PageTitle>
+<PageTitle>Feature Temporarily Unavailable</PageTitle>
 
 <div class="container-fluid">
-    <h2>🤖 Test Image Analysis with AI</h2>
-    <p class="text-muted">Click any image below to test classification based on metadata analysis</p>
-
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>🧠 Smart Rule-Based Classification</h5>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <span class="oi oi-warning" aria-hidden="true"></span> 
+                        Feature Temporarily Unavailable
+                    </h4>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <strong>🤖 LLM vs Rule-Based Classification:</strong><br/>
-                        <ul class="mb-0 mt-2">
-                            <li><strong>With OpenAI API Key:</strong> Uses GPT-4o-mini for intelligent metadata analysis</li>
-                            <li><strong>Without API Key:</strong> Falls back to rule-based pattern matching</li>
-                            <li><strong>Analysis includes:</strong> Camera metadata, software signatures, screen resolutions, GPS coordinates</li>
+                <div class="card-body text-center py-5">
+                    <i class="oi oi-wrench" style="font-size: 4rem; color: #ffc107;"></i>
+                    <h3 class="mt-3">AI Test Features Under Maintenance</h3>
+                    <p class="lead text-muted">
+                        AI testing functionality is temporarily disabled while we upgrade the system to support the new flexible settings architecture.
+                    </p>
+                    
+                    <div class="alert alert-light border mt-4" role="alert">
+                        <h6 class="alert-heading">What's happening:</h6>
+                        <ul class="text-start mb-0">
+                            <li>Database schema has been updated to a flexible key-value settings system</li>
+                            <li>AI features are being migrated to work with the new architecture</li>
+                            <li>Core photo management features remain fully functional</li>
+                            <li>This page will be restored once the migration is complete</li>
                         </ul>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>⚙️ Configuration</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="apiKey" class="form-label"><strong>OpenAI API Key</strong> <small class="text-muted">(optional)</small></label>
-                        <input type="password" class="form-control" id="apiKey" @bind="apiKey" placeholder="sk-..." />
-                        <div class="form-text">Leave empty to use rule-based classification</div>
+
+                    <div class="mt-4">
+                        <button class="btn btn-primary" @onclick="GoHome">
+                            <span class="oi oi-home" aria-hidden="true"></span> Go to Memories
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" @onclick="GoToPhotoScan">
+                            <span class="oi oi-pulse" aria-hidden="true"></span> Photo Scanning
+                        </button>
                     </div>
-                    <div class="mb-3">
-                        <label for="model" class="form-label"><strong>Model</strong></label>
-                        <select class="form-select" id="model" @bind="selectedModel">
-                            <option value="gpt-4o-mini">GPT-4o Mini (Recommended)</option>
-                            <option value="gpt-4o">GPT-4o (More Accurate)</option>
-                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster)</option>
-                        </select>
-                    </div>
-                    <hr>
-                    <p><strong>Unknown Images:</strong> @unknownImages.Count</p>
-                    <p><strong>Tested:</strong> @testedCount</p>
-                    <p class="mb-0"><strong>Currently Testing:</strong> @(isAnalyzing ? currentTestingImage?.FileName ?? "..." : "None")</p>
+                    
+                    <p class="text-muted mt-3">
+                        <small>You can still access photo scanning, gallery, and database management features.</small>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-
-    @if (unknownImages.Any())
-    {
-        <div class="row">
-            @foreach (var image in unknownImages)
-            {
-                <div class="col-2 col-sm-1 mb-3">
-                    <div class="card @(GetCardClass(image))">
-                        <ImageViewer Photo="image" ContainerClass="" ShowTime="false" OnImageClick="@(() => { })" />
-                        <div class="card-body p-1">
-                            <small class="text-muted d-block text-truncate">@image.FileName</small>
-                            @if (testResults.ContainsKey(image.ImageId))
-                            {
-                                var result = testResults[image.ImageId];
-                                <div class="mt-1">
-                                    @if (result.HasError)
-                                    {
-                                        <span class="badge bg-danger">Error</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge @GetBadgeClass(result.Category)">@result.Category</span>
-                                        <small class="d-block">@(result.Confidence.ToString("F2"))</small>
-                                    }
-                                </div>
-                                <button class="btn btn-sm btn-info mt-1" @onclick="() => ShowResult(image)" style="font-size: 0.7rem;">
-                                    View Details
-                                </button>
-                            }
-                            else
-                            {
-                                <button class="btn btn-sm @(isAnalyzing && currentTestingImage?.ImageId == image.ImageId ? "btn-warning" : "btn-primary") mt-1" 
-                                        @onclick="() => TestImage(image)" 
-                                        disabled="@(isAnalyzing)"
-                                        style="font-size: 0.7rem;">
-                                    @if (isAnalyzing && currentTestingImage?.ImageId == image.ImageId)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                        <text>Testing...</text>
-                                    }
-                                    else
-                                    {
-                                        <text>🤖 Test</text>
-                                    }
-                                </button>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="text-center py-5">
-            <i class="display-1 text-muted">🤖</i>
-            <h3 class="mt-3 text-muted">No Unknown Images Found</h3>
-            <p class="text-muted">All images have been analyzed or there are no images to analyze.</p>
-        </div>
-    }
-
-    @if (selectedResult != null)
-    {
-        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            🤖 AI Analysis Result: @selectedResult.FileName
-                        </h5>
-                        <button type="button" class="btn-close" @onclick="CloseModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        @if (testResults.ContainsKey(selectedResult.ImageId))
-                        {
-                            var result = testResults[selectedResult.ImageId];
-                            
-                            @if (result.HasError)
-                            {
-                                <div class="alert alert-danger">
-                                    <h6>❌ Error</h6>
-                                    <p>@result.ErrorMessage</p>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6>📊 Classification Result</h6>
-                                        <table class="table table-sm">
-                                            <tr>
-                                                <td><strong>Category:</strong></td>
-                                                <td><span class="badge @GetBadgeClass(result.Category)">@result.Category</span></td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Confidence:</strong></td>
-                                                <td>@(result.Confidence.ToString("F2")) (@((result.Confidence * 100).ToString("F0"))%)</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Tested At:</strong></td>
-                                                <td>@result.ClassifiedAt.ToString("HH:mm:ss")</td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6>📁 File Info</h6>
-                                        <table class="table table-sm">
-                                            <tr>
-                                                <td><strong>File:</strong></td>
-                                                <td>@selectedResult.FileName</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Size:</strong></td>
-                                                <td>@FormatFileSize(selectedResult.FileSizeBytes)</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Created:</strong></td>
-                                                <td>@selectedResult.DateCreated.ToString("yyyy-MM-dd HH:mm")</td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-3">
-                                    <h6>🧠 AI Reasoning</h6>
-                                    <div class="alert alert-info">
-                                        <p style="white-space: pre-wrap;">@result.Reasoning</p>
-                                    </div>
-                                </div>
-                                
-                                @if (selectedResult.tbl_image_metadata != null)
-                                {
-                                    <div class="mt-3">
-                                        <h6>📋 Metadata Used for Analysis</h6>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                @if (selectedResult.tbl_image_metadata.Width.HasValue)
-                                                {
-                                                    <p><strong>Dimensions:</strong> @selectedResult.tbl_image_metadata.Width x @selectedResult.tbl_image_metadata.Height</p>
-                                                }
-                                                @if (!string.IsNullOrEmpty(selectedResult.tbl_image_metadata.CameraMake))
-                                                {
-                                                    <p><strong>Camera:</strong> @selectedResult.tbl_image_metadata.CameraMake @selectedResult.tbl_image_metadata.CameraModel</p>
-                                                }
-                                                @if (!string.IsNullOrEmpty(selectedResult.tbl_image_metadata.Software))
-                                                {
-                                                    <p><strong>Software:</strong> @selectedResult.tbl_image_metadata.Software</p>
-                                                }
-                                            </div>
-                                            <div class="col-md-6">
-                                                @if (selectedResult.tbl_image_metadata.FocalLength.HasValue)
-                                                {
-                                                    <p><strong>Focal Length:</strong> @selectedResult.tbl_image_metadata.FocalLength mm</p>
-                                                }
-                                                @if (!string.IsNullOrEmpty(selectedResult.tbl_image_metadata.FNumber))
-                                                {
-                                                    <p><strong>Aperture:</strong> f/@selectedResult.tbl_image_metadata.FNumber</p>
-                                                }
-                                                @if (selectedResult.tbl_image_metadata.ISO.HasValue)
-                                                {
-                                                    <p><strong>ISO:</strong> @selectedResult.tbl_image_metadata.ISO</p>
-                                                }
-                                                @if (selectedResult.tbl_image_metadata.Latitude.HasValue)
-                                                {
-                                                    <p><strong>GPS:</strong> @selectedResult.tbl_image_metadata.Latitude.Value.ToString("F4"), @(selectedResult.tbl_image_metadata.Longitude?.ToString("F4") ?? "N/A")</p>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                        }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 </div>
 
 @code {
-    private string apiKey = "";
-    private string selectedModel = "gpt-4o-mini";
-    private List<tbl_images> unknownImages = new();
-    private Dictionary<int, MetadataClassificationResult> testResults = new();
-    private bool isAnalyzing = false;
-    private tbl_images? currentTestingImage = null;
-    private tbl_images? selectedResult = null;
-    private int testedCount = 0;
-
-    protected override async Task OnInitializedAsync()
+    private void GoHome()
     {
-        await LoadUnknownImages();
+        Navigation.NavigateTo("/");
     }
-
-    private async Task LoadUnknownImages()
+    
+    private void GoToPhotoScan()
     {
-        // Get images that are unknown or have no analysis
-        unknownImages = await DbContext.tbl_images
-            .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
-            .Where(img => 
-                !DbContext.tbl_image_analysis.Any(a => a.ImageId == img.ImageId) ||
-                DbContext.tbl_image_analysis.Any(a => a.ImageId == img.ImageId && 
-                    (a.ImageCategory == null || a.ImageCategory == "unknown"))
-            )
-            .Include(img => img.tbl_image_metadata)
-            .OrderBy(img => img.DateCreated)
-            .ToListAsync();
-    }
-
-    private async Task TestImage(tbl_images image)
-    {
-        if (isAnalyzing)
-        {
-            return; // Don't allow multiple simultaneous tests
-        }
-
-        isAnalyzing = true;
-        currentTestingImage = image;
-        StateHasChanged();
-
-        try
-        {
-            var result = await ClassificationService.ClassifyImageAsync(image, apiKey, selectedModel);
-            testResults[image.ImageId] = result;
-            testedCount = testResults.Count;
-            
-            // Auto-open modal to show result
-            selectedResult = image;
-        }
-        catch (Exception ex)
-        {
-            testResults[image.ImageId] = new MetadataClassificationResult
-            {
-                ImageId = image.ImageId,
-                FileName = image.FileName,
-                Category = "error",
-                HasError = true,
-                ErrorMessage = ex.Message
-            };
-        }
-        finally
-        {
-            isAnalyzing = false;
-            currentTestingImage = null;
-            StateHasChanged();
-        }
-    }
-
-    private void ShowResult(tbl_images image)
-    {
-        selectedResult = image;
-        StateHasChanged();
-    }
-
-    private void CloseModal()
-    {
-        selectedResult = null;
-    }
-
-    private string GetCardClass(tbl_images image)
-    {
-        if (isAnalyzing && currentTestingImage?.ImageId == image.ImageId)
-            return "border-primary";
-        
-        if (testResults.ContainsKey(image.ImageId))
-        {
-            var result = testResults[image.ImageId];
-            if (result.HasError) return "border-danger";
-            return result.Category switch
-            {
-                "photo" => "border-success",
-                "screenshot" => "border-info",
-                _ => "border-warning"
-            };
-        }
-        
-        return "";
-    }
-
-    private string GetBadgeClass(string category)
-    {
-        return category switch
-        {
-            "photo" => "bg-success",
-            "screenshot" => "bg-info", 
-            "unknown" => "bg-warning",
-            _ => "bg-secondary"
-        };
-    }
-
-    private string FormatFileSize(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len = len / 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
+        Navigation.NavigateTo("/photo-scan");
     }
 }

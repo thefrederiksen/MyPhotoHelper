@@ -10,12 +10,13 @@
 @inject IJSRuntime JsRuntime
 @inject SystemTrayService SystemTrayService
 @inject IServiceProvider ServiceProvider
+@inject ISettingsService SettingsService
 
-<PageTitle>Settings - FaceVault</PageTitle>
+<PageTitle>Settings - MyPhotoHelper</PageTitle>
 
 <div class="container-fluid">
     <h1 class="display-4">Settings</h1>
-    <p class="lead">Configure FaceVault application settings</p>
+    <p class="lead">Configure MyPhotoHelper application settings</p>
     
     @if (showSuccessMessage)
     {
@@ -49,26 +50,14 @@
             </div>
         </div>
     }
-    
-    @if (showResetMessage)
-    {
-        <div class="alert alert-info alert-dismissible fade show shadow-lg border-info border-2" role="alert" style="animation: slideInDown 0.3s ease-out;">
-            <div class="d-flex align-items-center">
-                <span class="oi oi-reload fs-4 me-3" aria-hidden="true"></span>
-                <div>
-                    <strong>Reset!</strong> Settings have been reset to defaults. Remember to save your changes.
-                </div>
-            </div>
-            <button type="button" class="btn-close" @onclick="() => showResetMessage = false"></button>
-        </div>
-    }
 
-    @if (settings == null)
+    @if (isLoading)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Loading settings...</span>
             </div>
+            <p class="mt-2">Loading settings...</p>
         </div>
     }
     else
@@ -84,8 +73,8 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label">Theme</label>
-                                <select class="form-select" @bind="settings.ThemeName">
-                                    <option value="">Default</option>
+                                <select class="form-select" @bind="themeName">
+                                    <option value="default">Default</option>
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
@@ -94,21 +83,22 @@
                             <h6 class="mt-4">System Settings</h6>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="runOnStartup" 
-                                       checked="@(settings.RunOnWindowsStartup == 1)"
-                                       @onchange="@((e) => settings.RunOnWindowsStartup = (bool)e.Value! ? 1 : 0)">
+                                       checked="@runOnWindowsStartup"
+                                       @onchange="@((e) => runOnWindowsStartup = (bool)e.Value!)">
                                 <label class="form-check-label" for="runOnStartup">
                                     Start MyPhotoHelper when Windows starts
                                     <small class="text-muted d-block">Application will start minimized to system tray</small>
                                 </label>
                             </div>
                             
-                            <h6 class="mt-4">Feature Toggles</h6>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="enableAI" 
-                                       checked="@(settings.EnableAIImageAnalysis == 1)"
-                                       @onchange="@((e) => settings.EnableAIImageAnalysis = (bool)e.Value! ? 1 : 0)">
-                                <label class="form-check-label" for="enableAI">
-                                    Enable AI Image Analysis
+                            <h6 class="mt-4">Scanning Settings</h6>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="autoScan" 
+                                       checked="@autoScanOnStartup"
+                                       @onchange="@((e) => autoScanOnStartup = (bool)e.Value!)">
+                                <label class="form-check-label" for="autoScan">
+                                    Auto-scan on Startup
+                                    <small class="text-muted d-block">Automatically scan for new photos when the app starts</small>
                                 </label>
                             </div>
                         </div>
@@ -164,92 +154,12 @@
                                     <div class="text-danger mt-1">@directoryError</div>
                                 }
                             </div>
-                            
-                            <hr />
-                            
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="autoScan" 
-                                       checked="@(settings.AutoScanOnStartup == 1)"
-                                       @onchange="@((e) => settings.AutoScanOnStartup = (bool)e.Value! ? 1 : 0)">
-                                <label class="form-check-label" for="autoScan">
-                                    Auto-scan on Startup
-                                </label>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- AI Settings -->
+                <!-- Performance & AI Settings -->
                 <div class="col-md-6">
-                    <div class="card mb-4" id="ai-settings">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0"><span class="oi oi-beaker" aria-hidden="true"></span> AI Settings</h5>
-                        </div>
-                        <div class="card-body">
-                            @if (settings.EnableAIImageAnalysis != 1)
-                            {
-                                <div class="alert alert-warning">
-                                    <span class="oi oi-warning" aria-hidden="true"></span> 
-                                    Enable AI Image Analysis above to configure these settings.
-                                </div>
-                            }
-                            
-                            <div class="mb-3">
-                                <label class="form-label">AI Provider <span class="text-danger">*</span></label>
-                                <select class="form-select" value="@settings.AIProvider" 
-                                        @onchange="OnAIProviderChanged"
-                                        disabled="@(settings.EnableAIImageAnalysis != 1)">
-                                    <option value="">-- Select Provider --</option>
-                                    <option value="OpenAI">OpenAI</option>
-                                    <option value="Azure">Azure Cognitive Services</option>
-                                    <option value="Google">Google Vision AI</option>
-                                    <option value="AWS">AWS Rekognition</option>
-                                    <option value="Local">Local Model</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">API Key <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="@(showApiKey ? "text" : "password")" 
-                                           class="form-control" @bind="settings.AIApiKey" 
-                                           placeholder="Enter your API key"
-                                           disabled="@(settings.EnableAIImageAnalysis != 1)">
-                                    <button class="btn btn-outline-secondary" type="button" 
-                                            @onclick="() => showApiKey = !showApiKey"
-                                            disabled="@(settings.EnableAIImageAnalysis != 1)">
-                                        <span class="oi oi-@(showApiKey ? "eye" : "lock-locked")" aria-hidden="true"></span>
-                                    </button>
-                                </div>
-                                <div class="form-text">Your API key is stored locally and never shared</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">API Endpoint</label>
-                                <input type="text" class="form-control" @bind="settings.AIApiEndpoint" 
-                                       placeholder="@GetEndpointPlaceholder()"
-                                       disabled="@(settings.EnableAIImageAnalysis != 1)">
-                                <div class="form-text">Default endpoint will be used if left empty</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Model</label>
-                                <input type="text" class="form-control" @bind="settings.AIModel" 
-                                       placeholder="@GetModelPlaceholder()"
-                                       disabled="@(settings.EnableAIImageAnalysis != 1)">
-                                <div class="form-text">Recommended model will be used if left empty</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Temperature</label>
-                                <input type="number" class="form-control" @bind="settings.AITemperature" 
-                                       step="0.1" min="0" max="2"
-                                       disabled="@(settings.EnableAIImageAnalysis != 1)">
-                                <div class="form-text">0.0 = Most focused, 2.0 = Most creative</div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Performance Settings -->
                     <div class="card mb-4">
                         <div class="card-header">
@@ -258,22 +168,35 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label">Batch Size</label>
-                                <input type="number" class="form-control" @bind="settings.BatchSize" 
+                                <input type="number" class="form-control" @bind="batchSize" 
                                        min="1" max="1000">
                                 <div class="form-text">Number of files to process at once</div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">Max Concurrent Tasks</label>
-                                <input type="number" class="form-control" @bind="settings.MaxConcurrentTasks" 
+                                <input type="number" class="form-control" @bind="maxConcurrentTasks" 
                                        min="1" max="20">
                                 <div class="form-text">Maximum parallel operations</div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- AI Settings - Temporarily Disabled -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><span class="oi oi-warning" aria-hidden="true"></span> AI Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <h6><span class="oi oi-wrench" aria-hidden="true"></span> Temporarily Unavailable</h6>
+                                <p class="mb-2">AI settings are being migrated to work with the new flexible settings system.</p>
+                                <p class="mb-0 small">All AI features (image analysis, categorization, etc.) are temporarily disabled while we complete the system upgrade.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between mb-4">
@@ -348,140 +271,72 @@
 </style>
 
 @code {
-    private tbl_app_settings? settings;
+    // Settings values
+    private string themeName = "default";
+    private bool runOnWindowsStartup = false;
+    private bool autoScanOnStartup = false;
+    private int batchSize = 100;
+    private int maxConcurrentTasks = 4;
+    
     private List<tbl_scan_directory>? scanDirectories;
     private string newDirectoryPath = string.Empty;
     private string directoryError = string.Empty;
     private bool isSaving = false;
+    private bool isLoading = true;
     private bool showSuccessMessage = false;
     private string errorMessage = string.Empty;
-    private bool showApiKey = false;
     private bool isResetting = false;
-    private bool showResetMessage = false;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadSettings();
         await LoadScanDirectories();
+        isLoading = false;
+        StateHasChanged();
     }
 
     private async Task LoadSettings()
     {
         try
         {
-            settings = await DbContext.tbl_app_settings.FirstOrDefaultAsync();
+            // Load all settings using SettingsService
+            themeName = await SettingsService.GetSettingAsync<string>(SettingNames.ThemeName, "default");
+            runOnWindowsStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.RunOnWindowsStartup, false);
+            autoScanOnStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.AutoScanOnStartup, false);
+            batchSize = await SettingsService.GetSettingAsync<int>(SettingNames.BatchSize, 100);
+            maxConcurrentTasks = await SettingsService.GetSettingAsync<int>(SettingNames.MaxConcurrentTasks, 4);
             
-            if (settings == null)
+            // Sync Windows startup status
+            var actualStartupEnabled = SystemTrayService.IsWindowsStartupEnabled();
+            if (actualStartupEnabled != runOnWindowsStartup)
             {
-                // Create default settings if none exist
-                settings = CreateDefaultSettings();
-                DbContext.tbl_app_settings.Add(settings);
-                await DbContext.SaveChangesAsync();
-                Logger.LogInformation("Created default application settings");
+                Logger.LogInformation($"Syncing Windows startup status. DB: {runOnWindowsStartup}, Actual: {actualStartupEnabled}");
+                runOnWindowsStartup = actualStartupEnabled;
+                await SettingsService.SetSettingAsync(SettingNames.RunOnWindowsStartup, runOnWindowsStartup);
             }
-            
-            // Try to sync Windows startup status, but handle missing column gracefully
-            try
-            {
-                var actualStartupEnabled = SystemTrayService.IsWindowsStartupEnabled();
-                var dbStartupEnabled = settings.RunOnWindowsStartup == 1;
-                
-                if (actualStartupEnabled != dbStartupEnabled)
-                {
-                    Logger.LogInformation($"Syncing Windows startup status. DB: {dbStartupEnabled}, Actual: {actualStartupEnabled}");
-                    settings.RunOnWindowsStartup = actualStartupEnabled ? 1 : 0;
-                }
-            }
-            catch (Exception startupEx)
-            {
-                Logger.LogWarning(startupEx, "Could not sync Windows startup status - database may need updating");
-                // Set a default value so the UI doesn't break
-                if (settings.RunOnWindowsStartup == null)
-                {
-                    settings.RunOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled() ? 1 : 0;
-                }
-            }
-        }
-        catch (Microsoft.Data.Sqlite.SqliteException sqlEx) when (sqlEx.Message.Contains("no such column"))
-        {
-            Logger.LogError(sqlEx, "Database schema is out of date");
-            errorMessage = "Database needs to be updated. Click 'Update Database' below to fix this issue.";
-            
-            // Create default settings object so page still works
-            settings = CreateDefaultSettings();
-            // Try to get actual startup status
-            settings.RunOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled() ? 1 : 0;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading settings");
             errorMessage = "Failed to load settings: " + ex.Message;
-            
-            // Create default settings object so page still works
-            settings = CreateDefaultSettings();
         }
-    }
-
-    private tbl_app_settings CreateDefaultSettings()
-    {
-        var defaultPhotoDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-        
-        return new tbl_app_settings
-        {
-            Id = 1,
-            EnableDuplicateDetection = 1,
-            EnableAIImageAnalysis = 0,
-            AutoScanOnStartup = 0,
-            RunOnWindowsStartup = 0,
-            ScanSubdirectories = 1,
-            SupportJpeg = 1,
-            SupportPng = 1,
-            SupportGif = 1,
-            SupportBmp = 1,
-            SupportWebp = 1,
-            SupportHeic = 0,
-            BatchSize = 100,
-            MaxConcurrentTasks = 4,
-            ThemeName = "default",
-            DateCreated = DateTime.UtcNow,
-            DateModified = DateTime.UtcNow
-        };
     }
 
     private async Task SaveSettings()
     {
-        if (settings == null) return;
-
         try
         {
             isSaving = true;
             errorMessage = string.Empty;
             
-            // Validate AI settings if enabled
-            if (settings.EnableAIImageAnalysis == 1)
-            {
-                if (string.IsNullOrWhiteSpace(settings.AIProvider))
-                {
-                    errorMessage = "Please select an AI Provider";
-                    return;
-                }
-                
-                if (string.IsNullOrWhiteSpace(settings.AIApiKey))
-                {
-                    errorMessage = "Please enter an API Key for AI analysis";
-                    return;
-                }
-            }
-            
             // Handle Windows startup changes
             try
             {
-                var shouldEnableStartup = settings.RunOnWindowsStartup == 1;
                 var isCurrentlyEnabled = SystemTrayService.IsWindowsStartupEnabled();
                 
-                if (shouldEnableStartup != isCurrentlyEnabled)
+                if (runOnWindowsStartup != isCurrentlyEnabled)
                 {
-                    if (shouldEnableStartup)
+                    if (runOnWindowsStartup)
                     {
                         SystemTrayService.EnableWindowsStartup();
                         Logger.LogInformation("Enabled Windows startup");
@@ -500,12 +355,15 @@
                 return;
             }
             
-            // Update modified date
-            settings.DateModified = DateTime.UtcNow;
-            
-            // Save to database
-            DbContext.Update(settings);
-            await DbContext.SaveChangesAsync();
+            // Save all settings using SettingsService
+            await SettingsService.SetMultipleSettingsAsync(new Dictionary<string, object>
+            {
+                { SettingNames.ThemeName, themeName },
+                { SettingNames.RunOnWindowsStartup, runOnWindowsStartup },
+                { SettingNames.AutoScanOnStartup, autoScanOnStartup },
+                { SettingNames.BatchSize, batchSize },
+                { SettingNames.MaxConcurrentTasks, maxConcurrentTasks }
+            });
             
             showSuccessMessage = true;
             Logger.LogInformation("Settings saved successfully");
@@ -516,11 +374,6 @@
                 showSuccessMessage = false;
                 InvokeAsync(StateHasChanged);
             });
-        }
-        catch (Microsoft.Data.Sqlite.SqliteException sqlEx) when (sqlEx.Message.Contains("no such column"))
-        {
-            Logger.LogError(sqlEx, "Database schema is out of date");
-            errorMessage = "Cannot save settings - database needs to be updated. Click 'Update Database' to fix this issue.";
         }
         catch (Exception ex)
         {
@@ -535,32 +388,27 @@
 
     private Task ResetToDefaults()
     {
-        if (settings == null) return Task.CompletedTask;
-        
         isResetting = true;
-        showResetMessage = false;
         errorMessage = "";
         StateHasChanged();
         
-        var defaultSettings = CreateDefaultSettings();
-        
-        // Preserve the ID, creation date, and current Windows startup state
-        defaultSettings.Id = settings.Id;
-        defaultSettings.DateCreated = settings.DateCreated;
-        defaultSettings.RunOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled() ? 1 : 0;
-        
-        settings = defaultSettings;
-        
-        showResetMessage = true;
-        isResetting = false;
-        StateHasChanged();
-        
-        // Hide reset message after 3 seconds
-        _ = Task.Delay(3000).ContinueWith(_ => 
+        try
         {
-            showResetMessage = false;
-            InvokeAsync(StateHasChanged);
-        });
+            // Reset to default values
+            themeName = "default";
+            autoScanOnStartup = false;
+            batchSize = 100;
+            maxConcurrentTasks = 4;
+            
+            // Keep current Windows startup state
+            runOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled();
+            
+            StateHasChanged();
+        }
+        finally
+        {
+            isResetting = false;
+        }
         
         return Task.CompletedTask;
     }
@@ -568,83 +416,6 @@
     private void GoBack()
     {
         Navigation.NavigateTo("/");
-    }
-
-    private void OnAIProviderChanged(ChangeEventArgs e)
-    {
-        if (settings == null) return;
-        
-        var provider = e.Value?.ToString();
-        if (string.IsNullOrEmpty(provider)) return;
-        
-        settings.AIProvider = provider;
-        
-        // Set default API endpoints and models based on provider
-        switch (provider)
-        {
-            case "OpenAI":
-                if (string.IsNullOrWhiteSpace(settings.AIApiEndpoint))
-                    settings.AIApiEndpoint = "https://api.openai.com/v1";
-                if (string.IsNullOrWhiteSpace(settings.AIModel))
-                    settings.AIModel = "gpt-4o-mini";
-                break;
-                
-            case "Azure":
-                if (string.IsNullOrWhiteSpace(settings.AIApiEndpoint))
-                    settings.AIApiEndpoint = "https://YOUR-RESOURCE-NAME.cognitiveservices.azure.com/";
-                if (string.IsNullOrWhiteSpace(settings.AIModel))
-                    settings.AIModel = "gpt-4";
-                break;
-                
-            case "Google":
-                if (string.IsNullOrWhiteSpace(settings.AIApiEndpoint))
-                    settings.AIApiEndpoint = "https://vision.googleapis.com/v1";
-                if (string.IsNullOrWhiteSpace(settings.AIModel))
-                    settings.AIModel = "gemini-pro-vision";
-                break;
-                
-            case "AWS":
-                if (string.IsNullOrWhiteSpace(settings.AIApiEndpoint))
-                    settings.AIApiEndpoint = "https://rekognition.us-east-1.amazonaws.com";
-                if (string.IsNullOrWhiteSpace(settings.AIModel))
-                    settings.AIModel = "rekognition-v1";
-                break;
-                
-            case "Local":
-                if (string.IsNullOrWhiteSpace(settings.AIApiEndpoint))
-                    settings.AIApiEndpoint = "http://localhost:1234/v1";
-                if (string.IsNullOrWhiteSpace(settings.AIModel))
-                    settings.AIModel = "llava-v1.5-7b";
-                break;
-        }
-        
-        StateHasChanged();
-    }
-
-    private string GetEndpointPlaceholder()
-    {
-        return settings?.AIProvider switch
-        {
-            "OpenAI" => "https://api.openai.com/v1",
-            "Azure" => "https://YOUR-RESOURCE-NAME.cognitiveservices.azure.com/",
-            "Google" => "https://vision.googleapis.com/v1",
-            "AWS" => "https://rekognition.us-east-1.amazonaws.com",
-            "Local" => "http://localhost:1234/v1",
-            _ => "https://api.example.com/v1"
-        };
-    }
-
-    private string GetModelPlaceholder()
-    {
-        return settings?.AIProvider switch
-        {
-            "OpenAI" => "gpt-4o-mini",
-            "Azure" => "gpt-4",
-            "Google" => "gemini-pro-vision",
-            "AWS" => "rekognition-v1",
-            "Local" => "llava-v1.5-7b",
-            _ => "e.g., gpt-4o-mini, claude-3"
-        };
     }
 
     private async Task LoadScanDirectories()

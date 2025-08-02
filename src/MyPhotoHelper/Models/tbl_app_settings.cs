@@ -5,49 +5,13 @@ namespace MyPhotoHelper.Models;
 
 public partial class tbl_app_settings
 {
-    public int Id { get; set; }
+    public string SettingName { get; set; } = null!;
 
-    public int? EnableDuplicateDetection { get; set; }
+    public string SettingType { get; set; } = null!;
 
-    public int? EnableAIImageAnalysis { get; set; }
+    public string SettingValue { get; set; } = null!;
 
-    public int? AutoScanOnStartup { get; set; }
+    public DateTime? CreatedDate { get; set; }
 
-    public int? ScanSubdirectories { get; set; }
-
-    public int? SupportJpeg { get; set; }
-
-    public int? SupportPng { get; set; }
-
-    public int? SupportHeic { get; set; }
-
-    public int? SupportGif { get; set; }
-
-    public int? SupportBmp { get; set; }
-
-    public int? SupportWebp { get; set; }
-
-    public int? BatchSize { get; set; }
-
-    public int? MaxConcurrentTasks { get; set; }
-
-    public string? AIProvider { get; set; }
-
-    public string? AIApiKey { get; set; }
-
-    public string? AIApiEndpoint { get; set; }
-
-    public string? AIModel { get; set; }
-
-    public double? AITemperature { get; set; }
-
-    public string? ThemeName { get; set; }
-
-    public DateTime DateCreated { get; set; }
-
-    public DateTime DateModified { get; set; }
-
-    public DateTime? LastScanDate { get; set; }
-
-    public int? RunOnWindowsStartup { get; set; }
+    public DateTime? ModifiedDate { get; set; }
 }

@@ -1,7 +1,7 @@
 -- MyPhotoHelper Database Schema
--- Version: 001 (Complete schema with Scan Directory support)
--- Description: Initial database creation with scan directory management
--- Date: 2025-01-29
+-- Version: 001 (Complete consolidated schema)
+-- Description: Complete database schema with flexible settings system
+-- Date: 2025-08-02
 
 -- Create Version table for tracking database version
 CREATE TABLE IF NOT EXISTS tbl_version (
@@ -44,11 +44,13 @@ CREATE TABLE IF NOT EXISTS tbl_images (
     CONSTRAINT UK_tbl_images_RelativePath_ScanDirectoryId UNIQUE (RelativePath, ScanDirectoryId)
 );
 
--- Create indexes for Images table
+-- Create all indexes for Images table (including performance optimizations)
 CREATE INDEX IF NOT EXISTS IX_tbl_images_FileHash ON tbl_images (FileHash);
 CREATE INDEX IF NOT EXISTS IX_tbl_images_DateCreated ON tbl_images (DateCreated);
 CREATE INDEX IF NOT EXISTS IX_tbl_images_IsDeleted ON tbl_images (IsDeleted);
 CREATE INDEX IF NOT EXISTS IX_tbl_images_ScanDirectoryId ON tbl_images (ScanDirectoryId);
+CREATE INDEX IF NOT EXISTS IX_tbl_images_RelativePath ON tbl_images (RelativePath);
+CREATE INDEX IF NOT EXISTS IX_tbl_images_FileExists_IsDeleted ON tbl_images (FileExists, IsDeleted);
 
 -- Create ImageMetadata table - Information that requires opening the file
 -- Uses same primary key as Images table (one-to-one relationship)
@@ -126,8 +128,10 @@ CREATE TABLE IF NOT EXISTS tbl_image_metadata (
     FOREIGN KEY (ImageId) REFERENCES tbl_images(ImageId) ON DELETE CASCADE
 );
 
--- Create index for location-based queries
+-- Create indexes for ImageMetadata (including performance optimizations)
 CREATE INDEX IF NOT EXISTS IX_tbl_image_metadata_Location ON tbl_image_metadata (Latitude, Longitude);
+CREATE INDEX IF NOT EXISTS IX_tbl_image_metadata_DateTaken ON tbl_image_metadata (DateTaken);
+CREATE INDEX IF NOT EXISTS IX_tbl_image_metadata_ImageId ON tbl_image_metadata (ImageId);
 
 -- Create ImageAnalysis table - AI analysis results
 -- Uses same primary key as Images table (one-to-one relationship)
@@ -147,49 +151,75 @@ CREATE TABLE IF NOT EXISTS tbl_image_analysis (
 -- Create index for ImageAnalysis
 CREATE INDEX IF NOT EXISTS IX_tbl_image_analysis_ImageCategory ON tbl_image_analysis (ImageCategory);
 
--- Create AppSettings table (singleton)
+-- Create new flexible AppSettings table (key-value design)
 CREATE TABLE IF NOT EXISTS tbl_app_settings (
-    Id INTEGER PRIMARY KEY,
-    
-    -- Feature Toggles
-    EnableDuplicateDetection INTEGER,
-    EnableAIImageAnalysis INTEGER,
-    
-    -- Directory Settings (PhotoDirectory removed - now using tbl_scan_directory)
-    AutoScanOnStartup INTEGER,
-    ScanSubdirectories INTEGER,
-    
-    -- File Type Support
-    SupportJpeg INTEGER,
-    SupportPng INTEGER,
-    SupportHeic INTEGER,
-    SupportGif INTEGER,
-    SupportBmp INTEGER,
-    SupportWebp INTEGER,
-    
-    -- Performance Settings
-    BatchSize INTEGER,
-    MaxConcurrentTasks INTEGER,
-    
-    -- AI Settings
-    AIProvider TEXT,
-    AIApiKey TEXT,
-    AIApiEndpoint TEXT,
-    AIModel TEXT,
-    AITemperature REAL,
-    
-    -- Other Settings
-    ThemeName TEXT,
-    DateCreated DATETIME NOT NULL,
-    DateModified DATETIME NOT NULL,
-    LastScanDate DATETIME
+    SettingName TEXT PRIMARY KEY,
+    SettingType TEXT NOT NULL CHECK(SettingType IN ('bool','int','string','datetime','double')),
+    SettingValue TEXT NOT NULL,
+    CreatedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ModifiedDate DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert minimal settings record
-INSERT INTO tbl_app_settings (
-    Id, DateCreated, DateModified
-) VALUES (
-    1, 
-    datetime('now'),
-    datetime('now')
-);
+-- Create index for settings lookup
+CREATE INDEX IF NOT EXISTS IX_tbl_app_settings_SettingName ON tbl_app_settings (SettingName);
+
+-- Insert default settings
+INSERT INTO tbl_app_settings (SettingName, SettingType, SettingValue) VALUES
+    -- Feature Toggles
+    ('EnableDuplicateDetection', 'bool', '1'),
+    ('EnableAIImageAnalysis', 'bool', '0'),
+    ('AutoScanOnStartup', 'bool', '0'),
+    ('RunOnWindowsStartup', 'bool', '0'),
+    ('ScanSubdirectories', 'bool', '1'),
+    
+    -- File Type Support
+    ('SupportJpeg', 'bool', '1'),
+    ('SupportPng', 'bool', '1'),
+    ('SupportHeic', 'bool', '0'),
+    ('SupportGif', 'bool', '1'),
+    ('SupportBmp', 'bool', '1'),
+    ('SupportWebp', 'bool', '1'),
+    
+    -- Performance Settings
+    ('BatchSize', 'int', '100'),
+    ('MaxConcurrentTasks', 'int', '4'),
+    
+    -- AI Settings
+    ('AIProvider', 'string', ''),
+    ('AIApiKey', 'string', ''),
+    ('AIApiEndpoint', 'string', ''),
+    ('AIModel', 'string', 'gpt-4o-mini'),
+    ('AITemperature', 'double', '0.7'),
+    
+    -- Other Settings
+    ('ThemeName', 'string', 'default'),
+    ('LastScanDate', 'datetime', '')
+;
+
+-- Data migration from version 2: Fix DateTaken to never be null
+-- Update any NULL DateTaken values to use the image's DateCreated
+UPDATE tbl_image_metadata
+SET DateTaken = (
+    SELECT DateCreated 
+    FROM tbl_images 
+    WHERE tbl_images.ImageId = tbl_image_metadata.ImageId
+)
+WHERE DateTaken IS NULL;
+
+-- Fix any DateTaken values that are in the future
+UPDATE tbl_image_metadata
+SET DateTaken = (
+    SELECT DateCreated 
+    FROM tbl_images 
+    WHERE tbl_images.ImageId = tbl_image_metadata.ImageId
+)
+WHERE DateTaken > datetime('now', '+1 day');
+
+-- Fix any DateTaken values that are too old (before 1990)
+UPDATE tbl_image_metadata
+SET DateTaken = (
+    SELECT DateCreated 
+    FROM tbl_images 
+    WHERE tbl_images.ImageId = tbl_image_metadata.ImageId
+)
+WHERE DateTaken < '1990-01-01';

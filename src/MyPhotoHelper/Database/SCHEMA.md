@@ -103,45 +103,48 @@ All tables use the `tbl_` prefix to clearly distinguish database tables from reg
 
 ---
 
-### 5. **tbl_app_settings**
-**Purpose**: Application configuration and user preferences (singleton).
+### 5. **tbl_version**
+**Purpose**: Tracks the current database schema version for migrations.
 
 | Column | Type | Description |
 |--------|------|-------------|
-| Id | INTEGER PK | Always 1 |
-| **Feature Toggles** | | |
-| EnableDuplicateDetection | INTEGER | Find duplicates |
-| EnableAIImageAnalysis | INTEGER | Enable AI features |
-| **Directories** | | |
-| PhotoDirectory | TEXT | Main photo folder path |
-| AutoScanOnStartup | INTEGER | Scan on app start |
-| ScanSubdirectories | INTEGER | Include subfolders |
-| **File Types** | | |
-| SupportJpeg | INTEGER | Process JPEG files |
-| SupportPng | INTEGER | Process PNG files |
-| SupportHeic | INTEGER | Process HEIC files |
-| SupportGif | INTEGER | Process GIF files |
-| SupportBmp | INTEGER | Process BMP files |
-| SupportWebp | INTEGER | Process WebP files |
-| **Performance** | | |
-| BatchSize | INTEGER | Photos per batch |
-| MaxConcurrentTasks | INTEGER | Parallel tasks |
-| **AI Settings** | | |
-| AIProvider | TEXT | OpenAI/Azure/etc. |
-| AIApiKey | TEXT | API key |
-| AIApiEndpoint | TEXT | API URL |
-| AIModel | TEXT | Model name (gpt-4o-mini) |
-| AIMaxTokens | INTEGER | Token limit |
-| AITemperature | REAL | Generation temperature |
-| **Other Settings** | | |
-| ThemeName | TEXT | UI theme |
-| DateCreated | DATETIME | First run date |
-| DateModified | DATETIME | Last settings change |
-| LastScanDate | DATETIME | Last photo scan |
+| Version | INTEGER | Current schema version number |
 
 **Notes**: 
-- Single row table (Id = 1)
-- Contains all user preferences and app configuration
+- Single row table
+- Updated by each migration script
+- Used to determine which migrations to apply
+
+---
+
+### 6. **tbl_app_settings**
+**Purpose**: Application configuration and user preferences (flexible key-value store).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| SettingName | TEXT PK | Unique setting identifier |
+| SettingType | TEXT | Data type: 'bool', 'int', 'string', 'datetime', 'double' |
+| SettingValue | TEXT | Setting value (stored as string) |
+| CreatedDate | DATETIME | When setting was first created |
+| ModifiedDate | DATETIME | When setting was last modified |
+
+**Common Settings**: 
+- EnableDuplicateDetection (bool)
+- EnableAIImageAnalysis (bool)
+- AutoScanOnStartup (bool)
+- RunOnWindowsStartup (bool)
+- ScanSubdirectories (bool)
+- SupportJpeg, SupportPng, SupportHeic, etc. (bool)
+- BatchSize, MaxConcurrentTasks (int)
+- AIProvider, AIApiKey, AIModel (string)
+- AITemperature (double)
+- ThemeName (string)
+- LastScanDate (datetime)
+
+**Notes**: 
+- Flexible key-value design allows adding new settings without schema changes
+- All values stored as strings and converted based on SettingType
+- Accessed through SettingsService for type-safe operations
 
 ---
 
