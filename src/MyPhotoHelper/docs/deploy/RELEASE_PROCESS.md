@@ -1,48 +1,58 @@
 # MyPhotoHelper Release Process
 
-This guide explains how to create and publish a new release that will automatically update for all users.
+This guide explains how to create and publish a new release using AutoUpdater.NET for automatic updates.
 
 ## Quick Steps to Release
 
 ### 1. Update Version Number
-Edit `src\MyPhotoHelper\MyPhotoHelper.csproj` and update these three lines:
+Edit `src\MyPhotoHelper\MyPhotoHelper.csproj` and `installer.iss` with the new version:
+
+**MyPhotoHelper.csproj:**
 ```xml
-<AssemblyVersion>1.0.1.0</AssemblyVersion>
-<FileVersion>1.0.1.0</FileVersion>
-<ProductVersion>1.0.1</ProductVersion>
+<AssemblyVersion>1.2.1.0</AssemblyVersion>
+<FileVersion>1.2.1.0</FileVersion>
+<ProductVersion>1.2.1</ProductVersion>
+```
+
+**installer.iss:**
+```ini
+AppVersion=1.2.1
 ```
 
 ### 2. Commit Your Changes
 ```bash
 git add .
-git commit -m "Prepare release v1.0.1"
+git commit -m "Prepare release v1.2.1"
 git push
 ```
 
 ### 3. Create and Push a Version Tag
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.2.1
+git push origin v1.2.1
 ```
 
 **That's it!** GitHub Actions will automatically:
-- Build the release
-- Create Squirrel packages
+- Build the release with Inno Setup
+- Create MyPhotoHelper-Setup.exe installer
+- Generate update.xml for AutoUpdater.NET
 - Upload to GitHub Releases
-- Users will get the update notification within 6 hours
+- Users will get the update notification automatically
 
 ## What Happens Next
 
 1. **GitHub Actions** (5-10 minutes)
-   - Builds the application
-   - Creates Setup.exe installer
+   - Builds the application with .NET 9
+   - Creates Inno Setup installer (MyPhotoHelper-Setup.exe)
+   - Generates update.xml for AutoUpdater.NET
    - Publishes to GitHub Releases
    - Check progress at: https://github.com/thefrederiksen/MyPhotoHelper/actions
 
-2. **User Updates** (within 6 hours)
-   - App checks for updates every 6 hours
-   - Users see notification: "Update available: Version 1.0.1"
-   - Click "Restart Now" applies the update
+2. **User Updates** (automatic)
+   - App checks for updates automatically
+   - AutoUpdater.NET handles the download and installation
+   - Users see notification when update is available
+   - One-click update process
 
 ## Version Numbering Guide
 
@@ -66,17 +76,17 @@ Before creating a release:
 
 1. **Build locally**:
    ```cmd
-   build-release.bat 1.0.1 "Bug fixes and improvements"
+   dotnet publish src/MyPhotoHelper -c Release -r win-x64 --self-contained false -o publish
+   iscc installer.iss
    ```
 
 2. **Create GitHub Release manually**:
    - Go to https://github.com/thefrederiksen/MyPhotoHelper/releases/new
-   - Tag: `v1.0.1`
-   - Title: `Release v1.0.1`
-   - Upload these files from `Releases` folder:
-     - `Setup.exe` (rename to `MyPhotoHelper-Setup.exe`)
-     - `RELEASES`
-     - `MyPhotoHelper-1.0.1-full.nupkg`
+   - Tag: `v1.2.1`
+   - Title: `MyPhotoHelper v1.2.1`
+   - Upload these files:
+     - `Output/MyPhotoHelper-Setup.exe`
+     - `update.xml`
 
 ## Troubleshooting Releases
 
@@ -88,9 +98,10 @@ Before creating a release:
   - Tag format must be `vX.X.X`
 
 **Users not getting updates**
-- Updates check every 6 hours
-- Users can manually check: System tray → Check for Updates
+- AutoUpdater.NET checks automatically
+- Users can manually check through app settings
 - Firewall might block GitHub access
+- Check update.xml file is valid and accessible
 
 **Emergency Rollback**
 If a release has critical issues:
@@ -132,10 +143,10 @@ Always test these scenarios:
 ## Summary
 
 Creating a release is as simple as:
-1. Update version in .csproj
-2. Commit and push
+1. Update version in .csproj and installer.iss
+2. Commit and push changes
 3. Tag with `git tag vX.X.X` and push tag
-4. Wait 5-10 minutes for automatic build
-5. Users get updates within 6 hours
+4. Wait 5-10 minutes for automatic build and deployment
+5. Users get updates automatically via AutoUpdater.NET
 
-No manual building or uploading needed - it's all automated!
+No manual building or uploading needed - completely automated with modern deployment!

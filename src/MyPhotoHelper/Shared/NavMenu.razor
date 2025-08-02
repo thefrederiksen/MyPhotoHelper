@@ -1,5 +1,8 @@
 ﻿<div class="sidebar-header">
-    <div class="sidebar-logo">MYPHOTO</div>
+    <div class="sidebar-logo">
+        <div class="logo-main">MyPhotoHelper</div>
+        <div class="logo-subtitle">Organize • Discover • Remember</div>
+    </div>
 </div>
 
 <div class="sidebar-content">
@@ -13,10 +16,12 @@
             <span class="oi oi-image"></span>
             <span>Gallery</span>
         </NavLink>
+        @* Photo Map - Temporarily hidden
         <NavLink class="sidebar-item" href="photo-map">
             <span class="oi oi-map-marker"></span>
             <span>Photo Map</span>
         </NavLink>
+        *@
     </div>
 
     <!-- AI & Analysis - Temporarily disabled during system upgrade -->
@@ -54,10 +59,12 @@
     <!-- System -->
     <div class="sidebar-section">
         <div class="sidebar-section-title">SYSTEM</div>
+        @* Database Status moved to Settings page for debugging
         <NavLink class="sidebar-item" href="database-status">
             <span class="oi oi-hard-drive"></span>
             <span>Database</span>
         </NavLink>
+        *@
         <NavLink class="sidebar-item" href="report">
             <span class="oi oi-graph"></span>
             <span>Report</span>

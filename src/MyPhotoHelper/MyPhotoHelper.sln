@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPhotoHelper", "MyPhotoHelper.csproj", "{BC9AFC3A-7A1F-EE34-28AB-B8B981F89CBC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC9AFC3A-7A1F-EE34-28AB-B8B981F89CBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC9AFC3A-7A1F-EE34-28AB-B8B981F89CBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC9AFC3A-7A1F-EE34-28AB-B8B981F89CBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC9AFC3A-7A1F-EE34-28AB-B8B981F89CBC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {341F1AA1-94D1-4335-9DF3-D512AA4FFF69}
+	EndGlobalSection
+EndGlobal
