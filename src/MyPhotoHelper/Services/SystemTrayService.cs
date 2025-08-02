@@ -53,8 +53,8 @@ namespace MyPhotoHelper.Services
             {
                 _logger.LogInformation("System tray service initializing");
 
-                // Add to startup automatically (user-level, no admin required)
-                AddToStartup();
+                // Don't add to startup automatically anymore - let user control via settings
+                // AddToStartup();
 
                 // Create system tray icon on the main UI thread
                 // Since we're called from the main WinForms app, we're already on the UI thread
@@ -66,6 +66,80 @@ namespace MyPhotoHelper.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to initialize system tray service");
+            }
+        }
+
+        public void EnableWindowsStartup()
+        {
+            try
+            {
+                _logger.LogInformation("Enabling Windows startup");
+                AddToStartup();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enable Windows startup");
+                throw;
+            }
+        }
+
+        public void DisableWindowsStartup()
+        {
+            try
+            {
+                _logger.LogInformation("Disabling Windows startup");
+                
+                // Remove from Startup folder
+                var startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                var shortcutPath = Path.Combine(startupPath, "MyPhotoHelper.lnk");
+                
+                if (File.Exists(shortcutPath))
+                {
+                    File.Delete(shortcutPath);
+                    _logger.LogInformation("Removed shortcut from startup folder");
+                }
+
+                // Remove from Registry
+                using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                if (key != null && key.GetValue("MyPhotoHelper") != null)
+                {
+                    key.DeleteValue("MyPhotoHelper", false);
+                    _logger.LogInformation("Removed MyPhotoHelper from registry startup");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to disable Windows startup");
+                throw;
+            }
+        }
+
+        public bool IsWindowsStartupEnabled()
+        {
+            try
+            {
+                // Check Startup folder
+                var startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                var shortcutPath = Path.Combine(startupPath, "MyPhotoHelper.lnk");
+                
+                if (File.Exists(shortcutPath))
+                {
+                    return true;
+                }
+
+                // Check Registry
+                using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false);
+                if (key != null && key.GetValue("MyPhotoHelper") != null)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check Windows startup status");
+                return false;
             }
         }
 

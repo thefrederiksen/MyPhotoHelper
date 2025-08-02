@@ -8,6 +8,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<Settings> Logger
 @inject IJSRuntime JsRuntime
+@inject SystemTrayService SystemTrayService
 
 <PageTitle>Settings - FaceVault</PageTitle>
 
@@ -75,6 +76,17 @@
                                     <option value="dark">Dark</option>
                                     <option value="light">Light</option>
                                 </select>
+                            </div>
+                            
+                            <h6 class="mt-4">System Settings</h6>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="runOnStartup" 
+                                       checked="@(settings.RunOnWindowsStartup == 1)"
+                                       @onchange="@((e) => settings.RunOnWindowsStartup = (bool)e.Value! ? 1 : 0)">
+                                <label class="form-check-label" for="runOnStartup">
+                                    Start MyPhotoHelper when Windows starts
+                                    <small class="text-muted d-block">Application will start minimized to system tray</small>
+                                </label>
                             </div>
                             
                             <h6 class="mt-4">Feature Toggles</h6>
@@ -349,6 +361,16 @@
                 await DbContext.SaveChangesAsync();
                 Logger.LogInformation("Created default application settings");
             }
+            
+            // Sync Windows startup status with actual system state
+            var actualStartupEnabled = SystemTrayService.IsWindowsStartupEnabled();
+            var dbStartupEnabled = settings.RunOnWindowsStartup == 1;
+            
+            if (actualStartupEnabled != dbStartupEnabled)
+            {
+                Logger.LogInformation($"Syncing Windows startup status. DB: {dbStartupEnabled}, Actual: {actualStartupEnabled}");
+                settings.RunOnWindowsStartup = actualStartupEnabled ? 1 : 0;
+            }
         }
         catch (Exception ex)
         {
@@ -367,6 +389,7 @@
             EnableDuplicateDetection = 1,
             EnableAIImageAnalysis = 0,
             AutoScanOnStartup = 0,
+            RunOnWindowsStartup = 0,
             ScanSubdirectories = 1,
             SupportJpeg = 1,
             SupportPng = 1,
@@ -405,6 +428,33 @@
                     errorMessage = "Please enter an API Key for AI analysis";
                     return;
                 }
+            }
+            
+            // Handle Windows startup changes
+            try
+            {
+                var shouldEnableStartup = settings.RunOnWindowsStartup == 1;
+                var isCurrentlyEnabled = SystemTrayService.IsWindowsStartupEnabled();
+                
+                if (shouldEnableStartup != isCurrentlyEnabled)
+                {
+                    if (shouldEnableStartup)
+                    {
+                        SystemTrayService.EnableWindowsStartup();
+                        Logger.LogInformation("Enabled Windows startup");
+                    }
+                    else
+                    {
+                        SystemTrayService.DisableWindowsStartup();
+                        Logger.LogInformation("Disabled Windows startup");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to update Windows startup setting");
+                errorMessage = "Failed to update Windows startup setting. You may need to run as administrator.";
+                return;
             }
             
             // Update modified date
@@ -446,9 +496,10 @@
         
         var defaultSettings = CreateDefaultSettings();
         
-        // Preserve the ID and creation date
+        // Preserve the ID, creation date, and current Windows startup state
         defaultSettings.Id = settings.Id;
         defaultSettings.DateCreated = settings.DateCreated;
+        defaultSettings.RunOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled() ? 1 : 0;
         
         settings = defaultSettings;
         
