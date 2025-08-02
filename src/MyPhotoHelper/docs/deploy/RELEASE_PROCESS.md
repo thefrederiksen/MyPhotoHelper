@@ -5,16 +5,16 @@ This guide explains how to create and publish a new release using AutoUpdater.NE
 ## Quick Steps to Release
 
 ### 1. Update Version Number
-**CRITICAL**: Update version in **THREE** files to ensure consistency:
+**SIMPLIFIED**: Update version in **TWO** files (update.xml is now auto-generated):
 
 **src\MyPhotoHelper\MyPhotoHelper.csproj:**
 ```xml
-<AssemblyVersion>1.2.3.0</AssemblyVersion>
-<FileVersion>1.2.3.0</FileVersion>
-<ProductVersion>1.2.3.0</ProductVersion>
-<Version>1.2.3.0</Version>
-<AssemblyInformationalVersion>1.2.3</AssemblyInformationalVersion>
-<InformationalVersion>1.2.3</InformationalVersion>
+<AssemblyVersion>1.2.4.0</AssemblyVersion>
+<FileVersion>1.2.4.0</FileVersion>
+<ProductVersion>1.2.4.0</ProductVersion>
+<Version>1.2.4.0</Version>
+<AssemblyInformationalVersion>1.2.4</AssemblyInformationalVersion>
+<InformationalVersion>1.2.4</InformationalVersion>
 <!-- Disable automatic version generation -->
 <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 <RepositoryCommit></RepositoryCommit>
@@ -22,38 +22,35 @@ This guide explains how to create and publish a new release using AutoUpdater.NE
 
 **installer.iss:**
 ```ini
-AppVersion=1.2.3
+AppVersion=1.2.4
 ```
 
-**update.xml:**
-```xml
-<version>1.2.3.0</version>
-<url>https://github.com/thefrederiksen/MyPhotoHelper/releases/download/v1.2.3/MyPhotoHelper-Setup.exe</url>
-```
-
-⚠️ **CRITICAL**: All versions must match exactly:
-- ProductVersion (csproj) = AppVersion (installer.iss) = Git tag version
-- About dialog reads ProductVersion from assembly (should show clean "1.2.3")
-- Auto-updater reads version from update.xml  
-- GitHub Actions generates update.xml from Git tag
-- The special version properties disable Git hash suffixes in version strings
+⚠️ **IMPORTANT**: 
+- ProductVersion (csproj) should match Git tag version
+- About dialog reads ProductVersion from assembly (displays clean "1.2.4")
+- **update.xml is automatically generated** after successful release
+- GitHub Actions now verifies release exists before updating auto-updater config
+- No more race conditions - users only see new versions after they're actually available
 
 ### 2. Commit Your Changes
 ```bash
 git add .
-git commit -m "Prepare release v1.2.3"
+git commit -m "Prepare release v1.2.4"
 git push
 ```
 
 ### 3. Create and Push a Version Tag
 ```bash
-git tag v1.2.3
-git push origin v1.2.3
+git tag v1.2.4
+git push origin v1.2.4
 ```
 
 **That's it!** GitHub Actions will automatically:
 - Build the release with Inno Setup
 - Create MyPhotoHelper-Setup.exe installer
+- Verify the release was created successfully
+- **Only then** update update.xml with the new version
+- Commit the verified update.xml back to main branch
 - Generate update.xml for AutoUpdater.NET
 - Upload to GitHub Releases
 - Users will get the update notification automatically
@@ -86,12 +83,12 @@ Use semantic versioning: `MAJOR.MINOR.PATCH`
 Before creating a release:
 
 - [ ] Test the application locally
-- [ ] Update version in **THREE** files: MyPhotoHelper.csproj, installer.iss, and update.xml
-- [ ] Verify all version numbers match exactly:
+- [ ] Update version in **TWO** files: MyPhotoHelper.csproj and installer.iss
+- [ ] Verify version numbers match:
   - [ ] ProductVersion (csproj) = X.X.X.0 (but displays as X.X.X)
   - [ ] AppVersion (installer.iss) = X.X.X  
-  - [ ] version (update.xml) = X.X.X.0
   - [ ] Git tag will be vX.X.X
+  - [ ] ✅ update.xml is now auto-generated after successful release
 - [ ] Test About dialog shows correct version (should match ProductVersion)
 - [ ] Run `build-release.bat X.X.X` locally to test build
 - [ ] Commit all changes
@@ -131,7 +128,13 @@ Before creating a release:
 **Version mismatch in About dialog**
 - Ensure ProductVersion in .csproj matches Git tag
 - The About dialog uses ProductVersion from assembly metadata
-- Auto-updater uses the version from update.xml (generated from Git tag)
+- Auto-updater uses the version from update.xml (auto-generated after successful release)
+
+**Race condition issues (FIXED)**
+- ✅ update.xml is now only updated AFTER successful release creation
+- ✅ No more 3-4 minute window where wrong version is advertised
+- ✅ GitHub Actions verifies release exists before updating auto-updater config
+- ✅ Users only see new versions when they're actually downloadable
 
 **Emergency Rollback**
 If a release has critical issues:

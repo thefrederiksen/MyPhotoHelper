@@ -62,21 +62,6 @@ jobs:
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
       shell: pwsh
     
-    - name: Update XML for AutoUpdater
-      run: |
-        $version = "${{ steps.version.outputs.VERSION }}"
-        $xml = @"
-        <?xml version="1.0" encoding="UTF-8"?>
-        <item>
-            <version>$version.0</version>
-            <url>https://github.com/thefrederiksen/MyPhotoHelper/releases/download/v$version/MyPhotoHelper-Setup.exe</url>
-            <changelog>https://github.com/thefrederiksen/MyPhotoHelper/releases/latest</changelog>
-            <mandatory>false</mandatory>
-        </item>
-        "@
-        $xml | Out-File -FilePath update.xml -Encoding UTF8
-      shell: pwsh
-    
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -86,7 +71,6 @@ jobs:
         prerelease: false
         files: |
           Output/MyPhotoHelper-Setup.exe
-          update.xml
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
           ## MyPhotoHelper v${{ steps.version.outputs.VERSION }}
@@ -120,8 +104,57 @@ jobs:
           - Core photo management features remain fully functional
           - Automatic migration from previous versions
     
-    - name: Update main branch with new XML
+    - name: Verify release was created successfully
       if: success()
+      run: |
+        $version = "${{ steps.version.outputs.VERSION }}"
+        $releaseUrl = "https://api.github.com/repos/thefrederiksen/MyPhotoHelper/releases/tags/v$version"
+        Write-Host "Verifying release exists at: $releaseUrl"
+        
+        # Wait a moment for GitHub to process the release
+        Start-Sleep -Seconds 10
+        
+        try {
+          $response = Invoke-RestMethod -Uri $releaseUrl -Headers @{ "User-Agent" = "GitHub-Actions" }
+          Write-Host "✅ Release verified: $($response.name)"
+          
+          # Check that the installer asset exists
+          $installerAsset = $response.assets | Where-Object { $_.name -eq "MyPhotoHelper-Setup.exe" }
+          if ($installerAsset) {
+            Write-Host "✅ Installer asset found: $($installerAsset.browser_download_url)"
+            echo "RELEASE_VERIFIED=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "❌ Installer asset not found!"
+            exit 1
+          }
+        } catch {
+          Write-Host "❌ Failed to verify release: $($_.Exception.Message)"
+          exit 1
+        }
+      shell: pwsh
+      id: verify_release
+    
+    - name: Update XML for AutoUpdater (AFTER successful release)
+      if: success() && steps.verify_release.outputs.RELEASE_VERIFIED == 'true'
+      run: |
+        $version = "${{ steps.version.outputs.VERSION }}"
+        Write-Host "Updating update.xml with verified release info"
+        
+        $xml = @"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <item>
+            <version>$version.0</version>
+            <url>https://github.com/thefrederiksen/MyPhotoHelper/releases/download/v$version/MyPhotoHelper-Setup.exe</url>
+            <changelog>https://github.com/thefrederiksen/MyPhotoHelper/releases/latest</changelog>
+            <mandatory>false</mandatory>
+        </item>
+        "@
+        $xml | Out-File -FilePath update.xml -Encoding UTF8
+        Write-Host "✅ update.xml updated successfully"
+      shell: pwsh
+    
+    - name: Update main branch with verified XML
+      if: success() && steps.verify_release.outputs.RELEASE_VERIFIED == 'true'
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -129,4 +162,5 @@ jobs:
         git add update.xml
         git commit -m "Update AutoUpdater XML to v${{ steps.version.outputs.VERSION }} [skip ci]" || echo "No changes to commit"
         git push origin main || echo "Failed to push - may be protected branch"
+        Write-Host "✅ update.xml committed to main branch"
       shell: pwsh
