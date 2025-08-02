@@ -7,9 +7,10 @@ using MyPhotoHelper.Services;
 using Squirrel;
 using Squirrel.Sources;
 using System.Diagnostics;
+using System.Reflection;
 
 // Mark this assembly as Squirrel-aware
-[assembly: Squirrel.AssemblyMetadata("SquirrelAwareVersion", "1")]
+[assembly: AssemblyMetadata("SquirrelAwareVersion", "1")]
 
 namespace MyPhotoHelper
 {

@@ -103,7 +103,8 @@ if (-not $squirrelExe) {
     Write-Host "Creating Squirrel package using releasify..." -ForegroundColor Yellow
     & $squirrelExe releasify `
         --package "MyPhotoHelper.$Version.nupkg" `
-        --releaseDir ".\Releases"
+        --releaseDir ".\Releases" `
+        --allowUnaware
 }
 
 if ($LASTEXITCODE -ne 0) {

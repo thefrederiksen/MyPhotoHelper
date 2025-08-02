@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
@@ -11,36 +10,29 @@
     <UseWinFormsStartup>true</UseWinFormsStartup>
     <AssemblyName>MyPhotoHelper</AssemblyName>
     <RootNamespace>MyPhotoHelper</RootNamespace>
-    
     <!-- Version Information -->
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
     <FileVersion>1.1.0.0</FileVersion>
     <ProductVersion>1.1.0</ProductVersion>
-    
     <!-- Application Information -->
     <Product>MyPhotoHelper</Product>
     <Company>MyPhotoHelper</Company>
-    <Copyright>Copyright © 2025</Copyright>
+    <Copyright>Copyright Â© 2025</Copyright>
     <Description>AI-powered photo organization and management</Description>
-    
     <!-- Application Icon -->
     <!-- <ApplicationIcon>app.ico</ApplicationIcon> -->
-    
     <!-- Squirrel Settings -->
     <SquirrelBuildDirectory>$(MSBuildProjectDirectory)\..\..\releases</SquirrelBuildDirectory>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(UseWinFormsStartup)' == 'true'">
     <DefineConstants>$(DefineConstants);WINFORMS_APP</DefineConstants>
   </PropertyGroup>
-  
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <PublishReadyToRun>true</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Clowd.Squirrel" Version="2.11.1" />
     <PackageReference Include="CSnakes.Runtime" Version="1.1.0" />
@@ -52,7 +44,6 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.10" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <AdditionalFiles Include="Python\heic_converter.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -70,20 +61,17 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AdditionalFiles>
   </ItemGroup>
-
   <ItemGroup>
     <Content Include="Database\*.sql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
   <ItemGroup>
     <!-- Include Resources directory -->
     <Content Include="Resources\**\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
   <ItemGroup>
     <!-- Exclude backup directory from build -->
     <Compile Remove="Backup_RemovedFiles\**" />
@@ -91,5 +79,4 @@
     <EmbeddedResource Remove="Backup_RemovedFiles\**" />
     <None Remove="Backup_RemovedFiles\**" />
   </ItemGroup>
-
 </Project>

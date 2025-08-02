@@ -29,7 +29,8 @@
       "Bash(dotnet tool list:*)",
       "Bash(gh issue view:*)",
       "Bash(del:*)",
-      "Bash(dotnet ef dbcontext scaffold:*)"
+      "Bash(dotnet ef dbcontext scaffold:*)",
+      "Bash(cmd:*)"
     ],
     "deny": []
   }
