@@ -133,13 +133,6 @@ namespace MyPhotoHelper
                 AutoUpdater.UpdateMode = Mode.Normal; // Show standard UI
                 AutoUpdater.ReportErrors = true;
                 
-                // Set up the application exit event for cleanup
-                AutoUpdater.ApplicationExitEvent = () =>
-                {
-                    Logger.Info("AutoUpdater requesting application exit");
-                    Environment.Exit(0); // Exit completely
-                };
-                
                 // Check for updates before app starts - this will show UI if update is available
                 AutoUpdater.Start("https://raw.githubusercontent.com/thefrederiksen/MyPhotoHelper/main/update.xml");
                 

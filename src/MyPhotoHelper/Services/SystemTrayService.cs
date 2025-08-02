@@ -292,16 +292,10 @@ namespace MyPhotoHelper.Services
                 
                 contextMenu.Items.Add(new ToolStripSeparator());
                 
-                // Update Database - Opens database update tool
-                var updateDbMenuItem = new ToolStripMenuItem("Update Database...");
-                updateDbMenuItem.Click += (s, e) => OpenDatabaseUpdateTool(false);
-                contextMenu.Items.Add(updateDbMenuItem);
-                
-                // Force Update Database - Opens database update tool in force mode
-                var forceUpdateDbMenuItem = new ToolStripMenuItem("Force Database Update (v2+)...");
-                forceUpdateDbMenuItem.ForeColor = System.Drawing.Color.DarkOrange;
-                forceUpdateDbMenuItem.Click += (s, e) => OpenDatabaseUpdateTool(true);
-                contextMenu.Items.Add(forceUpdateDbMenuItem);
+                // About menu item
+                var aboutMenuItem = new ToolStripMenuItem("About MyPhotoHelper...");
+                aboutMenuItem.Click += (s, e) => ShowAboutDialog();
+                contextMenu.Items.Add(aboutMenuItem);
                 
                 contextMenu.Items.Add(new ToolStripSeparator());
                 
@@ -459,38 +453,22 @@ namespace MyPhotoHelper.Services
             }
         }
 
-        private void OpenDatabaseUpdateTool(bool forceUpdate)
+        private void ShowAboutDialog()
         {
             try
             {
-                _logger.LogInformation($"Opening database update tool (force mode: {forceUpdate})");
+                _logger.LogInformation("Showing About dialog");
                 
-                // Create and show the database update form
-                var updateForm = new MyPhotoHelper.Forms.DatabaseUpdateForm(_serviceProvider);
+                // Create and show the About dialog
+                var aboutForm = new MyPhotoHelper.Forms.AboutForm();
+                aboutForm.ShowDialog();
                 
-                // If force update is requested, automatically trigger it after form loads
-                if (forceUpdate)
-                {
-                    updateForm.Load += async (s, e) =>
-                    {
-                        // Small delay to ensure form is fully loaded
-                        await Task.Delay(100);
-                        
-                        // Click the force update button programmatically
-                        var forceButton = updateForm.Controls.OfType<Button>()
-                            .FirstOrDefault(b => b.Text.Contains("Force Update"));
-                        forceButton?.PerformClick();
-                    };
-                }
-                
-                updateForm.ShowDialog();
-                
-                _logger.LogInformation("Database update tool closed");
+                _logger.LogInformation("About dialog closed");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to open database update tool");
-                MessageBox.Show("Failed to open database update tool. Check logs for details.", "Error", 
+                _logger.LogError(ex, "Failed to show About dialog");
+                MessageBox.Show("Failed to show About dialog. Check logs for details.", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

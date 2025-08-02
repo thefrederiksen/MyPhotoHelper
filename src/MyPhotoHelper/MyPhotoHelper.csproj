@@ -11,13 +11,19 @@
     <AssemblyName>MyPhotoHelper</AssemblyName>
     <RootNamespace>MyPhotoHelper</RootNamespace>
     <!-- Version Information -->
-    <AssemblyVersion>1.2.1.0</AssemblyVersion>
-    <FileVersion>1.2.1.0</FileVersion>
-    <ProductVersion>1.2.1</ProductVersion>
+    <AssemblyVersion>1.2.3.0</AssemblyVersion>
+    <FileVersion>1.2.3.0</FileVersion>
+    <ProductVersion>1.2.3.0</ProductVersion>
+    <Version>1.2.3.0</Version>
+    <AssemblyInformationalVersion>1.2.3</AssemblyInformationalVersion>
+    <InformationalVersion>1.2.3</InformationalVersion>
+    <!-- Disable automatic version generation -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <RepositoryCommit></RepositoryCommit>
     <!-- Application Information -->
     <Product>MyPhotoHelper</Product>
     <Company>MyPhotoHelper</Company>
-    <Copyright>Copyright Â© 2025</Copyright>
+    <Copyright>Copyright © 2025</Copyright>
     <Description>AI-powered photo organization and management</Description>
     <!-- Application Icon -->
     <!-- <ApplicationIcon>app.ico</ApplicationIcon> -->

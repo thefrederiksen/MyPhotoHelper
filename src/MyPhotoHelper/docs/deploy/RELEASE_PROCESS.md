@@ -5,31 +5,50 @@ This guide explains how to create and publish a new release using AutoUpdater.NE
 ## Quick Steps to Release
 
 ### 1. Update Version Number
-Edit `src\MyPhotoHelper\MyPhotoHelper.csproj` and `installer.iss` with the new version:
+**CRITICAL**: Update version in **THREE** files to ensure consistency:
 
-**MyPhotoHelper.csproj:**
+**src\MyPhotoHelper\MyPhotoHelper.csproj:**
 ```xml
-<AssemblyVersion>1.2.1.0</AssemblyVersion>
-<FileVersion>1.2.1.0</FileVersion>
-<ProductVersion>1.2.1</ProductVersion>
+<AssemblyVersion>1.2.3.0</AssemblyVersion>
+<FileVersion>1.2.3.0</FileVersion>
+<ProductVersion>1.2.3.0</ProductVersion>
+<Version>1.2.3.0</Version>
+<AssemblyInformationalVersion>1.2.3</AssemblyInformationalVersion>
+<InformationalVersion>1.2.3</InformationalVersion>
+<!-- Disable automatic version generation -->
+<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+<RepositoryCommit></RepositoryCommit>
 ```
 
 **installer.iss:**
 ```ini
-AppVersion=1.2.1
+AppVersion=1.2.3
 ```
+
+**update.xml:**
+```xml
+<version>1.2.3.0</version>
+<url>https://github.com/thefrederiksen/MyPhotoHelper/releases/download/v1.2.3/MyPhotoHelper-Setup.exe</url>
+```
+
+⚠️ **CRITICAL**: All versions must match exactly:
+- ProductVersion (csproj) = AppVersion (installer.iss) = Git tag version
+- About dialog reads ProductVersion from assembly (should show clean "1.2.3")
+- Auto-updater reads version from update.xml  
+- GitHub Actions generates update.xml from Git tag
+- The special version properties disable Git hash suffixes in version strings
 
 ### 2. Commit Your Changes
 ```bash
 git add .
-git commit -m "Prepare release v1.2.1"
+git commit -m "Prepare release v1.2.3"
 git push
 ```
 
 ### 3. Create and Push a Version Tag
 ```bash
-git tag v1.2.1
-git push origin v1.2.1
+git tag v1.2.3
+git push origin v1.2.3
 ```
 
 **That's it!** GitHub Actions will automatically:
@@ -67,7 +86,13 @@ Use semantic versioning: `MAJOR.MINOR.PATCH`
 Before creating a release:
 
 - [ ] Test the application locally
-- [ ] Update version in MyPhotoHelper.csproj
+- [ ] Update version in **THREE** files: MyPhotoHelper.csproj, installer.iss, and update.xml
+- [ ] Verify all version numbers match exactly:
+  - [ ] ProductVersion (csproj) = X.X.X.0 (but displays as X.X.X)
+  - [ ] AppVersion (installer.iss) = X.X.X  
+  - [ ] version (update.xml) = X.X.X.0
+  - [ ] Git tag will be vX.X.X
+- [ ] Test About dialog shows correct version (should match ProductVersion)
 - [ ] Run `build-release.bat X.X.X` locally to test build
 - [ ] Commit all changes
 - [ ] Push to main branch
@@ -102,6 +127,11 @@ Before creating a release:
 - Users can manually check through app settings
 - Firewall might block GitHub access
 - Check update.xml file is valid and accessible
+
+**Version mismatch in About dialog**
+- Ensure ProductVersion in .csproj matches Git tag
+- The About dialog uses ProductVersion from assembly metadata
+- Auto-updater uses the version from update.xml (generated from Git tag)
 
 **Emergency Rollback**
 If a release has critical issues:
@@ -143,10 +173,12 @@ Always test these scenarios:
 ## Summary
 
 Creating a release is as simple as:
-1. Update version in .csproj and installer.iss
+1. **Update version in BOTH .csproj and installer.iss** (ensure they match!)
 2. Commit and push changes
 3. Tag with `git tag vX.X.X` and push tag
 4. Wait 5-10 minutes for automatic build and deployment
 5. Users get updates automatically via AutoUpdater.NET
 
 No manual building or uploading needed - completely automated with modern deployment!
+
+💡 **Remember**: Always verify version consistency between ProductVersion (in .csproj), AppVersion (in installer.iss), and Git tag to avoid confusion between the About dialog and auto-updater versions.
