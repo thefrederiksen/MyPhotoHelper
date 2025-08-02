@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using MyPhotoHelper.Forms;
 using MyPhotoHelper.Services;
 using Squirrel;
+using Squirrel.Sources;
 using System.Diagnostics;
 
 namespace MyPhotoHelper
@@ -162,7 +163,7 @@ namespace MyPhotoHelper
         {
             try
             {
-                using (var mgr = await UpdateManager.GitHubUpdateManager("https://github.com/thefrederiksen/MyPhotoHelper"))
+                using (var mgr = new UpdateManager(new GithubSource("https://github.com/thefrederiksen/MyPhotoHelper", "", false)))
                 {
                     var updateInfo = await mgr.CheckForUpdate();
                     

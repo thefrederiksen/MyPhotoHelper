@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Squirrel;
+using Squirrel.Sources;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +50,7 @@ namespace MyPhotoHelper.Services
             {
                 var updateUrl = _configuration["Updates:GitHubUrl"] ?? "https://github.com/thefrederiksen/MyPhotoHelper";
                 
-                using (var mgr = await UpdateManager.GitHubUpdateManager(updateUrl))
+                using (var mgr = new UpdateManager(new GithubSource(updateUrl, "", false)))
                 {
                     _updateManager = mgr;
                     
