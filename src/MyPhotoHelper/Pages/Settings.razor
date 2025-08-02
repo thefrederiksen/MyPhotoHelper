@@ -9,6 +9,7 @@
 @inject ILogger<Settings> Logger
 @inject IJSRuntime JsRuntime
 @inject SystemTrayService SystemTrayService
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>Settings - FaceVault</PageTitle>
 
@@ -264,9 +265,14 @@
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between mb-4">
-                <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
-                    <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
-                </button>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
+                        <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
+                    </button>
+                    <button type="button" class="btn btn-outline-info ms-2" @onclick="OpenDatabaseUpdate">
+                        <span class="oi oi-data-transfer-download" aria-hidden="true"></span> Update Database
+                    </button>
+                </div>
                 <div>
                     <button type="button" class="btn btn-outline-warning me-2" @onclick="ResetToDefaults" disabled="@isResetting">
                         @if (isResetting)
@@ -703,6 +709,28 @@
         {
             Logger.LogError(ex, "Error removing scan directory");
             errorMessage = "Failed to remove directory: " + ex.Message;
+        }
+    }
+    
+    private void OpenDatabaseUpdate()
+    {
+        try
+        {
+            // Create and show the database update form
+            var updateForm = new MyPhotoHelper.Forms.DatabaseUpdateForm(ServiceProvider);
+            updateForm.ShowDialog();
+            
+            // Reload settings after database update
+            InvokeAsync(async () =>
+            {
+                await LoadSettings();
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening database update form");
+            errorMessage = "Failed to open database update tool: " + ex.Message;
         }
     }
 }
