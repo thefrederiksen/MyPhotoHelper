@@ -18,7 +18,9 @@
       "Bash(dotnet add package:*)",
       "Bash(sqlite3:*)",
       "Bash(dir:*)",
-      "WebFetch(domain:drata.com)"
+      "WebFetch(domain:drata.com)",
+      "Bash(git add:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
