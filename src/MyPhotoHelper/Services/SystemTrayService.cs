@@ -292,6 +292,13 @@ namespace MyPhotoHelper.Services
                 
                 contextMenu.Items.Add(new ToolStripSeparator());
                 
+                // Update Database - Opens database update tool
+                var updateDbMenuItem = new ToolStripMenuItem("Update Database...");
+                updateDbMenuItem.Click += (s, e) => OpenDatabaseUpdateTool();
+                contextMenu.Items.Add(updateDbMenuItem);
+                
+                contextMenu.Items.Add(new ToolStripSeparator());
+                
                 // Exit application
                 var exitMenuItem = new ToolStripMenuItem("Exit");
                 exitMenuItem.Click += (s, e) => ExitApplication();
@@ -443,6 +450,26 @@ namespace MyPhotoHelper.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error opening data directory");
+            }
+        }
+
+        private void OpenDatabaseUpdateTool()
+        {
+            try
+            {
+                _logger.LogInformation("Opening database update tool");
+                
+                // Create and show the database update form
+                var updateForm = new MyPhotoHelper.Forms.DatabaseUpdateForm(_serviceProvider);
+                updateForm.ShowDialog();
+                
+                _logger.LogInformation("Database update tool closed");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open database update tool");
+                MessageBox.Show("Failed to open database update tool. Check logs for details.", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
