@@ -18,7 +18,7 @@ echo This may take a moment on first run.
 echo.
 
 REM Run the application in a new window
-start "MyPhotoHelper" dotnet run --project src\MyPhotoHelper
+start "MyPhotoHelper" dotnet run --project ..\src\MyPhotoHelper
 
 echo.
 echo ========================================

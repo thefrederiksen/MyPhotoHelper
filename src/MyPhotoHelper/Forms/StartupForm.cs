@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace MyPhotoHelper.Forms
 {
@@ -9,7 +10,7 @@ namespace MyPhotoHelper.Forms
     {
         private ProgressBar progressBar = null!;
         private Label statusLabel = null!;
-        private Label titleLabel = null!;
+        private PictureBox? logoPictureBox;
         
         public StartupForm()
         {
@@ -26,16 +27,42 @@ namespace MyPhotoHelper.Forms
             this.MinimizeBox = false;
             this.BackColor = Color.White;
             
-            // Title label
-            titleLabel = new Label
+            // Logo picture box
+            logoPictureBox = new PictureBox
             {
-                Text = "MyPhotoHelper",
-                Font = new Font("Segoe UI", 18, FontStyle.Bold),
-                ForeColor = Color.FromArgb(0, 122, 204),
-                Location = new Point(12, 20),
-                Size = new Size(360, 40),
-                TextAlign = ContentAlignment.MiddleCenter
+                Location = new Point(150, 10),
+                Size = new Size(100, 60),
+                SizeMode = PictureBoxSizeMode.Zoom
             };
+            
+            // Try to load the logo image
+            try
+            {
+                string logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "MyPhotoHelper Logo Transparent.png");
+                if (File.Exists(logoPath))
+                {
+                    logoPictureBox.Image = Image.FromFile(logoPath);
+                }
+                else
+                {
+                    // Fallback to text if logo not found
+                    var fallbackLabel = new Label
+                    {
+                        Text = "MyPhotoHelper",
+                        Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                        ForeColor = Color.FromArgb(0, 122, 204),
+                        Location = logoPictureBox.Location,
+                        Size = logoPictureBox.Size,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    this.Controls.Add(fallbackLabel);
+                    logoPictureBox = null;
+                }
+            }
+            catch
+            {
+                // If loading fails, just continue without logo
+            }
             
             // Status label
             statusLabel = new Label
@@ -57,7 +84,10 @@ namespace MyPhotoHelper.Forms
             };
             
             // Add controls
-            this.Controls.Add(titleLabel);
+            if (logoPictureBox != null)
+            {
+                this.Controls.Add(logoPictureBox);
+            }
             this.Controls.Add(statusLabel);
             this.Controls.Add(progressBar);
         }

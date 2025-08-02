@@ -32,7 +32,9 @@
       "Bash(dotnet ef dbcontext scaffold:*)",
       "Bash(cmd:*)",
       "WebFetch(domain:docs.velopack.io)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(dotnet nuget list:*)",
+      "Bash(dotnet nuget remove source:*)"
     ],
     "deny": []
   }

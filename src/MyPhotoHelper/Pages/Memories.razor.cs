@@ -24,6 +24,7 @@ namespace MyPhotoHelper.Pages
         private bool hasPhotos = false;
         private System.Threading.Timer? refreshTimer;
         private int lastPhotoCount = 0;
+        private bool isDisposed = false;
 
         protected override async Task OnInitializedAsync()
         {
@@ -149,10 +150,20 @@ namespace MyPhotoHelper.Pages
             // Refresh every 3 seconds while scanning
             refreshTimer = new System.Threading.Timer(async _ =>
             {
+                // Check if component is disposed before doing anything
+                if (isDisposed)
+                {
+                    StopAutoRefresh();
+                    return;
+                }
+                
                 await InvokeAsync(async () =>
                 {
                     try
                     {
+                        // Double-check disposal status
+                        if (isDisposed) return;
+                        
                         // Create a new scoped context for the background timer
                         using var scope = ServiceProvider.CreateScope();
                         var scopedDbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
@@ -184,6 +195,7 @@ namespace MyPhotoHelper.Pages
         
         public void Dispose()
         {
+            isDisposed = true;
             StopAutoRefresh();
             ScanStatusService.StatusChanged -= OnScanStatusChanged;
         }

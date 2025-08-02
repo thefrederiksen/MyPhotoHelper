@@ -357,6 +357,7 @@
     private bool isDeletingAll = false;
     private HashSet<int> deletingImages = new();
     private DateTime lastLoadTime = DateTime.MinValue;
+    private bool isDisposed = false;
     private readonly TimeSpan minLoadInterval = TimeSpan.FromSeconds(2);
     
     private class FileNameDifference
@@ -744,10 +745,20 @@
         // Refresh every 10 seconds while scanning (increased from 5 to reduce load)
         refreshTimer = new System.Threading.Timer(async _ =>
         {
+            // Check if component is disposed before doing anything
+            if (isDisposed)
+            {
+                StopAutoRefresh();
+                return;
+            }
+            
             try
             {
                 await InvokeAsync(async () =>
                 {
+                    // Double-check disposal status
+                    if (isDisposed) return;
+                    
                     // Additional check to prevent overlapping refreshes
                     if (!isLoading && !isDeletingAll && deletingImages.Count == 0)
                     {
@@ -940,6 +951,7 @@
 
     public void Dispose()
     {
+        isDisposed = true;
         StopAutoRefresh();
         ScanStatusService.StatusChanged -= OnScanStatusChanged;
     }

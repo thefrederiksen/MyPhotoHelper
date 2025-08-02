@@ -71,16 +71,7 @@
                             <h5 class="mb-0"><span class="oi oi-cog" aria-hidden="true"></span> General Settings</h5>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Theme</label>
-                                <select class="form-select" @bind="themeName">
-                                    <option value="default">Default</option>
-                                    <option value="dark">Dark</option>
-                                    <option value="light">Light</option>
-                                </select>
-                            </div>
-                            
-                            <h6 class="mt-4">System Settings</h6>
+                            <h6>System Settings</h6>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="runOnStartup" 
                                        checked="@runOnWindowsStartup"
@@ -182,7 +173,7 @@
                         </div>
                     </div>
 
-                    <!-- AI Settings - Temporarily Disabled -->
+                    @* AI Settings - Hidden for now
                     <div class="card mb-4">
                         <div class="card-header bg-warning text-dark">
                             <h5 class="mb-0"><span class="oi oi-warning" aria-hidden="true"></span> AI Settings</h5>
@@ -195,6 +186,7 @@
                             </div>
                         </div>
                     </div>
+                    *@
                 </div>
             </div>
 
@@ -273,8 +265,8 @@
 @code {
     // Settings values
     private string themeName = "default";
-    private bool runOnWindowsStartup = false;
-    private bool autoScanOnStartup = false;
+    private bool runOnWindowsStartup = true;
+    private bool autoScanOnStartup = true;
     private int batchSize = 100;
     private int maxConcurrentTasks = 4;
     
@@ -301,8 +293,8 @@
         {
             // Load all settings using SettingsService
             themeName = await SettingsService.GetSettingAsync<string>(SettingNames.ThemeName, "default");
-            runOnWindowsStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.RunOnWindowsStartup, false);
-            autoScanOnStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.AutoScanOnStartup, false);
+            runOnWindowsStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.RunOnWindowsStartup, true);
+            autoScanOnStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.AutoScanOnStartup, true);
             batchSize = await SettingsService.GetSettingAsync<int>(SettingNames.BatchSize, 100);
             maxConcurrentTasks = await SettingsService.GetSettingAsync<int>(SettingNames.MaxConcurrentTasks, 4);
             
@@ -358,7 +350,6 @@
             // Save all settings using SettingsService
             await SettingsService.SetMultipleSettingsAsync(new Dictionary<string, object>
             {
-                { SettingNames.ThemeName, themeName },
                 { SettingNames.RunOnWindowsStartup, runOnWindowsStartup },
                 { SettingNames.AutoScanOnStartup, autoScanOnStartup },
                 { SettingNames.BatchSize, batchSize },
@@ -396,7 +387,7 @@
         {
             // Reset to default values
             themeName = "default";
-            autoScanOnStartup = false;
+            autoScanOnStartup = true;
             batchSize = 100;
             maxConcurrentTasks = 4;
             

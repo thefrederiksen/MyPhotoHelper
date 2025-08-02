@@ -1,6 +1,10 @@
-# MyPhotoHelper
-
-**Free AI-Powered Photo Organization and Management**
+<div align="center">
+  <img src="src/MyPhotoHelper/Images/MyPhotoHelper Logo.png" alt="MyPhotoHelper Logo" width="200">
+  
+  # MyPhotoHelper
+  
+  **Free AI-Powered Photo Organization and Management**
+</div>
 
 [![Release](https://img.shields.io/github/v/release/thefrederiksen/MyPhotoHelper)](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

@@ -71,6 +71,13 @@
     <Content Include="Resources\**\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <!-- Include Logo images -->
+    <Content Include="Images\MyPhotoHelper Logo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Images\MyPhotoHelper Logo Transparent.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <!-- Exclude backup directory from build -->
