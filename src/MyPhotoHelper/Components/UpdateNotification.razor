@@ -1,52 +1,11 @@
-@using MyPhotoHelper.Services
-@using Squirrel
-@implements IDisposable
-
-@if (showUpdateNotification)
-{
-    <div class="update-notification">
-        <div class="update-content">
-            <span class="update-icon">🎉</span>
-            <span class="update-text">Update available: Version @updateVersion</span>
-            <button class="btn btn-sm btn-primary" @onclick="RestartApplication">Restart Now</button>
-            <button class="btn btn-sm btn-secondary" @onclick="DismissNotification">Later</button>
-        </div>
-    </div>
-}
+@* 
+   Update notifications are now handled automatically by AutoUpdater.NET
+   This component is kept for future custom update notifications if needed
+*@
 
 @code {
-    private bool showUpdateNotification = false;
-    private string updateVersion = "";
-
-    protected override void OnInitialized()
-    {
-        AppUpdateService.UpdateStatusChanged += OnUpdateStatusChanged;
-    }
-
-    private void OnUpdateStatusChanged(object? sender, UpdateStatus status)
-    {
-        if (status.Status == "Ready")
-        {
-            updateVersion = status.Version;
-            showUpdateNotification = true;
-            InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void RestartApplication()
-    {
-        UpdateManager.RestartApp();
-    }
-
-    private void DismissNotification()
-    {
-        showUpdateNotification = false;
-    }
-
-    public void Dispose()
-    {
-        AppUpdateService.UpdateStatusChanged -= OnUpdateStatusChanged;
-    }
+    // AutoUpdater.NET handles update notifications automatically
+    // No manual update notification component needed
 }
 
 <style>

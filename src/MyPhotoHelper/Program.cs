@@ -4,13 +4,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using MyPhotoHelper.Forms;
 using MyPhotoHelper.Services;
-using Squirrel;
-using Squirrel.Sources;
 using System.Diagnostics;
-using System.Reflection;
-
-// Mark this assembly as Squirrel-aware
-[assembly: AssemblyMetadata("SquirrelAwareVersion", "1")]
+using AutoUpdaterDotNET;
 
 namespace MyPhotoHelper
 {
@@ -19,21 +14,6 @@ namespace MyPhotoHelper
         [STAThread]
         static void Main(string[] args)
         {
-            // Handle Squirrel events first
-            try
-            {
-                SquirrelAwareApp.HandleEvents(
-                    onInitialInstall: OnAppInstall,
-                    onAppUninstall: OnAppUninstall,
-                    onEveryRun: OnAppRun
-                );
-            }
-            catch (Exception ex)
-            {
-                // Log but don't crash if Squirrel fails
-                StartupErrorLogger.LogError("Squirrel initialization failed", ex);
-            }
-
             // Set up global exception handlers FIRST
             AppDomain.CurrentDomain.UnhandledException += HandleUnhandledException;
             Application.ThreadException += HandleThreadException;
@@ -77,6 +57,9 @@ namespace MyPhotoHelper
                     // First instance - continue with normal startup
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
+                    
+                    // Check for updates first (non-blocking)
+                    InitializeAutoUpdater();
                     
                     StartupErrorLogger.LogError("Starting Blazor server", null);
                     
@@ -132,63 +115,35 @@ namespace MyPhotoHelper
             Environment.Exit(1);
         }
 
-        // Squirrel event handlers
-        private static void OnAppInstall(SemanticVersion version, IAppTools tools)
-        {
-            tools.CreateShortcutForThisExe(ShortcutLocation.Desktop | ShortcutLocation.StartMenu);
-            tools.CreateUninstallerRegistryEntry();
-        }
-
-        private static void OnAppUninstall(SemanticVersion version, IAppTools tools)
-        {
-            tools.RemoveShortcutForThisExe(ShortcutLocation.Desktop | ShortcutLocation.StartMenu);
-            tools.RemoveUninstallerRegistryEntry();
-        }
-
-        private static void OnAppRun(SemanticVersion version, IAppTools tools, bool firstRun)
-        {
-            tools.SetProcessAppUserModelId();
-            
-            if (firstRun)
-            {
-                // First run after install
-                MessageBox.Show(
-                    "Welcome to MyPhotoHelper!\n\nThe application will help you organize and manage your photos with AI-powered features.", 
-                    "Welcome", 
-                    MessageBoxButtons.OK, 
-                    MessageBoxIcon.Information);
-            }
-
-            // Start update check in background
-            Task.Run(async () => await CheckForUpdates());
-        }
-
-        private static async Task CheckForUpdates()
+        private static void InitializeAutoUpdater()
         {
             try
             {
-                using (var mgr = new UpdateManager(new GithubSource("https://github.com/thefrederiksen/MyPhotoHelper", "", false)))
+                // Configure AutoUpdater
+                AutoUpdater.Start("https://raw.githubusercontent.com/thefrederiksen/MyPhotoHelper/main/update.xml");
+                
+                // Configuration options
+                AutoUpdater.ShowSkipButton = false;
+                AutoUpdater.ShowRemindLaterButton = true;
+                AutoUpdater.Mandatory = false;
+                AutoUpdater.UpdateMode = Mode.Normal;
+                
+                // Check if we should minimize (started from Windows startup)
+                var args = Environment.GetCommandLineArgs();
+                if (args.Length > 1 && args[1] == "--minimized")
                 {
-                    var updateInfo = await mgr.CheckForUpdate();
-                    
-                    if (updateInfo.ReleasesToApply.Count > 0)
-                    {
-                        // Download updates in background
-                        await mgr.DownloadReleases(updateInfo.ReleasesToApply);
-                        
-                        // Apply updates (will be installed on restart)
-                        await mgr.ApplyReleases(updateInfo);
-                        
-                        // Notify user - you might want to do this through your UI instead
-                        Debug.WriteLine($"Update downloaded: v{updateInfo.FutureReleaseEntry.Version}");
-                    }
+                    // When started from Windows startup, check updates silently
+                    AutoUpdater.UpdateMode = Mode.ForcedDownload;
+                    AutoUpdater.ShowSkipButton = false;
+                    AutoUpdater.ShowRemindLaterButton = false;
                 }
             }
             catch (Exception ex)
             {
                 // Don't crash the app if update check fails
-                Debug.WriteLine($"Update check failed: {ex.Message}");
+                StartupErrorLogger.LogError("AutoUpdater initialization failed", ex);
             }
         }
+
     }
 }

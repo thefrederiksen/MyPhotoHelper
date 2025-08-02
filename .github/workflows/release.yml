@@ -1,4 +1,4 @@
-name: Release
+name: Release with AutoUpdater.NET
 
 on:
   push:
@@ -11,56 +11,117 @@ jobs:
     
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 9.0.x
     
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v1
-    
     - name: Extract version from tag
       id: version
       run: |
         $VERSION = $env:GITHUB_REF -replace 'refs/tags/v', ''
         echo "VERSION=$VERSION" >> $env:GITHUB_OUTPUT
+        echo "Building version: $VERSION"
       shell: pwsh
     
     - name: Restore dependencies
       run: dotnet restore src/MyPhotoHelper.sln
     
-    - name: Build and create Squirrel package
+    - name: Build and Publish
       run: |
-        .\build-squirrel.ps1 -Version ${{ steps.version.outputs.VERSION }} -ReleaseNotes "See release notes on GitHub"
+        dotnet publish src/MyPhotoHelper/MyPhotoHelper.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained false `
+          -o publish `
+          -p:PublishReadyToRun=true
+    
+    - name: Install Inno Setup
+      run: |
+        choco install innosetup -y
+        $env:PATH += ";C:\Program Files (x86)\Inno Setup 6"
+        echo "PATH=$env:PATH" >> $env:GITHUB_ENV
+      shell: pwsh
+    
+    - name: Update version in installer script
+      run: |
+        $version = "${{ steps.version.outputs.VERSION }}"
+        (Get-Content installer.iss) -replace 'AppVersion=.*', "AppVersion=$version" | Set-Content installer.iss
+      shell: pwsh
+    
+    - name: Create Installer
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+      shell: pwsh
+    
+    - name: Update XML for AutoUpdater
+      run: |
+        $version = "${{ steps.version.outputs.VERSION }}"
+        $xml = @"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <item>
+            <version>$version.0</version>
+            <url>https://github.com/thefrederiksen/MyPhotoHelper/releases/download/v$version/MyPhotoHelper-Setup.exe</url>
+            <changelog>https://github.com/thefrederiksen/MyPhotoHelper/releases/latest</changelog>
+            <mandatory>false</mandatory>
+        </item>
+        "@
+        $xml | Out-File -FilePath update.xml -Encoding UTF8
       shell: pwsh
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref }}
-        name: Release ${{ github.ref }}
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: MyPhotoHelper v${{ steps.version.outputs.VERSION }}
         draft: false
         prerelease: false
         files: |
-          ./Releases/Setup.exe
-          ./Releases/RELEASES
-          ./Releases/MyPhotoHelper-${{ steps.version.outputs.VERSION }}-full.nupkg
+          Output/MyPhotoHelper-Setup.exe
+          update.xml
         body: |
-          ## Release v${{ steps.version.outputs.VERSION }}
+          ## MyPhotoHelper v${{ steps.version.outputs.VERSION }}
           
           ### What's New
           - Flexible settings system with key-value architecture
-          - Fixed all build errors and improved stability
-          - Enhanced database management tools
-          - Improved Settings page functionality
+          - Improved auto-update system using AutoUpdater.NET
+          - Enhanced database management and performance
+          - Streamlined installer with optional Windows startup
           
           ### Installation
-          - Download `Setup.exe` below to install MyPhotoHelper
-          - The application will automatically check for updates
+          1. Download `MyPhotoHelper-Setup.exe` below
+          2. Run the installer (no admin rights required)
+          3. Choose your preferences during installation:
+             - Desktop shortcut (optional)
+             - Start with Windows (optional)
+          4. The application will automatically check for updates
+          
+          ### Features
+          - **Easy Installation**: One-click installer, no UAC prompts
+          - **Auto Updates**: Automatic update notifications
+          - **System Integration**: Optional Windows startup and desktop shortcuts
+          - **User-Friendly**: Installs to your user folder, clean uninstall
+          
+          ### System Requirements
+          - Windows 10 or later
+          - .NET 9 Runtime (automatically installed if needed)
           
           ### Notes
           - AI features are temporarily disabled during system upgrade
           - Core photo management features remain fully functional
+          - Automatic migration from previous versions
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update main branch with new XML
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git checkout main
+        git add update.xml
+        git commit -m "Update AutoUpdater XML to v${{ steps.version.outputs.VERSION }}"
+        git push origin main
+      shell: pwsh

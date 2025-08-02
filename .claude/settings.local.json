@@ -30,7 +30,8 @@
       "Bash(gh issue view:*)",
       "Bash(del:*)",
       "Bash(dotnet ef dbcontext scaffold:*)",
-      "Bash(cmd:*)"
+      "Bash(cmd:*)",
+      "WebFetch(domain:docs.velopack.io)"
     ],
     "deny": []
   }
