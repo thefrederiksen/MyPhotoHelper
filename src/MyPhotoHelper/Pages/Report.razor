@@ -12,11 +12,11 @@
 @inject IScreenshotAnalysisService ScreenshotAnalysisService
 @inject IFastImageCategorizationService FastImageCategorizationService
 
-<PageTitle>Library Report - FaceVault</PageTitle>
+<PageTitle>Library Report - MyPhotoHelper</PageTitle>
 
 <div class="container-fluid">
-    <h1 class="display-4">Library Report</h1>
-    <p class="lead">Comprehensive analysis of your photo library</p>
+    <h1 class="display-4">📊 Library Report</h1>
+    <p class="lead">Overview of your photo collection</p>
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -34,9 +34,9 @@
             </div>
             <h4>Generating Your Report</h4>
             <p class="text-muted">
-                <span class="d-block">Loading image statistics...</span>
-                <span class="d-block">Analyzing AI results...</span>
-                <span class="d-block">Calculating duplicates...</span>
+                <span class="d-block">Loading photo statistics...</span>
+                <span class="d-block">Analyzing your library...</span>
+                <span class="d-block">Finding duplicate photos...</span>
             </p>
         </div>
     }
@@ -45,82 +45,88 @@
         <!-- Summary Cards -->
         <div class="row mb-4">
             <div class="col-lg-2 col-md-4 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Images</h5>
-                        <h2 class="text-primary">@totalImages.ToString("N0")</h2>
-                        <small class="text-muted">In library</small>
+                <div class="card text-center h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h6 class="card-title text-primary mb-3">Total Photos</h6>
+                        <h2 class="display-6 mb-0">@totalImages.ToString("N0")</h2>
+                        <small class="text-muted mt-2">In your library</small>
                     </div>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">Screenshots</h5>
-                        <h2 class="text-warning">@screenshotCount.ToString("N0")</h2>
-                        <small class="text-muted">@screenshotPercentage% detected</small>
+                <div class="card text-center h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h6 class="card-title text-warning mb-3">Screenshots</h6>
+                        <h2 class="display-6 mb-0">@screenshotCount.ToString("N0")</h2>
+                        <small class="text-muted mt-2">Found</small>
                     </div>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">AI Analyzed</h5>
-                        <h2 class="text-success">@analyzedImages.ToString("N0")</h2>
-                        <small class="text-muted">@percentAnalyzed% complete</small>
+                <div class="card text-center h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h6 class="card-title text-success mb-3">Analyzed</h6>
+                        <h2 class="display-6 mb-0">@analyzedImages.ToString("N0")</h2>
+                        <small class="text-muted mt-2">Photos processed</small>
                     </div>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">Duplicates</h5>
-                        <h2 class="text-danger">@duplicateCount.ToString("N0")</h2>
-                        <small class="text-muted">Files found</small>
+                <div class="card text-center h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h6 class="card-title text-danger mb-3">Duplicates</h6>
+                        <h2 class="display-6 mb-0">@duplicateCount.ToString("N0")</h2>
+                        <small class="text-muted mt-2">Files found</small>
                     </div>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">Storage Used</h5>
-                        <h2 class="text-info">@totalSizeStr</h2>
-                        <small class="text-muted">Total size</small>
+                <div class="card text-center h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h6 class="card-title text-info mb-3">Storage Used</h6>
+                        <h2 class="display-6 mb-0">@totalSizeStr</h2>
+                        <small class="text-muted mt-2">Total size</small>
                     </div>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4 mb-3">
-                <div class="card text-center h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">Real Photos</h5>
-                        <h2 class="text-success">@realPhotoCount.ToString("N0")</h2>
-                        <small class="text-muted">@realPhotoPercentage% of library</small>
+                <div class="card text-center h-100 stat-card">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h6 class="card-title text-success mb-3">Real Photos</h6>
+                        <h2 class="display-6 mb-0">@realPhotoCount.ToString("N0")</h2>
+                        <small class="text-muted mt-2">Personal photos</small>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- AI Analysis Summary -->
+        <!-- Photo Categories -->
         @if (categoryStats.Any())
         {
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><span class="oi oi-eye" aria-hidden="true"></span> AI Analysis Categories</h5>
+                    <h5 class="mb-0"><span class="oi oi-tag" aria-hidden="true"></span> Photo Categories</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         @foreach (var category in categoryStats.OrderByDescending(c => c.Count))
                         {
                             <div class="col-md-4 mb-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6>@category.Category</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">@(category.Category == "photo" ? "📷 Photos" : category.Category == "screenshot" ? "🖥️ Screenshots" : "❓ Other")</h6>
                                     <span class="badge bg-primary">@category.Count</span>
                                 </div>
-                                <div class="progress mb-2">
+                                <div class="progress progress-thick mb-2">
                                     @{
                                         var percent = totalImages > 0 ? (double)category.Count / totalImages * 100 : 0;
+                                        var progressColor = category.Category == "photo" ? "bg-success" : category.Category == "screenshot" ? "bg-warning" : "bg-secondary";
                                     }
-                                    <div class="progress-bar" role="progressbar" style="width: @percent%"></div>
+                                    <div class="progress-bar @progressColor" role="progressbar" style="width: @percent%">
+                                        @if (percent > 5)
+                                        {
+                                            <span>@percent.ToString("F0")%</span>
+                                        }
+                                    </div>
                                 </div>
                                 <small class="text-muted">@percent.ToString("F1")% of total</small>
                             </div>
@@ -130,206 +136,37 @@
             </div>
         }
 
-        <!-- Image Classification Tracking -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0"><span class="oi oi-beaker" aria-hidden="true"></span> Classification Method Breakdown</h5>
-                        <small class="text-muted">Track how images are classified by different methods</small>
-                    </div>
-                    <a href="/test-image-analysis-ai" class="btn btn-sm btn-outline-primary">
-                        <span class="oi oi-external-link" aria-hidden="true"></span> Test Metadata Classifier
-                    </a>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row mb-4">
-                    <!-- Phase 1: Initial Categorization (Fast) -->
-                    <div class="col-md-3 mb-3">
-                        <div class="card h-100 border-info">
-                            <div class="card-header bg-info bg-opacity-10 text-center">
-                                <h6 class="mb-0">📁 Phase 1: Fast Analysis</h6>
-                                <small class="text-muted">Filename & Resolution</small>
-                            </div>
-                            <div class="card-body text-center">
-                                <h4 class="text-info">@(categorizationStats?.FilenameScreenshots + categorizationStats?.ResolutionScreenshots ?? 0)</h4>
-                                <small class="text-muted">Screenshots Detected</small>
-                                <hr>
-                                <div class="small">
-                                    <div>📝 Filename: @(categorizationStats?.FilenameScreenshots ?? 0)</div>
-                                    <div>📐 Resolution: @(categorizationStats?.ResolutionScreenshots ?? 0)</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Phase 2: Metadata Analysis -->
-                    <div class="col-md-3 mb-3">
-                        <div class="card h-100 border-success">
-                            <div class="card-header bg-success bg-opacity-10 text-center">
-                                <h6 class="mb-0">📷 Phase 2: Camera Metadata</h6>
-                                <small class="text-muted">EXIF Data Analysis</small>
-                            </div>
-                            <div class="card-body text-center">
-                                <h4 class="text-success">@(categorizationStats?.TotalPhotos ?? 0)</h4>
-                                <small class="text-muted">Photos with Camera Data</small>
-                                <hr>
-                                <div class="small">
-                                    <div>📸 Camera make/model</div>
-                                    <div>⚙️ Settings (f-stop, ISO, etc.)</div>
-                                    <div>📍 GPS coordinates</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Phase 3: AI Vision Analysis -->
-                    <div class="col-md-3 mb-3">
-                        <div class="card h-100 border-primary">
-                            <div class="card-header bg-primary bg-opacity-10 text-center">
-                                <h6 class="mb-0">🤖 Phase 3: AI Vision</h6>
-                                <small class="text-muted">Deep Learning Analysis</small>
-                            </div>
-                            <div class="card-body text-center">
-                                <h4 class="text-primary">@analyzedImages</h4>
-                                <small class="text-muted">AI Analyzed Images</small>
-                                <hr>
-                                <div class="small">
-                                    <div>🔍 Visual content analysis</div>
-                                    <div>📝 Scene description</div>
-                                    <div>🏷️ Object detection</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Remaining Unclassified -->
-                    <div class="col-md-3 mb-3">
-                        <div class="card h-100 border-warning">
-                            <div class="card-header bg-warning bg-opacity-10 text-center">
-                                <h6 class="mb-0">❓ Unclassified</h6>
-                                <small class="text-muted">Need More Analysis</small>
-                            </div>
-                            <div class="card-body text-center">
-                                <h4 class="text-warning">@(categorizationStats?.UncategorizedImages ?? 0)</h4>
-                                <small class="text-muted">Images Remaining</small>
-                                <hr>
-                                <div class="small">
-                                    <div>🔬 Awaiting metadata classification</div>
-                                    <div>🤖 Or AI vision analysis</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Classification Progress Bar -->
-                <div class="mb-4">
-                    <h6>Overall Classification Progress</h6>
-                    @{
-                        var fastClassified = (categorizationStats?.FilenameScreenshots + categorizationStats?.ResolutionScreenshots ?? 0);
-                        var metadataClassified = (categorizationStats?.TotalPhotos ?? 0);
-                        var aiClassified = analyzedImages;
-                        var totalClassified = fastClassified + metadataClassified + aiClassified;
-                        var unclassified = totalImages - totalClassified;
-                        
-                        var fastPercent = totalImages > 0 ? (double)fastClassified / totalImages * 100 : 0;
-                        var metadataPercent = totalImages > 0 ? (double)metadataClassified / totalImages * 100 : 0; 
-                        var aiPercent = totalImages > 0 ? (double)aiClassified / totalImages * 100 : 0;
-                        var unclassifiedPercent = totalImages > 0 ? (double)unclassified / totalImages * 100 : 0;
-                    }
-                    <div class="progress mb-2" style="height: 25px;">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: @fastPercent%" title="Fast Analysis: @fastClassified images (@fastPercent.ToString("F1")%)">
-                            @if (fastPercent > 8) { <small>Fast: @fastClassified</small> }
-                        </div>
-                        <div class="progress-bar bg-success" role="progressbar" style="width: @metadataPercent%" title="Metadata Analysis: @metadataClassified images (@metadataPercent.ToString("F1")%)">
-                            @if (metadataPercent > 8) { <small>Meta: @metadataClassified</small> }
-                        </div>
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: @aiPercent%" title="AI Analysis: @aiClassified images (@aiPercent.ToString("F1")%)">
-                            @if (aiPercent > 8) { <small>AI: @aiClassified</small> }
-                        </div>
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: @unclassifiedPercent%" title="Unclassified: @unclassified images (@unclassifiedPercent.ToString("F1")%)">
-                            @if (unclassifiedPercent > 8) { <small>Unknown: @unclassified</small> }
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between small text-muted">
-                        <span>📁 Fast: @fastPercent.ToString("F1")%</span>
-                        <span>📷 Metadata: @metadataPercent.ToString("F1")%</span>
-                        <span>🤖 AI Vision: @aiPercent.ToString("F1")%</span>
-                        <span>❓ Unknown: @unclassifiedPercent.ToString("F1")%</span>
-                    </div>
-                </div>
-
-                <!-- Next Steps Recommendations -->
-                @if (unclassified > 0)
-                {
-                    <div class="alert alert-info">
-                        <h6><span class="oi oi-lightbulb" aria-hidden="true"></span> Next Steps for @unclassified Unclassified Images:</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <ol class="mb-0">
-                                    <li><strong>Try Metadata Classification:</strong> Use the new rule-based classifier to analyze metadata patterns</li>
-                                    <li><strong>Run AI Vision Analysis:</strong> For remaining images that need visual analysis</li>
-                                </ol>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="d-flex gap-2">
-                                    <a href="/test-image-analysis-ai" class="btn btn-sm btn-primary">
-                                        <span class="oi oi-beaker" aria-hidden="true"></span> Test Metadata Classifier
-                                    </a>
-                                    <a href="/database-scan" class="btn btn-sm btn-outline-primary">
-                                        <span class="oi oi-eye" aria-hidden="true"></span> AI Vision Analysis
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="alert alert-success">
-                        <h6><span class="oi oi-check" aria-hidden="true"></span> All Images Classified!</h6>
-                        <p class="mb-0">Great job! All @totalImages images have been analyzed and classified using various methods.</p>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Screenshot Analysis Summary -->
-        @if (categorizationStats != null)
+        <!-- Screenshot Detection -->
+        @if (categorizationStats != null && screenshotCount > 0)
         {
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0"><span class="oi oi-monitor" aria-hidden="true"></span> Screenshot Detection Summary</h5>
-                        <small class="text-muted">Automated screenshot filtering results</small>
-                    </div>
-                    <a href="/screenshot-analysis" class="btn btn-sm btn-outline-primary">
-                        <span class="oi oi-external-link" aria-hidden="true"></span> View Details
-                    </a>
+                <div class="card-header">
+                    <h5 class="mb-0"><span class="oi oi-monitor" aria-hidden="true"></span> Screenshot Detection</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
                             <div class="text-center">
-                                <h4 class="text-warning">@categorizationStats.FilenameScreenshots.ToString("N0")</h4>
-                                <h6 class="text-muted">By Filename</h6>
-                                <small class="text-muted">Contains "screenshot", "capture", etc.</small>
+                                <h3 class="text-warning">@categorizationStats.TotalScreenshots.ToString("N0")</h3>
+                                <p class="text-muted mb-0">Screenshots found in your library</p>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <h4 class="text-info">@categorizationStats.ResolutionScreenshots.ToString("N0")</h4>
-                                <h6 class="text-muted">By Resolution</h6>
-                                <small class="text-muted">Common screen sizes (1920×1080, etc.)</small>
+                        <div class="col-md-8">
+                            <div class="progress progress-thick mt-3">
+                                @{
+                                    var screenshotPercent = totalImages > 0 ? (double)screenshotCount / totalImages * 100 : 0;
+                                }
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: @screenshotPercent%">
+                                    <span>Screenshots: @screenshotPercent.ToString("F0")%</span>
+                                </div>
+                                <div class="progress-bar bg-success" role="progressbar" style="width: @(100 - screenshotPercent)%">
+                                    <span>Real Photos: @((100 - screenshotPercent).ToString("F0"))%</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <h4 class="text-success">@categorizationStats.TotalScreenshots.ToString("N0")</h4>
-                                <h6 class="text-muted">Total Screenshots</h6>
-                                <small class="text-muted">@((categorizationStats.TotalImages > 0 ? categorizationStats.TotalScreenshots * 100.0 / categorizationStats.TotalImages : 0).ToString("F1"))% of library</small>
+                            <div class="d-flex justify-content-between small text-muted mt-2">
+                                <span>🖥️ Screenshots</span>
+                                <span>📷 Real Photos</span>
                             </div>
                         </div>
                     </div>
@@ -337,12 +174,12 @@
                     @if (screenshotSamples.Any())
                     {
                         <hr>
-                        <h6>Sample Screenshots Detected</h6>
+                        <h6>Recent Screenshots</h6>
                         <div class="row">
                             @foreach (var sample in screenshotSamples.Take(6))
                             {
                                 <div class="col-md-2 mb-2">
-                                    <div class="card">
+                                    <div class="card shadow-sm">
                                         <img src="/api/images/thumbnail/@(Uri.EscapeDataString(sample.RelativePath))" 
                                              class="card-img-top" 
                                              alt="@sample.FileName"
@@ -356,217 +193,44 @@
                                 </div>
                             }
                         </div>
-                        <div class="text-center mt-2">
-                            <a href="/gallery?filter=screenshots" class="btn btn-sm btn-outline-warning">
-                                <span class="oi oi-layers" aria-hidden="true"></span> View All Screenshots
-                            </a>
-                        </div>
                     }
                 </div>
             </div>
         }
 
-        <!-- Image Categorization Summary -->
-        @if (categorizationStats != null)
-        {
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <span class="oi oi-tag" aria-hidden="true"></span> Image Categorization Summary
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <h4 class="text-primary">@categorizationStats.TotalPhotos.ToString("N0")</h4>
-                                <h6 class="text-muted">Confirmed Photos</h6>
-                                <small class="text-muted">Images with camera metadata</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <h4 class="text-warning">@categorizationStats.TotalScreenshots.ToString("N0")</h4>
-                                <h6 class="text-muted">Screenshots</h6>
-                                <small class="text-muted">Detected by patterns</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <h4 class="text-info">@categorizationStats.CategorizedImages.ToString("N0")</h4>
-                                <h6 class="text-muted">Total Categorized</h6>
-                                <small class="text-muted">@((categorizationStats.TotalImages > 0 ? categorizationStats.CategorizedImages * 100.0 / categorizationStats.TotalImages : 0).ToString("F1"))% of library</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="text-center">
-                                <h4 class="text-secondary">@categorizationStats.UncategorizedImages.ToString("N0")</h4>
-                                <h6 class="text-muted">Uncategorized</h6>
-                                <small class="text-muted">Need AI analysis</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
 
-        <!-- AI Analysis Samples -->
+        <!-- Recently Analyzed Photos -->
         @if (aiSamples.Any())
         {
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0"><span class="oi oi-image" aria-hidden="true"></span> AI Analysis Samples</h5>
-                        <small class="text-muted">Recent AI analysis results to verify functionality</small>
-                    </div>
-                    <div>
-                        <small class="text-muted">
-                            Page @(currentAiPage + 1) of @((allAiSamples.Count + aiSamplesPerPage - 1) / aiSamplesPerPage)
-                        </small>
-                    </div>
+                <div class="card-header">
+                    <h5 class="mb-0"><span class="oi oi-image" aria-hidden="true"></span> Recently Analyzed Photos</h5>
                 </div>
                 <div class="card-body">
-                    @foreach (var sample in aiSamples)
-                    {
-                        <div class="card mb-3 border-primary">
-                            <div class="card-header bg-light">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0" title="@sample.FileName">
-                                        <span class="oi oi-file" aria-hidden="true"></span> @sample.FileName
-                                    </h6>
-                                    <span class="badge bg-info">@sample.Category</span>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-12 mb-2">
-                                        <small class="text-muted">
-                                            <strong>Model:</strong> @sample.AIModel | 
-                                            <strong>Analyzed:</strong> @sample.AnalyzedAt?.ToString("g")
-                                        </small>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
+                    <div class="row">
+                        @foreach (var sample in aiSamples.Take(6))
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card shadow-sm h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-truncate" title="@sample.FileName">
+                                            <span class="oi oi-file" aria-hidden="true"></span> @sample.FileName
+                                        </h6>
                                         @if (!string.IsNullOrEmpty(sample.Description))
                                         {
-                                            <div class="mb-3">
-                                                <strong>AI Description:</strong>
-                                                <div class="border rounded p-2 bg-light">
-                                                    <pre class="mb-0" style="white-space: pre-wrap; word-wrap: break-word;">@sample.Description</pre>
-                                                </div>
-                                            </div>
+                                            <p class="small text-muted">@(sample.Description.Length > 100 ? sample.Description.Substring(0, 100) + "..." : sample.Description)</p>
                                         }
-                                        
-                                        @if (!string.IsNullOrEmpty(sample.Keywords))
-                                        {
-                                            <div class="mb-3">
-                                                <strong>AI Analysis Details:</strong>
-                                                <div class="border rounded p-2 bg-light mt-1">
-                                                    @{
-                                                        var keywords = sample.Keywords.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
-                                                        var isScreenshot = keywords.Any(k => k.Equals("screenshot", StringComparison.OrdinalIgnoreCase));
-                                                        var hasText = keywords.Any(k => k.Equals("has_text", StringComparison.OrdinalIgnoreCase));
-                                                        var isDocument = keywords.Any(k => k.Equals("document", StringComparison.OrdinalIgnoreCase));
-                                                        var peopleCount = keywords.FirstOrDefault(k => k.StartsWith("people:"))?.Split(':').LastOrDefault();
-                                                        var objects = keywords.Where(k => k.StartsWith("object:")).Select(k => k.Split(':').LastOrDefault()).ToList();
-                                                        var colors = keywords.Where(k => k.StartsWith("color:")).Select(k => k.Split(':').LastOrDefault()).ToList();
-                                                    }
-                                                    
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <div class="mb-2">
-                                                                <strong>Type Detection:</strong><br>
-                                                                @if (isScreenshot)
-                                                                {
-                                                                    <span class="badge bg-warning me-1">📱 Screenshot</span>
-                                                                }
-                                                                @if (isDocument)
-                                                                {
-                                                                    <span class="badge bg-info me-1">📄 Document</span>
-                                                                }
-                                                                @if (hasText)
-                                                                {
-                                                                    <span class="badge bg-secondary me-1">🔤 Contains Text</span>
-                                                                }
-                                                                @if (!string.IsNullOrEmpty(peopleCount) && peopleCount != "0")
-                                                                {
-                                                                    <span class="badge bg-success me-1">👥 People: @peopleCount</span>
-                                                                }
-                                                            </div>
-                                                            
-                                                            @if (objects.Any())
-                                                            {
-                                                                <div class="mb-2">
-                                                                    <strong>Objects Detected:</strong><br>
-                                                                    @foreach (var obj in objects.Take(5))
-                                                                    {
-                                                                        <span class="badge bg-light text-dark me-1">@obj</span>
-                                                                    }
-                                                                    @if (objects.Count > 5)
-                                                                    {
-                                                                        <span class="badge bg-light text-muted">+@(objects.Count - 5) more</span>
-                                                                    }
-                                                                </div>
-                                                            }
-                                                        </div>
-                                                        
-                                                        <div class="col-md-6">
-                                                            @if (colors.Any())
-                                                            {
-                                                                <div class="mb-2">
-                                                                    <strong>Dominant Colors:</strong><br>
-                                                                    @foreach (var color in colors.Take(4))
-                                                                    {
-                                                                        <span class="badge bg-light text-dark me-1">🎨 @color</span>
-                                                                    }
-                                                                </div>
-                                                            }
-                                                            
-                                                            <div class="small text-muted">
-                                                                <strong>All Keywords:</strong><br>
-                                                                @sample.Keywords
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                        
-                                        @if (!string.IsNullOrEmpty(sample.JsonResponse))
-                                        {
-                                            <div class="mt-3">
-                                                <strong>AI Response Data:</strong>
-                                                <div class="border rounded p-2 bg-light mt-1">
-                                                    <pre class="mb-0" style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem; max-height: 300px; overflow-y: auto;">@sample.JsonResponse</pre>
-                                                </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="mt-3">
-                                                <div class="alert alert-warning mb-0">
-                                                    <small>No JSON response data available (analyze again to capture full response)</small>
-                                                </div>
-                                            </div>
-                                        }
+                                        <div class="mt-2">
+                                            <span class="badge bg-info">@(sample.Category == "photo" ? "📷 Photo" : sample.Category == "screenshot" ? "🖥️ Screenshot" : "❓ Other")</span>
+                                            @if (sample.AnalyzedAt.HasValue)
+                                            {
+                                                <small class="text-muted d-block mt-1">Analyzed @sample.AnalyzedAt.Value.ToString("MMM dd")</small>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    }
-                    
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button class="btn btn-outline-primary" @onclick="PreviousAiPage" disabled="@(currentAiPage == 0)">
-                            <span class="oi oi-arrow-left" aria-hidden="true"></span> Previous
-                        </button>
-                        <span class="text-muted">
-                            Showing @(currentAiPage * aiSamplesPerPage + 1) - @Math.Min((currentAiPage + 1) * aiSamplesPerPage, allAiSamples.Count) of @allAiSamples.Count
-                        </span>
-                        <button class="btn btn-outline-primary" @onclick="NextAiPage" 
-                                disabled="@((currentAiPage + 1) * aiSamplesPerPage >= allAiSamples.Count)">
-                            Next <span class="oi oi-arrow-right" aria-hidden="true"></span>
-                        </button>
+                        }
                     </div>
                 </div>
             </div>
@@ -574,8 +238,7 @@
         else if (analyzedImages == 0)
         {
             <div class="alert alert-info" role="alert">
-                <h5 class="alert-heading"><span class="oi oi-info" aria-hidden="true"></span> No AI Analysis Yet</h5>
-                <p>No images have been analyzed with AI yet. Visit the <a href="/database-scan" class="alert-link">AI Analysis</a> page to start analyzing your images.</p>
+                <p class="mb-0"><span class="oi oi-info" aria-hidden="true"></span> No photos have been analyzed yet. Analysis helps categorize your photos automatically.</p>
             </div>
         }
 
@@ -714,130 +377,47 @@
             </div>
         }
 
-        <!-- GPS Coordinates Section -->
+        <!-- Photo Locations -->
         <div class="card mb-4">
             <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <span class="oi oi-map-marker me-2" aria-hidden="true"></span>
-                        🗺️ GPS Location Data
-                    </h5>
-                    @if (gpsEnabledImages > 0)
-                    {
-                        <button class="btn btn-sm btn-outline-primary" @onclick="@(() => Navigation.NavigateTo("/locations"))">
-                            <span class="oi oi-external-link me-1"></span>
-                            View Photo Map
-                        </button>
-                    }
-                </div>
+                <h5 class="mb-0">
+                    <span class="oi oi-map-marker me-2" aria-hidden="true"></span>
+                    Photo Locations
+                </h5>
             </div>
             <div class="card-body">
                 @if (gpsEnabledImages == 0)
                 {
                     <div class="text-center py-3">
                         <i class="oi oi-map-marker text-muted" style="font-size: 2rem;"></i>
-                        <h6 class="mt-2 text-muted">No GPS Data Found</h6>
-                        <p class="text-muted mb-0">Photos need location information to appear here. Most smartphone photos include GPS data.</p>
+                        <h6 class="mt-2 text-muted">No Location Data Found</h6>
+                        <p class="text-muted mb-0">Photos taken with smartphones usually include location information.</p>
                     </div>
                 }
                 else
                 {
-                    <div class="row mb-3">
+                    <div class="row mb-4">
                         <div class="col-md-4">
                             <div class="text-center">
-                                <h4 class="text-success">@gpsEnabledImages</h4>
-                                <small class="text-muted">Photos with GPS</small>
+                                <h3 class="text-success">@gpsEnabledImages.ToString("N0")</h3>
+                                <p class="text-muted mb-0">Photos with locations</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="text-center">
-                                <h4 class="text-info">@uniqueLocations</h4>
-                                <small class="text-muted">Different Locations</small>
+                                <h3 class="text-info">@uniqueLocations</h3>
+                                <p class="text-muted mb-0">Different places</p>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="text-center">
-                                <h4 class="text-primary">@gpsPercentage.ToString("F1")%</h4>
-                                <small class="text-muted">of Total Photos</small>
+                            <div class="progress progress-thick mt-3">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: @gpsPercentage%">
+                                    <span>@gpsPercentage.ToString("F0")%</span>
+                                </div>
                             </div>
+                            <small class="text-muted">of photos have locations</small>
                         </div>
                     </div>
-
-                    @if (gpsFileTypeStats.Any())
-                    {
-                        <h6 class="mb-3">GPS Data by File Type:</h6>
-                        <div class="row mb-4">
-                            @foreach (var fileType in gpsFileTypeStats.OrderByDescending(f => f.Count))
-                            {
-                                <div class="col-md-3 mb-2">
-                                    <div class="d-flex justify-content-between align-items-center bg-light rounded p-2">
-                                        <div>
-                                            <strong>@fileType.Extension.ToUpper()</strong><br>
-                                            <small class="text-muted">@fileType.Count photos</small>
-                                        </div>
-                                        <span class="badge bg-success">@fileType.Percentage.ToString("F1")%</span>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-
-                    @if (gpsSampleImages.Any())
-                    {
-                        <h6 class="mb-3">Sample Photos with GPS Data:</h6>
-                        <div class="row">
-                            @foreach (var sample in gpsSampleImages)
-                            {
-                                <div class="col-md-6 mb-3">
-                                    <div class="card border-success">
-                                        <div class="card-body p-3">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1" title="@sample.FileName">
-                                                        <span class="oi oi-file me-1"></span>
-                                                        @(sample.FileName.Length > 30 ? sample.FileName.Substring(0, 30) + "..." : sample.FileName)
-                                                    </h6>
-                                                    <div class="small text-muted">
-                                                        <span class="badge bg-secondary me-1">@sample.FileExtension.ToUpper()</span>
-                                                        @if (sample.DateTaken.HasValue)
-                                                        {
-                                                            <span>📅 @sample.DateTaken.Value.ToString("MMM dd, yyyy")</span>
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mb-2">
-                                                <small class="text-success">
-                                                    <span class="oi oi-map-marker me-1"></span>
-                                                    <strong>@sample.Latitude.ToString("F4"), @sample.Longitude.ToString("F4")</strong>
-                                                </small>
-                                            </div>
-                                            <div class="d-flex gap-2">
-                                                <a href="https://www.google.com/maps?q=@sample.Latitude,@sample.Longitude" 
-                                                   target="_blank" class="btn btn-sm btn-outline-primary">
-                                                    <span class="oi oi-external-link me-1"></span>View on Map
-                                                </a>
-                                                <button class="btn btn-sm btn-outline-secondary" 
-                                                        @onclick="() => ShowImageDetails(sample.ImageId)">
-                                                    <span class="oi oi-info me-1"></span>Details
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                        
-                        @if (gpsEnabledImages > gpsSampleImages.Count)
-                        {
-                            <div class="text-center mt-3">
-                                <button class="btn btn-outline-primary" @onclick="@(() => Navigation.NavigateTo("/locations"))">
-                                    <span class="oi oi-map-marker me-2"></span>
-                                    View All @gpsEnabledImages Photos with GPS Data
-                                </button>
-                            </div>
-                        }
-                    }
                 }
             </div>
         </div>
@@ -881,6 +461,85 @@
         </div>
     }
 </div>
+
+<style>
+    /* Summary stat cards */
+    .stat-card {
+        min-height: 160px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .stat-card .card-body {
+        min-height: 160px;
+        padding: 1.5rem;
+    }
+    
+    .stat-card .display-6 {
+        font-size: 2.2rem;
+        font-weight: 300;
+        line-height: 1.2;
+    }
+    
+    .stat-card .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    /* Progress bars */
+    .progress-thick {
+        height: 30px;
+        border-radius: 15px;
+        overflow: hidden;
+        background-color: #e9ecef;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-thick .progress-bar {
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Enhanced progress bar colors */
+    .progress-bar.bg-success {
+        background-color: #28a745 !important;
+    }
+    
+    .progress-bar.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000;
+        text-shadow: none;
+    }
+    
+    .progress-bar.bg-info {
+        background-color: #17a2b8 !important;
+    }
+    
+    .progress-bar.bg-primary {
+        background-color: #007bff !important;
+    }
+    
+    /* Card improvements */
+    .card {
+        border: 1px solid #dee2e6;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+</style>
 
 @code {
     private bool isLoading = true;
@@ -1034,7 +693,7 @@
             // Load categorization statistics
             categorizationStats = await FastImageCategorizationService.GetCategorizationStatisticsAsync();
             screenshotCount = categorizationStats?.TotalScreenshots ?? 0;
-            screenshotPercentage = totalImages > 0 ? (screenshotCount * 100 / totalImages) : 0;
+            screenshotPercentage = totalImages > 0 ? (int)Math.Round((double)screenshotCount * 100 / totalImages) : 0;
             realPhotoCount = totalImages - screenshotCount;
             realPhotoPercentage = totalImages > 0 ? (realPhotoCount * 100 / totalImages) : 0;
             
@@ -1288,5 +947,28 @@
     private void ShowImageDetails(int imageId)
     {
         ImageDetailsService.ShowImageDetails(imageId);
+    }
+
+    private string GetFormattedPercentage(int count, int total)
+    {
+        if (total == 0) return "0%";
+        
+        double percentage = (double)count * 100 / total;
+        
+        if (percentage < 0.1 && count > 0)
+        {
+            // For very small percentages, show more decimal places
+            return $"{percentage:F2}%";
+        }
+        else if (percentage < 1.0 && count > 0)
+        {
+            // For small percentages, show one decimal place
+            return $"{percentage:F1}%";
+        }
+        else
+        {
+            // For larger percentages, show whole numbers
+            return $"{percentage:F0}%";
+        }
     }
 }
