@@ -8,6 +8,9 @@ using Squirrel;
 using Squirrel.Sources;
 using System.Diagnostics;
 
+// Mark this assembly as Squirrel-aware
+[assembly: Squirrel.AssemblyMetadata("SquirrelAwareVersion", "1")]
+
 namespace MyPhotoHelper
 {
     class Program
