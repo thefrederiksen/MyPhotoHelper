@@ -46,6 +46,7 @@ namespace MyPhotoHelper.Tests.Services
             services.AddSingleton<IScanStatusService, ScanStatusService>();
             services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             services.AddScoped<IPhotoPathService>(provider => new TestPhotoPathService(provider));
+            services.AddScoped<IFastImageCategorizationService, FastImageCategorizationService>();
             
             _serviceProvider = services.BuildServiceProvider();
             _dbContext = _serviceProvider.GetRequiredService<MyPhotoHelperDbContext>();
@@ -258,14 +259,23 @@ namespace MyPhotoHelper.Tests.Services
                 Console.WriteLine($"Found {metadata.Count} metadata records");
                 // Metadata extraction might fail for minimal JPEG, so we just log it
                 
-                // Check Phase 3 - Hashing (should have calculated hash)
-                Assert.IsNotNull(image.FileHash, "Phase 3 should have calculated file hash");
+                // Check Phase 4 - Hashing (should have calculated hash)
+                Assert.IsNotNull(image.FileHash, "Phase 4 should have calculated file hash");
                 Assert.IsTrue(image.FileHash.Length > 0, "File hash should not be empty");
             }
             
             // Verify phases were completed
             Console.WriteLine($"Phases completed: {string.Join(", ", phasesCompleted)}");
             Assert.IsTrue(phasesCompleted.Contains(ScanPhase.Phase1_Discovery), "Phase 1 should have completed");
+            
+            // Log which phases were NOT completed for debugging
+            var allPhases = new[] { ScanPhase.Phase1_Discovery, ScanPhase.Phase2_Metadata, 
+                                   ScanPhase.Phase3_ScreenshotDetection, ScanPhase.Phase4_Hashing };
+            var missingPhases = allPhases.Where(p => !phasesCompleted.Contains(p)).ToList();
+            if (missingPhases.Any())
+            {
+                Console.WriteLine($"Phases NOT completed: {string.Join(", ", missingPhases)}");
+            }
         }
     }
     

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents - MyPhotoHelper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Drata-inspired colors */
+            --primary: #0B4F71;
+            --primary-dark: #073D58;
+            --sidebar-bg: #0B4F71;
+            --sidebar-hover: #0D5A81;
+            --accent-blue: #2196F3;
+            --accent-green: #4CAF50;
+            --accent-orange: #FF9800;
+            --accent-red: #F44336;
+            
+            /* Neutrals */
+            --bg-main: #F5F7FA;
+            --bg-card: #FFFFFF;
+            --border: #E0E6ED;
+            --text-primary: #1A1F36;
+            --text-secondary: #647788;
+            --text-muted: #8792A2;
+            
+            /* Typography */
+            --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        /* Layout Container */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .sidebar-section {
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-section-title {
+            padding: 0 20px 10px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 600;
+        }
+        
+        .sidebar-item {
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+        
+        .sidebar-item:hover {
+            background-color: var(--sidebar-hover);
+        }
+        
+        .sidebar-item.active {
+            background-color: var(--sidebar-hover);
+            color: white;
+            position: relative;
+        }
+        
+        .sidebar-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--accent-blue);
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        /* Header */
+        .header {
+            background-color: white;
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .avatar-group {
+            display: flex;
+            margin-right: 8px;
+        }
+        
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--accent-blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            margin-left: -8px;
+            border: 2px solid white;
+        }
+        
+        .avatar:first-child {
+            margin-left: 0;
+        }
+        
+        /* Page Content */
+        .page-content {
+            padding: 32px;
+        }
+        
+        /* Stats Overview */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+        
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .stat-icon.blue {
+            background-color: #E3F2FD;
+            color: var(--accent-blue);
+        }
+        
+        .stat-icon.green {
+            background-color: #E8F5E9;
+            color: var(--accent-green);
+        }
+        
+        .stat-icon.orange {
+            background-color: #FFF3E0;
+            color: var(--accent-orange);
+        }
+        
+        .stat-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .stat-subtitle {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #E0E6ED;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-fill.green {
+            background-color: var(--accent-green);
+        }
+        
+        .progress-fill.orange {
+            background-color: var(--accent-orange);
+        }
+        
+        .progress-fill.blue {
+            background-color: var(--accent-blue);
+        }
+        
+        .stat-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        /* Document List Section */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #1976D2;
+        }
+        
+        /* Document Table */
+        .document-table {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background-color: #F8FAFC;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        th {
+            padding: 12px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+        
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:hover {
+            background-color: #F8FAFC;
+        }
+        
+        .document-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .document-icon {
+            color: var(--text-muted);
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background-color: #FFF3E0;
+            color: #F57C00;
+        }
+        
+        .status-badge.signed {
+            background-color: #E8F5E9;
+            color: #388E3C;
+        }
+        
+        .status-badge.expired {
+            background-color: #FFEBEE;
+            color: #D32F2F;
+        }
+        
+        .status-badge.draft {
+            background-color: #F3F4F6;
+            color: var(--text-secondary);
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            background-color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        
+        .action-btn:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+        
+        /* Task Panel */
+        .side-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 320px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .side-panel.active {
+            transform: translateX(0);
+        }
+        
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .panel-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        
+        .task-list {
+            padding: 20px;
+        }
+        
+        .task-item {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+        
+        .task-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        
+        .task-icon.yellow {
+            background-color: #FFC107;
+        }
+        
+        .task-content {
+            flex: 1;
+        }
+        
+        .task-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .task-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">MYPHOTO</div>
+            </div>
+            
+            <div class="sidebar-section">
+                <a href="#" class="sidebar-item">
+                    <span>🚀</span>
+                    <span>Quick Start</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="sidebar-item active">
+                    <span>📄</span>
+                    <span>Documents</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>✅</span>
+                    <span>Tasks</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">COMPLIANCE</div>
+                <a href="#" class="sidebar-item">
+                    <span>🎯</span>
+                    <span>Controls</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>📋</span>
+                    <span>Frameworks</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>📊</span>
+                    <span>Monitoring</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>📝</span>
+                    <span>Audit Hub</span>
+                </a>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">GOVERNANCE</div>
+                <a href="#" class="sidebar-item">
+                    <span>👥</span>
+                    <span>Personnel</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>📜</span>
+                    <span>Policy Center</span>
+                </a>
+                <a href="#" class="sidebar-item">
+                    <span>🔗</span>
+                    <span>Connections</span>
+                </a>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1 class="page-title">Documents</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showNewDocumentModal()">
+                        + New Document
+                    </button>
+                    <div class="user-menu">
+                        <div class="avatar-group">
+                            <div class="avatar">SF</div>
+                            <div class="avatar" style="background-color: var(--accent-green)">JD</div>
+                            <div class="avatar" style="background-color: var(--accent-orange)">AK</div>
+                        </div>
+                        <span style="color: var(--text-secondary)">LIVE</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Document Readiness Overview -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon blue">📄</div>
+                            <div>
+                                <div class="stat-title">Total Documents</div>
+                                <div class="stat-subtitle">97% ready</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill green" style="width: 97%"></div>
+                        </div>
+                        <div class="stat-details">
+                            <span>Remaining documents</span>
+                            <span><strong>1</strong> out of 35 total</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon green">✍️</div>
+                            <div>
+                                <div class="stat-title">Signatures</div>
+                                <div class="stat-subtitle">94% complete</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill green" style="width: 94%"></div>
+                        </div>
+                        <div class="stat-details">
+                            <span>Remaining signatures</span>
+                            <span><strong>3</strong> out of 48 total</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon orange">⏰</div>
+                            <div>
+                                <div class="stat-title">Compliance</div>
+                                <div class="stat-subtitle">92% ready</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill orange" style="width: 92%"></div>
+                        </div>
+                        <div class="stat-details">
+                            <span>Pending actions</span>
+                            <span><strong>2</strong> out of 25 total</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document List -->
+                <div class="section-header">
+                    <h2 class="section-title">Recent Documents</h2>
+                    <button class="action-btn" onclick="toggleTaskPanel()">View all tasks →</button>
+                </div>
+                
+                <div class="document-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Signatures</th>
+                                <th>Due Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="document-name">
+                                        <span class="document-icon">📄</span>
+                                        Employee Handbook 2025
+                                    </div>
+                                </td>
+                                <td>Policy</td>
+                                <td>
+                                    <span class="status-badge pending">
+                                        <span>⚠️</span> Pending
+                                    </span>
+                                </td>
+                                <td>3 of 5</td>
+                                <td>Jan 22, 2025</td>
+                                <td>
+                                    <button class="action-btn">View →</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="document-name">
+                                        <span class="document-icon">📄</span>
+                                        Security Policy v2.1
+                                    </div>
+                                </td>
+                                <td>Policy</td>
+                                <td>
+                                    <span class="status-badge signed">
+                                        <span>✓</span> Signed
+                                    </span>
+                                </td>
+                                <td>5 of 5</td>
+                                <td>Jan 15, 2025</td>
+                                <td>
+                                    <button class="action-btn">View →</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="document-name">
+                                        <span class="document-icon">📄</span>
+                                        Business Associate Agreement
+                                    </div>
+                                </td>
+                                <td>Contract</td>
+                                <td>
+                                    <span class="status-badge pending">
+                                        <span>⚠️</span> Pending
+                                    </span>
+                                </td>
+                                <td>1 of 2</td>
+                                <td>Jan 30, 2025</td>
+                                <td>
+                                    <button class="action-btn">Sign →</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="document-name">
+                                        <span class="document-icon">📄</span>
+                                        Data Processing Agreement
+                                    </div>
+                                </td>
+                                <td>Contract</td>
+                                <td>
+                                    <span class="status-badge signed">
+                                        <span>✓</span> Signed
+                                    </span>
+                                </td>
+                                <td>2 of 2</td>
+                                <td>Jan 10, 2025</td>
+                                <td>
+                                    <button class="action-btn">View →</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="document-name">
+                                        <span class="document-icon">📄</span>
+                                        Incident Response Plan
+                                    </div>
+                                </td>
+                                <td>Policy</td>
+                                <td>
+                                    <span class="status-badge draft">
+                                        <span>📝</span> Draft
+                                    </span>
+                                </td>
+                                <td>0 of 3</td>
+                                <td>Feb 1, 2025</td>
+                                <td>
+                                    <button class="action-btn">Edit →</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="document-name">
+                                        <span class="document-icon">📄</span>
+                                        Vendor Risk Assessment
+                                    </div>
+                                </td>
+                                <td>Assessment</td>
+                                <td>
+                                    <span class="status-badge expired">
+                                        <span>⚡</span> Expired
+                                    </span>
+                                </td>
+                                <td>2 of 3</td>
+                                <td>Jan 5, 2025</td>
+                                <td>
+                                    <button class="action-btn">Renew →</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Task Side Panel -->
+        <div class="side-panel" id="taskPanel">
+            <div class="panel-header">
+                <h3 class="panel-title">Task list</h3>
+                <button class="panel-close" onclick="toggleTaskPanel()">×</button>
+            </div>
+            <div class="task-list">
+                <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 13px;">
+                    Within the next 6 months
+                </p>
+                <div class="task-item">
+                    <div class="task-icon yellow"></div>
+                    <div class="task-content">
+                        <div class="task-title">Employee Handbook - Signature Required</div>
+                        <div class="task-date">Due May 9, 2025</div>
+                    </div>
+                </div>
+                <div class="task-item">
+                    <div class="task-icon yellow"></div>
+                    <div class="task-content">
+                        <div class="task-title">Business Associate Agreement</div>
+                        <div class="task-date">Due June 22, 2025</div>
+                    </div>
+                </div>
+                <div class="task-item">
+                    <div class="task-icon yellow"></div>
+                    <div class="task-content">
+                        <div class="task-title">Security Awareness Training</div>
+                        <div class="task-date">Due October 23, 2025</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleTaskPanel() {
+            const panel = document.getElementById('taskPanel');
+            panel.classList.toggle('active');
+        }
+        
+        function showNewDocumentModal() {
+            alert('New Document modal would open here');
+        }
+    </script>
+</body>
+</html>

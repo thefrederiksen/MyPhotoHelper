@@ -1,4 +1,4 @@
-# UI Development Rules for FaceVault
+# UI Development Rules for MyPhotoHelper
 
 # 🚨 **ALWAYS UPDATE THE USER IMMEDIATELY** 🚨
 # 🚨 **ALWAYS HANDLE ERRORS** 🚨
@@ -223,6 +223,133 @@ Before considering any UI feature complete, verify:
 - [ ] Error messages are helpful, not technical
 - [ ] Operations can be cancelled when appropriate
 
+## 9. Modern Design System
+
+### Color Palette (Drata-Inspired)
+```css
+/* Primary Colors */
+--primary: #0B4F71;           /* Deep blue for primary actions */
+--primary-dark: #073D58;      /* Darker blue for hover states */
+--sidebar-bg: #0B4F71;        /* Sidebar background */
+--accent-blue: #2196F3;       /* Bright blue for highlights */
+--accent-green: #4CAF50;      /* Success states */
+--accent-orange: #FF9800;     /* Warnings */
+--accent-red: #F44336;        /* Errors */
+
+/* Neutral Colors */
+--bg-main: #F5F7FA;          /* Main background */
+--bg-card: #FFFFFF;          /* Card backgrounds */
+--border: #E0E6ED;           /* Borders */
+--text-primary: #1A1F36;     /* Primary text */
+--text-secondary: #647788;   /* Secondary text */
+--text-muted: #8792A2;       /* Muted text */
+```
+
+### Layout Principles
+- **Sidebar Navigation**: Fixed 220px width with dark blue background
+- **Card-Based Design**: All content in white cards with subtle shadows
+- **Consistent Spacing**: Use 8px grid system (8, 16, 24, 32px)
+- **Border Radius**: 8px for cards, 6px for buttons, 4px for inputs
+
+### Typography
+```css
+/* Font Hierarchy */
+--font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+--text-xs: 0.75rem;     /* 12px - Labels, metadata */
+--text-sm: 0.875rem;    /* 14px - Body text, buttons */
+--text-base: 1rem;      /* 16px - Large body text */
+--text-lg: 1.125rem;    /* 18px - Section titles */
+--text-xl: 1.25rem;     /* 20px - Card headers */
+--text-2xl: 1.5rem;     /* 24px - Page titles */
+```
+
+### Component Standards
+
+#### Cards
+```razor
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Title</h3>
+        <button class="card-action">Action</button>
+    </div>
+    <div class="card-body">
+        <!-- Content -->
+    </div>
+</div>
+```
+
+#### Status Badges
+```razor
+<span class="status-badge status-@status.ToLower()">
+    @switch(status)
+    {
+        case "Pending":
+            <span>⚠️</span>
+            break;
+        case "Signed":
+            <span>✓</span>
+            break;
+        case "Expired":
+            <span>⚡</span>
+            break;
+    }
+    @status
+</span>
+```
+
+#### Progress Indicators
+```razor
+<div class="progress-container">
+    <div class="progress-header">
+        <span class="progress-label">@label</span>
+        <span class="progress-value">@percentage%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: @percentage%"></div>
+    </div>
+    <div class="progress-details">
+        <span>@current of @total completed</span>
+    </div>
+</div>
+```
+
+### Tables
+- Use clean, minimal design with hover states
+- Uppercase column headers with letter-spacing
+- Alternating row colors on hover only
+- Action buttons aligned right
+
+### Forms
+- Labels above inputs
+- Clear focus states with primary color
+- Error messages below fields in red
+- Success states with green checkmarks
+
+### Responsive Design
+- Mobile-first approach
+- Sidebar converts to hamburger menu on mobile
+- Cards stack vertically on small screens
+- Touch targets minimum 44x44px
+
+## 10. Animation Guidelines
+
+### Transitions
+```css
+/* Standard transition for all interactive elements */
+transition: all 0.2s ease-in-out;
+
+/* Page/modal entrances */
+animation: fadeIn 0.3s ease-out;
+
+/* Success animations */
+animation: checkmark 0.5s ease-in-out;
+```
+
+### Loading States
+- Use subtle pulse animations for skeletons
+- Rotate spinners smoothly at consistent speed
+- Fade in content when loaded
+
 ## Remember
 
 **A confused user is a frustrated user. A frustrated user is a lost user.**
@@ -230,3 +357,5 @@ Before considering any UI feature complete, verify:
 Always ask yourself: "If I click this button, will I know what's happening?"
 
 If the answer is anything but a clear "YES", add more feedback!
+
+**Design with confidence, clarity, and consistency.**
