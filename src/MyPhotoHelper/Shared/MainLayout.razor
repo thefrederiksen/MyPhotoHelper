@@ -2,24 +2,38 @@
 @using MyPhotoHelper.Components.Shared
 @using MyPhotoHelper.Services
 @inject IImageDetailsService ImageDetailsService
+@inject NavigationManager Navigation
 @implements IDisposable
 
-<PageTitle>FaceVault</PageTitle>
+<PageTitle>MyPhotoHelper</PageTitle>
 
-<div class="page">
-    <div class="sidebar">
+<div class="app-container">
+    <div class="sidebar @(isSidebarOpen ? "open" : "")">
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <div class="d-flex align-items-center justify-content-between w-100">
-                <ScanStatusIndicator />
-                <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+    <main class="main-content">
+        <header class="app-header">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-link d-md-none p-0" @onclick="ToggleSidebar">
+                    <span class="oi oi-menu" style="font-size: 1.5rem;"></span>
+                </button>
+                <h1 class="page-title mb-0">@GetPageTitle()</h1>
             </div>
-        </div>
+            <div class="d-flex align-items-center gap-3">
+                <ScanStatusIndicator />
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-secondary">
+                        <span class="oi oi-bell"></span>
+                    </button>
+                    <button class="btn btn-sm btn-secondary">
+                        <span class="oi oi-question-mark"></span>
+                    </button>
+                </div>
+            </div>
+        </header>
 
-        <article class="content px-4">
+        <article class="page-content">
             <PageTransition />
             @Body
         </article>
@@ -31,6 +45,7 @@
 
 @code {
     private ImageDetailsModal? imageDetailsModal;
+    private bool isSidebarOpen = false;
 
     protected override void OnInitialized()
     {
@@ -43,6 +58,33 @@
         {
             await imageDetailsModal.ShowImageDetailsAsync(imageId);
         }
+    }
+
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+    }
+
+    private string GetPageTitle()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var path = uri.PathAndQuery.ToLower();
+        
+        return path switch
+        {
+            "/" or "/memories" => "Memories",
+            "/gallery" => "Gallery",
+            "/photo-map" => "Photo Map",
+            "/database-scan" => "AI Analysis",
+            "/test-image-analysis-ai" => "Test AI Classification",
+            "/duplicates" => "Duplicate Photos",
+            "/screenshot-analysis" => "Screenshots",
+            "/database-status" => "Database Status",
+            "/report" => "Report",
+            "/settings" => "Settings",
+            "/photo-scan" => "Scan Progress",
+            _ => "MyPhotoHelper"
+        };
     }
 
     public void Dispose()

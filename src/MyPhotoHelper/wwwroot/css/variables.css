@@ -1,30 +1,42 @@
 /* MyPhotoHelper Design System - CSS Variables */
 
 :root {
-    /* ===== COLOR PALETTE ===== */
+    /* ===== COLOR PALETTE - DRATA INSPIRED ===== */
     
     /* Primary Colors */
-    --primary-blue: #1b6ec2;
-    --primary-blue-dark: #1861ac;
-    --primary-blue-light: #258cfb;
-    --primary-blue-hover: #155a9e;
+    --primary: #0B4F71;           /* Deep blue for primary actions */
+    --primary-dark: #073D58;      /* Darker blue for hover states */
+    --primary-hover: #0D5A81;     /* Hover state for sidebar */
+    --primary-light: #E0E7FF;     /* Light blue for backgrounds */
+    
+    /* Previous primary colors (legacy) */
+    --primary-blue: #0B4F71;
+    --primary-blue-dark: #073D58;
+    --primary-blue-light: #2196F3;
+    --primary-blue-hover: #0D5A81;
+    
+    /* Accent Colors */
+    --accent-blue: #2196F3;       /* Bright blue for highlights */
+    --accent-green: #4CAF50;      /* Success states */
+    --accent-orange: #FF9800;     /* Warnings */
+    --accent-red: #F44336;        /* Errors */
     
     /* Secondary Colors */
     --primary-purple: #3a0647;
     --primary-purple-dark: #2d004d;
     --primary-purple-light: #4a0a5a;
     
-    /* Neutral Grays */
-    --gray-50: #f8f9fa;
-    --gray-100: #f7f7f7;
-    --gray-200: #d6d5d5;
-    --gray-300: #e9ecef;
-    --gray-400: #ced4da;
-    --gray-500: #adb5bd;
-    --gray-600: #6c757d;
-    --gray-700: #495057;
-    --gray-800: #343a40;
-    --gray-900: #212529;
+    /* Neutral Colors - Updated for Drata style */
+    --gray-50: #F5F7FA;          /* Main background */
+    --gray-100: #FFFFFF;         /* Card backgrounds */
+    --gray-200: #E0E6ED;         /* Borders */
+    --gray-300: #D1D5DB;         /* Disabled states */
+    --gray-400: #8792A2;         /* Muted text */
+    --gray-500: #647788;         /* Secondary text */
+    --gray-600: #6B7280;         /* Alternative secondary text */
+    --gray-700: #1A1F36;         /* Primary text */
+    --gray-800: #111827;         /* Headings */
+    --gray-900: #000000;         /* Pure black (rarely used) */
     
     /* Status Colors */
     --success: #26b050;
@@ -46,8 +58,8 @@
     /* ===== TYPOGRAPHY ===== */
     
     /* Font Families */
-    --font-family-base: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    --font-family-monospace: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-monospace: 'Fira Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     
     /* Font Sizes */
     --font-size-xs: 0.75rem;    /* 12px */
@@ -90,13 +102,23 @@
     --container-padding: var(--spacing-md);
     
     /* Sidebar */
-    --sidebar-width: 250px;
-    --sidebar-bg: linear-gradient(180deg, rgb(5, 39, 103) 0%, var(--primary-purple) 70%);
+    --sidebar-width: 220px;
+    --sidebar-bg: var(--primary);
+    --sidebar-text: rgba(255, 255, 255, 0.9);
+    --sidebar-hover-bg: var(--primary-hover);
+    --sidebar-section-title: rgba(255, 255, 255, 0.6);
+    --sidebar-border: rgba(255, 255, 255, 0.1);
     
-    /* Top Row */
-    --top-row-height: 3.5rem;
-    --top-row-bg: var(--gray-100);
-    --top-row-border: 1px solid var(--gray-200);
+    /* Top Row / Header */
+    --header-height: 4rem;
+    --header-bg: var(--gray-100);
+    --header-border: 1px solid var(--gray-200);
+    
+    /* Main Content */
+    --content-bg: var(--gray-50);
+    --card-bg: var(--gray-100);
+    --card-border: 1px solid var(--gray-200);
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     
     /* ===== BORDERS & RADIUS ===== */
     

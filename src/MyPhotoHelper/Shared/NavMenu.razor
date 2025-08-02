@@ -1,84 +1,67 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">FaceVault</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+﻿<div class="sidebar-header">
+    <div class="sidebar-logo">MYPHOTO</div>
+</div>
+
+<div class="sidebar-content">
+    <!-- Main Navigation -->
+    <div class="sidebar-section">
+        <NavLink class="sidebar-item" href="memories" Match="NavLinkMatch.All">
+            <span class="oi oi-camera"></span>
+            <span>Memories</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="gallery">
+            <span class="oi oi-image"></span>
+            <span>Gallery</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="photo-map">
+            <span class="oi oi-map-marker"></span>
+            <span>Photo Map</span>
+        </NavLink>
+    </div>
+
+    <!-- AI & Analysis -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">AI & ANALYSIS</div>
+        <NavLink class="sidebar-item" href="database-scan">
+            <span class="oi oi-eye"></span>
+            <span>AI Analysis</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="test-image-analysis-ai">
+            <span class="oi oi-beaker"></span>
+            <span>Test AI</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="duplicates">
+            <span class="oi oi-layers"></span>
+            <span>Duplicates</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="screenshot-analysis">
+            <span class="oi oi-monitor"></span>
+            <span>Screenshots</span>
+        </NavLink>
+    </div>
+
+    <!-- System -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">SYSTEM</div>
+        <NavLink class="sidebar-item" href="database-status">
+            <span class="oi oi-hard-drive"></span>
+            <span>Database</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="report">
+            <span class="oi oi-graph"></span>
+            <span>Report</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="photo-scan">
+            <span class="oi oi-pulse"></span>
+            <span>Scan Progress</span>
+        </NavLink>
+        <NavLink class="sidebar-item" href="settings">
+            <span class="oi oi-cog"></span>
+            <span>Settings</span>
+        </NavLink>
     </div>
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="CloseNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="memories" Match="NavLinkMatch.All">
-                <span class="oi oi-camera" aria-hidden="true"></span> Memories
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="gallery">
-                <span class="oi oi-image" aria-hidden="true"></span> Gallery
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="photo-map">
-                <span class="oi oi-map-marker" aria-hidden="true"></span> Photo Map
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="database-scan">
-                <span class="oi oi-eye" aria-hidden="true"></span> AI Analysis
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="test-image-analysis-ai">
-                <span class="oi oi-beaker" aria-hidden="true"></span> Test AI Classification
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="duplicates">
-                <span class="oi oi-layers" aria-hidden="true"></span> Duplicates
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="screenshot-analysis">
-                <span class="oi oi-monitor" aria-hidden="true"></span> Screenshots
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="database-status">
-                <span class="oi oi-hard-drive" aria-hidden="true"></span> Database
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="report">
-                <span class="oi oi-graph" aria-hidden="true"></span> Report
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="settings">
-                <span class="oi oi-cog" aria-hidden="true"></span> Settings
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="photo-scan">
-                <span class="oi oi-pulse" aria-hidden="true"></span> Scan Progress
-            </NavLink>
-        </div>
-    </nav>
-</div>
-
 @code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-    
-    private void CloseNavMenu()
-    {
-        collapseNavMenu = true;
-    }
+    // Navigation state is now handled by the MainLayout
 }
