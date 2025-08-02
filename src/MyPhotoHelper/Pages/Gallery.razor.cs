@@ -39,6 +39,7 @@ namespace MyPhotoHelper.Pages
         private Dictionary<string, bool> expandedMonths = new();
         private bool showCategoryDropdown = false;
         private HashSet<string> selectedCategories = new() { "photo", "screenshot", "unknown" };
+        private HashSet<string> loadingMonths = new();
 
         protected override async Task OnInitializedAsync()
         {
@@ -262,6 +263,29 @@ namespace MyPhotoHelper.Pages
             await LoadGalleryStructure();
         }
 
+        private void ExpandAll()
+        {
+            foreach (var yearGroup in yearGroups)
+            {
+                foreach (var monthGroup in yearGroup.MonthGroups)
+                {
+                    var key = $"{yearGroup.Year}-{monthGroup.Month}";
+                    expandedMonths[key] = true;
+                    
+                    // Don't load photos immediately - let them load on-demand as user scrolls
+                    // This prevents memory issues and crashes
+                }
+            }
+            StateHasChanged();
+        }
+
+        private void CollapseAll()
+        {
+            expandedMonths.Clear();
+            StateHasChanged();
+        }
+
+
         private async Task ScrollToTop()
         {
             await JSRuntime.InvokeVoidAsync("window.scrollTo", 0, 0);
@@ -344,6 +368,35 @@ namespace MyPhotoHelper.Pages
                         }
                     });
                 ");
+            }
+            
+            // Check for expanded months that need photos loaded
+            var monthsToLoad = new List<(int Year, int Month)>();
+            
+            foreach (var yearGroup in yearGroups)
+            {
+                foreach (var monthGroup in yearGroup.MonthGroups)
+                {
+                    var key = $"{yearGroup.Year}-{monthGroup.Month}";
+                    if (IsMonthExpanded(yearGroup.Year, monthGroup.Month) && 
+                        monthGroup.Photos == null && 
+                        !loadingMonths.Contains(key))
+                    {
+                        monthsToLoad.Add((yearGroup.Year, monthGroup.Month));
+                    }
+                }
+            }
+            
+            // Load photos for expanded months
+            foreach (var (year, month) in monthsToLoad)
+            {
+                var key = $"{year}-{month}";
+                loadingMonths.Add(key);
+                _ = Task.Run(async () => 
+                {
+                    await LoadMonthPhotos(year, month);
+                    loadingMonths.Remove(key);
+                });
             }
         }
 
