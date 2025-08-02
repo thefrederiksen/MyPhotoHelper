@@ -32,6 +32,7 @@ public partial class MyPhotoHelperDbContext : DbContext
             entity.Property(e => e.DateCreated).HasColumnType("DATETIME");
             entity.Property(e => e.DateModified).HasColumnType("DATETIME");
             entity.Property(e => e.LastScanDate).HasColumnType("DATETIME");
+            entity.Property(e => e.RunOnWindowsStartup).HasDefaultValue(0);
         });
 
         modelBuilder.Entity<tbl_image_analysis>(entity =>
@@ -50,6 +51,8 @@ public partial class MyPhotoHelperDbContext : DbContext
         {
             entity.HasKey(e => e.ImageId);
 
+            entity.HasIndex(e => e.ImageId, "IX_tbl_image_metadata_ImageId");
+
             entity.HasIndex(e => new { e.Latitude, e.Longitude }, "IX_tbl_image_metadata_Location");
 
             entity.Property(e => e.ImageId).ValueGeneratedNever();
@@ -67,6 +70,8 @@ public partial class MyPhotoHelperDbContext : DbContext
             entity.HasIndex(e => new { e.RelativePath, e.ScanDirectoryId }, "IX_tbl_images_RelativePath_ScanDirectoryId").IsUnique();
 
             entity.HasIndex(e => e.DateCreated, "IX_tbl_images_DateCreated");
+
+            entity.HasIndex(e => new { e.FileExists, e.IsDeleted }, "IX_tbl_images_FileExists_IsDeleted");
 
             entity.HasIndex(e => e.FileHash, "IX_tbl_images_FileHash");
 

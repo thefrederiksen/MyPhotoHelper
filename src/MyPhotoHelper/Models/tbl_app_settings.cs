@@ -48,4 +48,6 @@ public partial class tbl_app_settings
     public DateTime DateModified { get; set; }
 
     public DateTime? LastScanDate { get; set; }
+
+    public int? RunOnWindowsStartup { get; set; }
 }

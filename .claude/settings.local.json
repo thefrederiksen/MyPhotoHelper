@@ -24,7 +24,9 @@
       "Bash(cp:*)",
       "WebFetch(domain:github.com)",
       "Bash(gh run list:*)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(dotnet tool list:*)"
     ],
     "deny": []
   }
