@@ -10,14 +10,17 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      actions: read
+      id-token: write
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
     
@@ -75,7 +78,7 @@ jobs:
       shell: pwsh
     
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.VERSION }}
         name: MyPhotoHelper v${{ steps.version.outputs.VERSION }}
@@ -84,6 +87,7 @@ jobs:
         files: |
           Output/MyPhotoHelper-Setup.exe
           update.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
         body: |
           ## MyPhotoHelper v${{ steps.version.outputs.VERSION }}
           
@@ -115,15 +119,14 @@ jobs:
           - AI features are temporarily disabled during system upgrade
           - Core photo management features remain fully functional
           - Automatic migration from previous versions
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Update main branch with new XML
+      if: success()
       run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         git checkout main
         git add update.xml
-        git commit -m "Update AutoUpdater XML to v${{ steps.version.outputs.VERSION }}"
-        git push origin main
+        git commit -m "Update AutoUpdater XML to v${{ steps.version.outputs.VERSION }} [skip ci]" || echo "No changes to commit"
+        git push origin main || echo "Failed to push - may be protected branch"
       shell: pwsh
