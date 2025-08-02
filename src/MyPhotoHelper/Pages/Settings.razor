@@ -32,9 +32,21 @@
     
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <span class="oi oi-x" aria-hidden="true"></span> @errorMessage
-            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        <div class="alert alert-danger alert-dismissible fade show @(errorMessage.Contains("database needs to be updated") ? "border-3 shadow-lg" : "")" role="alert">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="oi oi-x" aria-hidden="true"></span> @errorMessage
+                    @if (errorMessage.Contains("database needs to be updated"))
+                    {
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-warning" @onclick="OpenDatabaseUpdate">
+                                <span class="oi oi-data-transfer-download" aria-hidden="true"></span> Update Database Now
+                            </button>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+            </div>
         </div>
     }
     
@@ -368,20 +380,45 @@
                 Logger.LogInformation("Created default application settings");
             }
             
-            // Sync Windows startup status with actual system state
-            var actualStartupEnabled = SystemTrayService.IsWindowsStartupEnabled();
-            var dbStartupEnabled = settings.RunOnWindowsStartup == 1;
-            
-            if (actualStartupEnabled != dbStartupEnabled)
+            // Try to sync Windows startup status, but handle missing column gracefully
+            try
             {
-                Logger.LogInformation($"Syncing Windows startup status. DB: {dbStartupEnabled}, Actual: {actualStartupEnabled}");
-                settings.RunOnWindowsStartup = actualStartupEnabled ? 1 : 0;
+                var actualStartupEnabled = SystemTrayService.IsWindowsStartupEnabled();
+                var dbStartupEnabled = settings.RunOnWindowsStartup == 1;
+                
+                if (actualStartupEnabled != dbStartupEnabled)
+                {
+                    Logger.LogInformation($"Syncing Windows startup status. DB: {dbStartupEnabled}, Actual: {actualStartupEnabled}");
+                    settings.RunOnWindowsStartup = actualStartupEnabled ? 1 : 0;
+                }
             }
+            catch (Exception startupEx)
+            {
+                Logger.LogWarning(startupEx, "Could not sync Windows startup status - database may need updating");
+                // Set a default value so the UI doesn't break
+                if (settings.RunOnWindowsStartup == null)
+                {
+                    settings.RunOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled() ? 1 : 0;
+                }
+            }
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException sqlEx) when (sqlEx.Message.Contains("no such column"))
+        {
+            Logger.LogError(sqlEx, "Database schema is out of date");
+            errorMessage = "Database needs to be updated. Click 'Update Database' below to fix this issue.";
+            
+            // Create default settings object so page still works
+            settings = CreateDefaultSettings();
+            // Try to get actual startup status
+            settings.RunOnWindowsStartup = SystemTrayService.IsWindowsStartupEnabled() ? 1 : 0;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading settings");
             errorMessage = "Failed to load settings: " + ex.Message;
+            
+            // Create default settings object so page still works
+            settings = CreateDefaultSettings();
         }
     }
 
@@ -479,6 +516,11 @@
                 showSuccessMessage = false;
                 InvokeAsync(StateHasChanged);
             });
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException sqlEx) when (sqlEx.Message.Contains("no such column"))
+        {
+            Logger.LogError(sqlEx, "Database schema is out of date");
+            errorMessage = "Cannot save settings - database needs to be updated. Click 'Update Database' to fix this issue.";
         }
         catch (Exception ex)
         {
