@@ -242,6 +242,7 @@ namespace MyPhotoHelper
             builder.Services.AddSingleton<IDatabaseChangeNotificationService, DatabaseChangeNotificationService>();
             builder.Services.AddSingleton<SystemTrayService>();
             builder.Services.AddHostedService<BackgroundTaskService>();
+            builder.Services.AddHostedService<AppUpdateService>();
             builder.Services.AddScoped<IMemoryService, MemoryService>();
             builder.Services.AddScoped<IPhotoPathService, PhotoPathService>();
             builder.Services.AddScoped<IFolderDialogService, FolderDialogService>();

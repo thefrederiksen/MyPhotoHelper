@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>MyPhotoHelper</id>
+    <version>1.0.0</version>
+    <title>MyPhotoHelper</title>
+    <authors>Your Name</authors>
+    <owners>Your Name</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>AI-powered photo organization and management application</description>
+    <summary>Organize and manage your photos with AI-powered features including face recognition, duplicate detection, and smart categorization.</summary>
+    <releaseNotes>Initial release with core photo management features.</releaseNotes>
+    <copyright>Copyright 2025</copyright>
+    <tags>photo organizer ai management</tags>
+  </metadata>
+  <files>
+    <!-- Include all files from publish output -->
+    <file src="src\MyPhotoHelper\bin\Release\net9.0-windows\win-x64\publish\**\*.*" target="lib\net9.0\" />
+    
+    <!-- Exclude files that Squirrel doesn't need -->
+    <file src="src\MyPhotoHelper\bin\Release\net9.0-windows\win-x64\publish\*.pdb" target="lib\net9.0\" exclude="**/*.pdb" />
+    <file src="src\MyPhotoHelper\bin\Release\net9.0-windows\win-x64\publish\*.xml" target="lib\net9.0\" exclude="**/*.xml" />
+  </files>
+</package>

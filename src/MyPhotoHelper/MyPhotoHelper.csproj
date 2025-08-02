@@ -11,13 +11,38 @@
     <UseWinFormsStartup>true</UseWinFormsStartup>
     <AssemblyName>MyPhotoHelper</AssemblyName>
     <RootNamespace>MyPhotoHelper</RootNamespace>
+    
+    <!-- Version Information -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <ProductVersion>1.0.0</ProductVersion>
+    
+    <!-- Application Information -->
+    <Product>MyPhotoHelper</Product>
+    <Company>MyPhotoHelper</Company>
+    <Copyright>Copyright © 2025</Copyright>
+    <Description>AI-powered photo organization and management</Description>
+    
+    <!-- Application Icon -->
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    
+    <!-- Squirrel Settings -->
+    <SquirrelBuildDirectory>$(MSBuildProjectDirectory)\..\..\releases</SquirrelBuildDirectory>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(UseWinFormsStartup)' == 'true'">
     <DefineConstants>$(DefineConstants);WINFORMS_APP</DefineConstants>
   </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Clowd.Squirrel" Version="2.11.1" />
     <PackageReference Include="CSnakes.Runtime" Version="1.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />

@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 9.0.x
+    
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+    
+    - name: Extract version from tag
+      id: version
+      run: |
+        $VERSION = $env:GITHUB_REF -replace 'refs/tags/v', ''
+        echo "VERSION=$VERSION" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+    
+    - name: Restore dependencies
+      run: dotnet restore src/MyPhotoHelper.sln
+    
+    - name: Build and create Squirrel package
+      run: |
+        .\build-squirrel.ps1 -Version ${{ steps.version.outputs.VERSION }} -ReleaseNotes "See release notes on GitHub"
+      shell: pwsh
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload Setup.exe
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./Releases/Setup.exe
+        asset_name: MyPhotoHelper-Setup.exe
+        asset_content_type: application/octet-stream
+    
+    - name: Upload RELEASES file
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./Releases/RELEASES
+        asset_name: RELEASES
+        asset_content_type: text/plain
+    
+    - name: Upload NuGet Package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./Releases/MyPhotoHelper-${{ steps.version.outputs.VERSION }}-full.nupkg
+        asset_name: MyPhotoHelper-${{ steps.version.outputs.VERSION }}-full.nupkg
+        asset_content_type: application/octet-stream

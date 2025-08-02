@@ -20,7 +20,8 @@
       "Bash(dir:*)",
       "WebFetch(domain:drata.com)",
       "Bash(git add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

@@ -1,0 +1,90 @@
+@using MyPhotoHelper.Services
+@using Squirrel
+@implements IDisposable
+
+@if (showUpdateNotification)
+{
+    <div class="update-notification">
+        <div class="update-content">
+            <span class="update-icon">🎉</span>
+            <span class="update-text">Update available: Version @updateVersion</span>
+            <button class="btn btn-sm btn-primary" @onclick="RestartApplication">Restart Now</button>
+            <button class="btn btn-sm btn-secondary" @onclick="DismissNotification">Later</button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool showUpdateNotification = false;
+    private string updateVersion = "";
+
+    protected override void OnInitialized()
+    {
+        AppUpdateService.UpdateStatusChanged += OnUpdateStatusChanged;
+    }
+
+    private void OnUpdateStatusChanged(object? sender, UpdateStatus status)
+    {
+        if (status.Status == "Ready")
+        {
+            updateVersion = status.Version;
+            showUpdateNotification = true;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void RestartApplication()
+    {
+        UpdateManager.RestartApp();
+    }
+
+    private void DismissNotification()
+    {
+        showUpdateNotification = false;
+    }
+
+    public void Dispose()
+    {
+        AppUpdateService.UpdateStatusChanged -= OnUpdateStatusChanged;
+    }
+}
+
+<style>
+    .update-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: var(--primary);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1050;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .update-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .update-icon {
+        font-size: 1.5rem;
+    }
+
+    .update-text {
+        margin-right: 1rem;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
