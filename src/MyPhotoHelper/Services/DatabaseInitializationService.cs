@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using System.Text;
+using System.Windows.Forms;
 
 namespace MyPhotoHelper.Services;
 
@@ -19,6 +20,23 @@ public class DatabaseInitializationService : IDatabaseInitializationService
     {
         _logger = logger;
         _databaseScriptsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database");
+        
+        // Log the scripts path for debugging
+        _logger.LogInformation($"Database scripts path: {_databaseScriptsPath}");
+        
+        if (!Directory.Exists(_databaseScriptsPath))
+        {
+            _logger.LogError($"Database scripts directory does not exist: {_databaseScriptsPath}");
+        }
+        else
+        {
+            var sqlFiles = Directory.GetFiles(_databaseScriptsPath, "*.sql");
+            _logger.LogInformation($"Found {sqlFiles.Length} SQL files in database scripts directory");
+            foreach (var file in sqlFiles)
+            {
+                _logger.LogDebug($"SQL file: {Path.GetFileName(file)}");
+            }
+        }
     }
 
     public async Task<bool> InitializeDatabaseAsync(string connectionString)
@@ -51,6 +69,16 @@ public class DatabaseInitializationService : IDatabaseInitializationService
                 if (!File.Exists(initialScriptPath))
                 {
                     _logger.LogError("Initial database script not found at: {Path}", initialScriptPath);
+                    
+                    // Show error to user
+                    var message = $"Critical Error: Database initialization script not found!\n\n" +
+                                 $"Expected location: {initialScriptPath}\n\n" +
+                                 $"The application cannot start without the database scripts.\n" +
+                                 $"Please ensure the Database folder is included in the application directory.";
+                    
+                    MessageBox.Show(message, "MyPhotoHelper - Critical Error", 
+                                  MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    
                     return false;
                 }
 
@@ -90,6 +118,17 @@ public class DatabaseInitializationService : IDatabaseInitializationService
                     if (!success)
                     {
                         _logger.LogError($"Failed to apply migration version {migration.Version}");
+                        
+                        // Show error to user
+                        var message = $"Database Migration Failed!\n\n" +
+                                     $"Failed to apply database migration version {migration.Version}.\n" +
+                                     $"Script: {Path.GetFileName(migration.Path)}\n\n" +
+                                     $"Please check the application logs for more details.\n" +
+                                     $"The application may not function correctly.";
+                        
+                        MessageBox.Show(message, "MyPhotoHelper - Migration Error", 
+                                      MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        
                         return false;
                     }
                     
@@ -182,7 +221,17 @@ public class DatabaseInitializationService : IDatabaseInitializationService
                 command.CommandText = sql;
                 
                 _logger.LogDebug("Executing SQL: {Sql}", sql.Length > 100 ? sql.Substring(0, 100) + "..." : sql);
-                await command.ExecuteNonQueryAsync();
+                
+                try
+                {
+                    await command.ExecuteNonQueryAsync();
+                }
+                catch (SqliteException sqlEx)
+                {
+                    _logger.LogError($"SQL Error executing statement: {sqlEx.Message}");
+                    _logger.LogError($"Failed SQL: {sql}");
+                    throw;
+                }
             }
 
             await transaction.CommitAsync();

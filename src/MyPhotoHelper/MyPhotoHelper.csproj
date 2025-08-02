@@ -24,7 +24,7 @@
     <Description>AI-powered photo organization and management</Description>
     
     <!-- Application Icon -->
-    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <!-- <ApplicationIcon>app.ico</ApplicationIcon> -->
     
     <!-- Squirrel Settings -->
     <SquirrelBuildDirectory>$(MSBuildProjectDirectory)\..\..\releases</SquirrelBuildDirectory>
