@@ -20,7 +20,7 @@ dotnet publish src\MyPhotoHelper\MyPhotoHelper.csproj `
     --self-contained true `
     -p:PublishSingleFile=false `
     -p:PublishReadyToRun=true `
-    -o ".\publish"
+    -o "src\MyPhotoHelper\bin\Release\net9.0-windows\win-x64\publish"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed!"
