@@ -189,3 +189,9 @@ cython_debug/
 /nul
 /src/MyPhotoHelper/nul
 src/MyPhotoHelper/Temp
+
+# Publishing output directory
+publish/
+
+# Installer output
+Output/
