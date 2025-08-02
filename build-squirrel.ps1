@@ -58,17 +58,52 @@ if ($LASTEXITCODE -ne 0) {
 
 # Create Squirrel package
 Write-Host "Creating Squirrel package..." -ForegroundColor Yellow
-$squirrelPath = "src\MyPhotoHelper\packages\Clowd.Squirrel.2.11.1\tools"
 
-if (Test-Path $squirrelPath) {
-    & "$squirrelPath\Squirrel.exe" `
-        --releasify "MyPhotoHelper.$Version.nupkg" `
-        --releaseDir ".\Releases" `
-        --no-msi `
-        --icon "src\MyPhotoHelper\app.ico"
+# Find Squirrel.exe in NuGet packages
+$possiblePaths = @(
+    "$env:USERPROFILE\.nuget\packages\clowd.squirrel\2.11.1\tools\Squirrel.exe",
+    "$env:NUGET_PACKAGES\clowd.squirrel\2.11.1\tools\Squirrel.exe",
+    "src\MyPhotoHelper\packages\Clowd.Squirrel.2.11.1\tools\Squirrel.exe"
+)
+
+$squirrelExe = $null
+foreach ($path in $possiblePaths) {
+    if (Test-Path $path) {
+        $squirrelExe = $path
+        Write-Host "Found Squirrel.exe at: $squirrelExe" -ForegroundColor Yellow
+        break
+    }
+}
+
+if (-not $squirrelExe) {
+    Write-Error "Squirrel.exe not found! Tried multiple locations."
+    Write-Host "Searched paths:" -ForegroundColor Yellow
+    foreach ($path in $possiblePaths) {
+        Write-Host "  - $path" -ForegroundColor Gray
+    }
+    
+    # Try installing as global tool as last resort
+    Write-Host "Attempting to install Squirrel as global tool..." -ForegroundColor Yellow
+    dotnet tool install --global Clowd.Squirrel --version 2.11.1 --verbosity quiet
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Creating Squirrel package using global tool..." -ForegroundColor Yellow
+        squirrel pack --packId "MyPhotoHelper" `
+            --packVersion $Version `
+            --packDir "src\MyPhotoHelper\bin\Release\net9.0-windows\win-x64\publish" `
+            --releaseDir ".\Releases" `
+            --mainExe "MyPhotoHelper.exe" `
+            --packTitle "MyPhotoHelper" `
+            --packAuthors "MyPhotoHelper Team"
+    } else {
+        Write-Error "Failed to install Squirrel tool!"
+        exit 1
+    }
 } else {
-    Write-Error "Squirrel.exe not found! Please restore NuGet packages first."
-    exit 1
+    # Use the found Squirrel.exe with releasify command
+    Write-Host "Creating Squirrel package using releasify..." -ForegroundColor Yellow
+    & $squirrelExe --releasify "MyPhotoHelper.$Version.nupkg" `
+        --releaseDir ".\Releases" `
+        --no-msi
 }
 
 if ($LASTEXITCODE -ne 0) {
