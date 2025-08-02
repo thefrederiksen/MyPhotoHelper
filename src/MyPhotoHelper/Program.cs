@@ -6,11 +6,14 @@ using MyPhotoHelper.Forms;
 using MyPhotoHelper.Services;
 using System.Diagnostics;
 using AutoUpdaterDotNET;
+using System.Linq;
+using System.IO;
 
 namespace MyPhotoHelper
 {
     class Program
     {
+
         [STAThread]
         static void Main(string[] args)
         {
@@ -58,7 +61,7 @@ namespace MyPhotoHelper
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
                     
-                    // Check for updates first (non-blocking)
+                    // Check for updates first (blocking - app won't start if update is available)
                     InitializeAutoUpdater();
                     
                     StartupErrorLogger.LogError("Starting Blazor server", null);
@@ -115,18 +118,30 @@ namespace MyPhotoHelper
             Environment.Exit(1);
         }
 
+
+
         private static void InitializeAutoUpdater()
         {
             try
             {
-                // Configure AutoUpdater
-                AutoUpdater.Start("https://raw.githubusercontent.com/thefrederiksen/MyPhotoHelper/main/update.xml");
-                
-                // Configuration options
+                // Configure AutoUpdater - standard mode with UI
+                AutoUpdater.RunUpdateAsAdmin = false;
+                AutoUpdater.Synchronous = true; // Wait for update check to complete
                 AutoUpdater.ShowSkipButton = false;
                 AutoUpdater.ShowRemindLaterButton = true;
                 AutoUpdater.Mandatory = false;
-                AutoUpdater.UpdateMode = Mode.Normal;
+                AutoUpdater.UpdateMode = Mode.Normal; // Show standard UI
+                AutoUpdater.ReportErrors = true;
+                
+                // Set up the application exit event for cleanup
+                AutoUpdater.ApplicationExitEvent = () =>
+                {
+                    Logger.Info("AutoUpdater requesting application exit");
+                    Environment.Exit(0); // Exit completely
+                };
+                
+                // Check for updates before app starts - this will show UI if update is available
+                AutoUpdater.Start("https://raw.githubusercontent.com/thefrederiksen/MyPhotoHelper/main/update.xml");
                 
                 // Check if we should minimize (started from Windows startup)
                 var args = Environment.GetCommandLineArgs();
