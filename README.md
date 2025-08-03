@@ -14,7 +14,7 @@ MyPhotoHelper is a completely **free** Windows application that helps you organi
 
 ## 🚀 Download Now - 100% Free!
 
-**[📥 Download MyPhotoHelper v1.2.1](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest/download/MyPhotoHelper-Setup.exe)**
+**[📥 Download MyPhotoHelper (Latest)](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest/download/MyPhotoHelper-Setup.exe)**
 
 - ✅ **Completely Free** - No subscription, no ads, no premium features
 - ✅ **MIT License** - Use it however you want, modify it, redistribute it
@@ -101,6 +101,6 @@ MyPhotoHelper automatically checks for updates and will notify you when new vers
 
 ---
 
-**Ready to organize your photos? [Download MyPhotoHelper now!](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest/download/MyPhotoHelper-Setup.exe)**
+**Ready to organize your photos? [Download MyPhotoHelper (Latest) now!](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest/download/MyPhotoHelper-Setup.exe)**
 
 *Made with ❤️ for photographers, families, and anyone who loves their memories organized*
