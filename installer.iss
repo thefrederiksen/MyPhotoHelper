@@ -1,7 +1,7 @@
 [Setup]
 ; Basic App Information
 AppName=MyPhotoHelper
-AppVersion=1.2.4
+AppVersion=1.2.5
 AppPublisher=MyPhotoHelper Team
 AppPublisherURL=https://github.com/thefrederiksen/MyPhotoHelper
 AppSupportURL=https://github.com/thefrederiksen/MyPhotoHelper/issues
