@@ -121,11 +121,9 @@
                                     @{
                                         var percent = totalImages > 0 ? (double)category.Count / totalImages * 100 : 0;
                                         var progressColor = category.Category == "photo" ? "bg-success" : category.Category == "screenshot" ? "bg-warning" : "bg-secondary";
-                                        // Ensure minimum visible width for very small percentages
-                                        var displayWidth = Math.Max(percent, percent > 0 ? 8 : 0);
                                     }
-                                    <div class="progress-bar @progressColor" role="progressbar" style="width: @displayWidth%" title="@percent.ToString("F1")% (@category.Count photos)">
-                                        @if (displayWidth > 15 || percent > 3)
+                                    <div class="progress-bar @progressColor" role="progressbar" style="width: @percent%; min-width: @(percent > 0 ? "3px" : "0")" title="@percent.ToString("F1")% (@category.Count photos)">
+                                        @if (percent > 8)
                                         {
                                             <span>@percent.ToString("F0")%</span>
                                         }
@@ -159,12 +157,19 @@
                             <div class="progress progress-thick mt-3">
                                 @{
                                     var screenshotPercent = totalImages > 0 ? (double)screenshotCount / totalImages * 100 : 0;
+                                    var realPhotoPercent = 100 - screenshotPercent;
                                 }
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: @screenshotPercent%">
-                                    <span>Screenshots: @screenshotPercent.ToString("F0")%</span>
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: @screenshotPercent%; min-width: @(screenshotPercent > 0 ? "3px" : "0")">
+                                    @if (screenshotPercent > 12)
+                                    {
+                                        <span>Screenshots: @screenshotPercent.ToString("F0")%</span>
+                                    }
                                 </div>
-                                <div class="progress-bar bg-success" role="progressbar" style="width: @(100 - screenshotPercent)%">
-                                    <span>Real Photos: @((100 - screenshotPercent).ToString("F0"))%</span>
+                                <div class="progress-bar bg-success" role="progressbar" style="width: @realPhotoPercent%; min-width: @(realPhotoPercent > 0 ? "3px" : "0")">
+                                    @if (realPhotoPercent > 12)
+                                    {
+                                        <span>Real Photos: @realPhotoPercent.ToString("F0")%</span>
+                                    }
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between small text-muted mt-2">
@@ -437,8 +442,11 @@
                         </div>
                         <div class="col-md-4">
                             <div class="progress progress-thick mt-3">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: @gpsPercentage%">
-                                    <span>@gpsPercentage.ToString("F0")%</span>
+                                <div class="progress-bar bg-success" role="progressbar" style="width: @gpsPercentage%; min-width: @(gpsPercentage > 0 ? "3px" : "0")">
+                                    @if (gpsPercentage > 8)
+                                    {
+                                        <span>@gpsPercentage.ToString("F0")%</span>
+                                    }
                                 </div>
                             </div>
                             <small class="text-muted">of photos have locations</small>
