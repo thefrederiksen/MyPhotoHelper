@@ -121,15 +121,17 @@
                                     @{
                                         var percent = totalImages > 0 ? (double)category.Count / totalImages * 100 : 0;
                                         var progressColor = category.Category == "photo" ? "bg-success" : category.Category == "screenshot" ? "bg-warning" : "bg-secondary";
+                                        // Ensure minimum visible width for very small percentages
+                                        var displayWidth = Math.Max(percent, percent > 0 ? 8 : 0);
                                     }
-                                    <div class="progress-bar @progressColor" role="progressbar" style="width: @percent%">
-                                        @if (percent > 5)
+                                    <div class="progress-bar @progressColor" role="progressbar" style="width: @displayWidth%" title="@percent.ToString("F1")% (@category.Count photos)">
+                                        @if (displayWidth > 15 || percent > 3)
                                         {
                                             <span>@percent.ToString("F0")%</span>
                                         }
                                     </div>
                                 </div>
-                                <small class="text-muted">@percent.ToString("F1")% of total</small>
+                                <small class="text-muted">@percent.ToString("F1")% (@category.Count photos)</small>
                             </div>
                         }
                     </div>
@@ -222,13 +224,27 @@
                         {
                             <div class="col-md-4 mb-3">
                                 <div class="card shadow-sm h-100">
+                                    @if (thumbnailDataUris.ContainsKey(sample.ImageId))
+                                    {
+                                        <img src="@thumbnailDataUris[sample.ImageId]" 
+                                             class="card-img-top" 
+                                             alt="@sample.FileName"
+                                             style="height: 200px; object-fit: cover; cursor: pointer;"
+                                             @onclick="() => ShowImageDetails(sample.ImageId)">
+                                    }
+                                    else
+                                    {
+                                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
+                                            <i class="oi oi-image text-muted"></i>
+                                        </div>
+                                    }
                                     <div class="card-body">
                                         <h6 class="card-title text-truncate" title="@sample.FileName">
                                             <span class="oi oi-file" aria-hidden="true"></span> @sample.FileName
                                         </h6>
                                         @if (!string.IsNullOrEmpty(sample.Description))
                                         {
-                                            <p class="small text-muted">@(sample.Description.Length > 100 ? sample.Description.Substring(0, 100) + "..." : sample.Description)</p>
+                                            <p class="small text-muted">@(sample.Description.Length > 80 ? sample.Description.Substring(0, 80) + "..." : sample.Description)</p>
                                         }
                                         <div class="mt-2">
                                             <span class="badge bg-info">@(sample.Category == "photo" ? "📷 Photo" : sample.Category == "screenshot" ? "🖥️ Screenshot" : "❓ Other")</span>
@@ -605,6 +621,7 @@
 
     private class AISample
     {
+        public int ImageId { get; set; }
         public string FileName { get; set; } = "";
         public string Category { get; set; } = "";
         public string Description { get; set; } = "";
@@ -736,6 +753,7 @@
                     image => image.ImageId,
                     (analysis, image) => new AISample
                     {
+                        ImageId = image.ImageId,
                         FileName = image.FileName,
                         Category = analysis.ImageCategory ?? "Unknown",
                         Description = analysis.AIDescription ?? "",
@@ -747,9 +765,9 @@
                 .OrderByDescending(s => s.AnalyzedAt)
                 .ToListAsync();
             
-            // Set initial page of samples
+            // Set initial page of samples and generate thumbnails
             currentAiPage = 0;
-            UpdateAiSamplesPage();
+            await UpdateAiSamplesPage();
             
             // Load duplicate statistics with scan directory information
             var duplicates = await DbContext.tbl_images
@@ -937,30 +955,43 @@
         // Navigation.NavigateTo("/duplicates");
     }
 
-    private void UpdateAiSamplesPage()
+    private async Task UpdateAiSamplesPage()
     {
         aiSamples = allAiSamples
             .Skip(currentAiPage * aiSamplesPerPage)
             .Take(aiSamplesPerPage)
             .ToList();
+            
+        // Generate data URIs for new page of AI samples
+        foreach (var sample in aiSamples)
+        {
+            if (!thumbnailDataUris.ContainsKey(sample.ImageId))
+            {
+                var dataUri = await ImageDisplayService.GetThumbnailDataUriAsync(sample.ImageId);
+                if (!string.IsNullOrEmpty(dataUri))
+                {
+                    thumbnailDataUris[sample.ImageId] = dataUri;
+                }
+            }
+        }
     }
 
-    private void NextAiPage()
+    private async Task NextAiPage()
     {
         if ((currentAiPage + 1) * aiSamplesPerPage < allAiSamples.Count)
         {
             currentAiPage++;
-            UpdateAiSamplesPage();
+            await UpdateAiSamplesPage();
             StateHasChanged();
         }
     }
 
-    private void PreviousAiPage()
+    private async Task PreviousAiPage()
     {
         if (currentAiPage > 0)
         {
             currentAiPage--;
-            UpdateAiSamplesPage();
+            await UpdateAiSamplesPage();
             StateHasChanged();
         }
     }
