@@ -3,7 +3,7 @@
 AppName=MyPhotoHelper
 AppVersion=1.2.6
 AppPublisher=MyPhotoHelper Team
-AppMutex=MyPhotoHelper-{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}
+AppMutex=MyPhotoHelper-{{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}}
 AppPublisherURL=https://github.com/thefrederiksen/MyPhotoHelper
 AppSupportURL=https://github.com/thefrederiksen/MyPhotoHelper/issues
 AppUpdatesURL=https://github.com/thefrederiksen/MyPhotoHelper/releases
