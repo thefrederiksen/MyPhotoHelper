@@ -3,7 +3,7 @@
 @using MyPhotoHelper.Services
 @using MyPhotoHelper.Data
 @using Microsoft.EntityFrameworkCore
-@inject IHeicCacheService HeicCacheService
+@inject IThumbnailCacheService ThumbnailCacheService
 @inject MyPhotoHelperDbContext DbContext
 @inject IPathService PathService
 
@@ -13,8 +13,8 @@
     <div class="row">
         <div class="col-12">
             <h4>Cache Directory</h4>
-            <code>@HeicCacheService.GetCacheDirectory()</code>
-            <p>Directory Exists: @(Directory.Exists(HeicCacheService.GetCacheDirectory()) ? "Yes" : "No")</p>
+            <code>@ThumbnailCacheService.GetCacheDirectory()</code>
+            <p>Directory Exists: @(Directory.Exists(ThumbnailCacheService.GetCacheDirectory()) ? "Yes" : "No")</p>
             
             <h4>HEIC Files in Database</h4>
             @if (heicFiles == null)
@@ -98,7 +98,7 @@
             
             // Try to get cached thumbnail
             testResult += "\nCalling GetCachedHeicThumbnailAsync...\n";
-            var jpegBytes = await HeicCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
+            var jpegBytes = await ThumbnailCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
             
             if (jpegBytes != null)
             {
@@ -106,7 +106,7 @@
                 
                 // Check if cache file exists
                 var cacheKey = GetCacheKey(fullPath, 250, 80);
-                var expectedCachePath = Path.Combine(HeicCacheService.GetCacheDirectory(), $"thumb_{cacheKey}.jpg");
+                var expectedCachePath = Path.Combine(ThumbnailCacheService.GetCacheDirectory(), $"thumb_{cacheKey}.jpg");
                 testResult += $"\nExpected cache path: {expectedCachePath}\n";
                 testResult += $"Cache file exists: {File.Exists(expectedCachePath)}\n";
                 

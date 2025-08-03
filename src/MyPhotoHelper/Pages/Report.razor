@@ -117,19 +117,24 @@
                                     <h6 class="mb-0">@(category.Category == "photo" ? "📷 Photos" : category.Category == "screenshot" ? "🖥️ Screenshots" : "❓ Other")</h6>
                                     <span class="badge bg-primary">@category.Count</span>
                                 </div>
-                                <div class="progress progress-thick mb-2">
-                                    @{
-                                        var percent = totalImages > 0 ? (double)category.Count / totalImages * 100 : 0;
-                                        var progressColor = category.Category == "photo" ? "bg-success" : category.Category == "screenshot" ? "bg-warning" : "bg-secondary";
-                                    }
-                                    <div class="progress-bar @progressColor" role="progressbar" style="width: @percent%; min-width: @(percent > 0 ? "3px" : "0")" title="@percent.ToString("F1")% (@category.Count photos)">
-                                        @if (percent > 8)
-                                        {
-                                            <span>@percent.ToString("F0")%</span>
-                                        }
+                                @{
+                                    var percent = totalImages > 0 ? (double)category.Count / totalImages * 100 : 0;
+                                    var progressColor = category.Category == "photo" ? "bg-success" : category.Category == "screenshot" ? "bg-warning" : "bg-secondary";
+                                }
+                                
+                                <!-- Simple bar chart instead of progress bar -->
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">@(category.Category == "photo" ? "📷 Photos" : category.Category == "screenshot" ? "🖥️ Screenshots" : "❓ Other")</span>
+                                    <span class="badge bg-primary fs-6">@category.Count.ToString("N0")</span>
+                                </div>
+                                <div class="simple-bar-chart mb-3">
+                                    <div class="bar-background">
+                                        <div class="bar-fill @(category.Category == "photo" ? "bar-green" : category.Category == "screenshot" ? "bar-orange" : "bar-gray")" 
+                                             style="width: @percent%;">
+                                            <span class="bar-text">@percent.ToString("F1")%</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <small class="text-muted">@percent.ToString("F1")% (@category.Count photos)</small>
                             </div>
                         }
                     </div>
@@ -154,27 +159,39 @@
                             </div>
                         </div>
                         <div class="col-md-8">
-                            <div class="progress progress-thick mt-3">
-                                @{
-                                    var screenshotPercent = totalImages > 0 ? (double)screenshotCount / totalImages * 100 : 0;
-                                    var realPhotoPercent = 100 - screenshotPercent;
-                                }
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: @screenshotPercent%; min-width: @(screenshotPercent > 0 ? "3px" : "0")">
-                                    @if (screenshotPercent > 12)
-                                    {
-                                        <span>Screenshots: @screenshotPercent.ToString("F0")%</span>
-                                    }
+                            @{
+                                var screenshotPercent = totalImages > 0 ? (double)screenshotCount / totalImages * 100 : 0;
+                                var realPhotoPercent = 100 - screenshotPercent;
+                            }
+                            
+                            <!-- Screenshots bar chart -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">🖥️ Screenshots</span>
+                                    <span class="badge bg-warning text-dark fs-6">@screenshotCount.ToString("N0")</span>
                                 </div>
-                                <div class="progress-bar bg-success" role="progressbar" style="width: @realPhotoPercent%; min-width: @(realPhotoPercent > 0 ? "3px" : "0")">
-                                    @if (realPhotoPercent > 12)
-                                    {
-                                        <span>Real Photos: @realPhotoPercent.ToString("F0")%</span>
-                                    }
+                                <div class="simple-bar-chart">
+                                    <div class="bar-background">
+                                        <div class="bar-fill bar-orange" style="width: @screenshotPercent%;">
+                                            <span class="bar-text">@screenshotPercent.ToString("F1")%</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between small text-muted mt-2">
-                                <span>🖥️ Screenshots</span>
-                                <span>📷 Real Photos</span>
+                            
+                            <!-- Real photos bar chart -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">📷 Real Photos</span>
+                                    <span class="badge bg-success fs-6">@realPhotoCount.ToString("N0")</span>
+                                </div>
+                                <div class="simple-bar-chart">
+                                    <div class="bar-background">
+                                        <div class="bar-fill bar-green" style="width: @realPhotoPercent%;">
+                                            <span class="bar-text">@realPhotoPercent.ToString("F1")%</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -186,27 +203,20 @@
                         <div class="row">
                             @foreach (var sample in screenshotSamples.Take(6))
                             {
-                                <div class="col-md-2 mb-2">
-                                    <div class="card shadow-sm">
-                                        @if (thumbnailDataUris.ContainsKey(sample.ImageId))
-                                        {
-                                            <img src="@thumbnailDataUris[sample.ImageId]" 
-                                                 class="card-img-top" 
-                                                 alt="@sample.FileName"
-                                                 style="height: 100px; object-fit: cover;">
-                                        }
-                                        else
-                                        {
-                                            <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 100px;">
-                                                <i class="oi oi-image text-muted"></i>
+                                <div class="col-md-4 col-lg-3 col-xl-2 mb-3">
+                                    <!-- Use ImageViewer with standard 200x200 thumbnails -->
+                                    <ImageViewer Photo="sample" 
+                                               ContainerClass="w-100" 
+                                               ShowTime="true"
+                                               OnImageClick="EventCallback.Factory.Create<tbl_images>(this, (img) => ShowImageDetails(img.ImageId))">
+                                        <AdditionalContent>
+                                            <div class="card-body p-2">
+                                                <small class="text-muted d-block text-truncate" title="@sample.FileName">
+                                                    🖥️ @sample.FileName
+                                                </small>
                                             </div>
-                                        }
-                                        <div class="card-body p-2">
-                                            <small class="text-muted d-block text-truncate" title="@sample.FileName">
-                                                @sample.FileName
-                                            </small>
-                                        </div>
-                                    </div>
+                                        </AdditionalContent>
+                                    </ImageViewer>
                                 </div>
                             }
                         </div>
@@ -227,39 +237,34 @@
                     <div class="row">
                         @foreach (var sample in aiSamples.Take(6))
                         {
-                            <div class="col-md-4 mb-3">
-                                <div class="card shadow-sm h-100">
-                                    @if (thumbnailDataUris.ContainsKey(sample.ImageId))
-                                    {
-                                        <img src="@thumbnailDataUris[sample.ImageId]" 
-                                             class="card-img-top" 
-                                             alt="@sample.FileName"
-                                             style="height: 200px; object-fit: cover; cursor: pointer;"
-                                             @onclick="() => ShowImageDetails(sample.ImageId)">
-                                    }
-                                    else
-                                    {
-                                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
-                                            <i class="oi oi-image text-muted"></i>
-                                        </div>
-                                    }
-                                    <div class="card-body">
-                                        <h6 class="card-title text-truncate" title="@sample.FileName">
-                                            <span class="oi oi-file" aria-hidden="true"></span> @sample.FileName
-                                        </h6>
-                                        @if (!string.IsNullOrEmpty(sample.Description))
-                                        {
-                                            <p class="small text-muted">@(sample.Description.Length > 80 ? sample.Description.Substring(0, 80) + "..." : sample.Description)</p>
-                                        }
-                                        <div class="mt-2">
-                                            <span class="badge bg-info">@(sample.Category == "photo" ? "📷 Photo" : sample.Category == "screenshot" ? "🖥️ Screenshot" : "❓ Other")</span>
-                                            @if (sample.AnalyzedAt.HasValue)
+                            <div class="col-md-4 col-lg-3 col-xl-2 mb-3">
+                                @{
+                                    var sampleImage = CreateImageFromSample(sample);
+                                }
+                                <!-- Use ImageViewer with standard 200x200 thumbnails -->
+                                <ImageViewer Photo="sampleImage" 
+                                           ContainerClass="w-100" 
+                                           ShowTime="true"
+                                           OnImageClick="EventCallback.Factory.Create<tbl_images>(this, (img) => ShowImageDetails(img.ImageId))">
+                                    <AdditionalContent>
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title text-truncate small" title="@sample.FileName">
+                                                <span class="oi oi-file" aria-hidden="true"></span> @sample.FileName
+                                            </h6>
+                                            @if (!string.IsNullOrEmpty(sample.Description))
                                             {
-                                                <small class="text-muted d-block mt-1">Analyzed @sample.AnalyzedAt.Value.ToString("MMM dd")</small>
+                                                <p class="small text-muted mb-1">@(sample.Description.Length > 60 ? sample.Description.Substring(0, 60) + "..." : sample.Description)</p>
                                             }
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="badge bg-info small">@(sample.Category == "photo" ? "📷 Photo" : sample.Category == "screenshot" ? "🖥️ Screenshot" : "❓ Other")</span>
+                                                @if (sample.AnalyzedAt.HasValue)
+                                                {
+                                                    <small class="text-muted">@sample.AnalyzedAt.Value.ToString("MMM dd")</small>
+                                                }
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    </AdditionalContent>
+                                </ImageViewer>
                             </div>
                         }
                     </div>
@@ -318,7 +323,6 @@
                                         <strong>@group.Files.Count identical files</strong> - 
                                         Wasting @FormatFileSize(group.FileSize * (group.Files.Count - 1))
                                     </div>
-                                    <small class="text-muted">Hash: @group.Hash.Substring(0, 12)...</small>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -393,10 +397,13 @@
                                         </div>
                                         @if (dir.ImageCount > 0)
                                         {
-                                            <div class="progress mt-2" style="height: 6px;">
-                                                <div class="progress-bar" 
-                                                     style="width: @(totalImages > 0 ? (double)dir.ImageCount / totalImages * 100 : 0)%"
-                                                     title="@((totalImages > 0 ? (double)dir.ImageCount / totalImages * 100 : 0).ToString("F1"))% of total library"></div>
+                                            var dirPercent = totalImages > 0 ? (double)dir.ImageCount / totalImages * 100 : 0;
+                                            <div class="progress mt-2" style="height: 0.5rem;">
+                                                <div class="progress-bar bg-primary" 
+                                                     role="progressbar"
+                                                     style="width: @dirPercent%; border-radius: 0.25rem;"
+                                                     title="@dirPercent.ToString("F1")% of total library">
+                                                </div>
                                             </div>
                                         }
                                     </div>
@@ -441,15 +448,18 @@
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="progress progress-thick mt-3">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: @gpsPercentage%; min-width: @(gpsPercentage > 0 ? "3px" : "0")">
-                                    @if (gpsPercentage > 8)
-                                    {
-                                        <span>@gpsPercentage.ToString("F0")%</span>
-                                    }
+                            <div class="text-center">
+                                <h6 class="text-muted">Location Data Coverage</h6>
+                                <div class="display-6 text-success mb-2">@gpsPercentage.ToString("F1")%</div>
+                                <p class="text-muted small mb-3">@gpsEnabledImages.ToString("N0") of @totalImages.ToString("N0") photos</p>
+                                <div class="simple-bar-chart">
+                                    <div class="bar-background">
+                                        <div class="bar-fill bar-green" style="width: @gpsPercentage%;">
+                                            <span class="bar-text">@gpsPercentage.ToString("F0")%</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <small class="text-muted">of photos have locations</small>
                         </div>
                     </div>
                 }
@@ -525,41 +535,77 @@
         margin-bottom: 0.75rem !important;
     }
     
-    /* Progress bars */
-    .progress-thick {
-        height: 30px;
-        border-radius: 15px;
-        overflow: hidden;
-        background-color: #e9ecef;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* Simple Bar Charts - No Bootstrap Progress Bars */
+    .simple-bar-chart {
+        width: 100%;
+        margin: 0.5rem 0;
     }
     
-    .progress-thick .progress-bar {
-        font-weight: 600;
-        font-size: 0.875rem;
+    .bar-background {
+        width: 100%;
+        height: 40px;
+        background-color: #e9ecef;
+        border-radius: 20px;
+        border: 2px solid #dee2e6;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .bar-fill {
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        border-radius: 18px;
+        transition: width 0.8s ease;
+        min-width: 60px; /* Always show at least some bar */
+        position: relative;
     }
     
-    /* Enhanced progress bar colors */
-    .progress-bar.bg-success {
-        background-color: #28a745 !important;
+    .bar-text {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: white;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        white-space: nowrap;
     }
     
-    .progress-bar.bg-warning {
-        background-color: #ffc107 !important;
+    /* Color variants */
+    .bar-green {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+    
+    .bar-orange {
+        background: linear-gradient(135deg, #fd7e14, #ffc107);
+    }
+    
+    .bar-orange .bar-text {
         color: #000;
-        text-shadow: none;
+        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
     }
     
-    .progress-bar.bg-info {
-        background-color: #17a2b8 !important;
+    .bar-gray {
+        background: linear-gradient(135deg, #6c757d, #adb5bd);
     }
     
-    .progress-bar.bg-primary {
-        background-color: #007bff !important;
+    /* High quality image rendering for Report page */
+    .photo-card .photo-thumbnail {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: optimizeQuality;
+        backface-visibility: hidden;
+        transform: translateZ(0);
+        /* Ensure images don't scale beyond their native resolution */
+        max-width: 200px;
+        max-height: 200px;
+        width: auto;
+        height: auto;
+    }
+    
+    /* Make sure containers don't force upscaling */
+    .photo-container {
+        max-width: 200px;
+        max-height: 200px;
+        margin: 0 auto;
     }
     
     /* Card improvements */
@@ -744,15 +790,7 @@
                 .Take(12)
                 .ToListAsync();
             
-            // Generate data URIs for screenshot thumbnails
-            foreach (var sample in screenshotSamples)
-            {
-                var dataUri = await ImageDisplayService.GetThumbnailDataUriAsync(sample.ImageId);
-                if (!string.IsNullOrEmpty(dataUri))
-                {
-                    thumbnailDataUris[sample.ImageId] = dataUri;
-                }
-            }
+            // Note: Screenshot thumbnails now handled by ImageViewer component
             
             // Load ALL AI analysis samples
             allAiSamples = await DbContext.tbl_image_analysis
@@ -773,9 +811,9 @@
                 .OrderByDescending(s => s.AnalyzedAt)
                 .ToListAsync();
             
-            // Set initial page of samples and generate thumbnails
+            // Set initial page of samples
             currentAiPage = 0;
-            await UpdateAiSamplesPage();
+            UpdateAiSamplesPage();
             
             // Load duplicate statistics with scan directory information
             var duplicates = await DbContext.tbl_images
@@ -963,43 +1001,30 @@
         // Navigation.NavigateTo("/duplicates");
     }
 
-    private async Task UpdateAiSamplesPage()
+    private void UpdateAiSamplesPage()
     {
         aiSamples = allAiSamples
             .Skip(currentAiPage * aiSamplesPerPage)
             .Take(aiSamplesPerPage)
             .ToList();
-            
-        // Generate data URIs for new page of AI samples
-        foreach (var sample in aiSamples)
-        {
-            if (!thumbnailDataUris.ContainsKey(sample.ImageId))
-            {
-                var dataUri = await ImageDisplayService.GetThumbnailDataUriAsync(sample.ImageId);
-                if (!string.IsNullOrEmpty(dataUri))
-                {
-                    thumbnailDataUris[sample.ImageId] = dataUri;
-                }
-            }
-        }
     }
 
-    private async Task NextAiPage()
+    private void NextAiPage()
     {
         if ((currentAiPage + 1) * aiSamplesPerPage < allAiSamples.Count)
         {
             currentAiPage++;
-            await UpdateAiSamplesPage();
+            UpdateAiSamplesPage();
             StateHasChanged();
         }
     }
 
-    private async Task PreviousAiPage()
+    private void PreviousAiPage()
     {
         if (currentAiPage > 0)
         {
             currentAiPage--;
-            await UpdateAiSamplesPage();
+            UpdateAiSamplesPage();
             StateHasChanged();
         }
     }
@@ -1030,5 +1055,17 @@
             // For larger percentages, show whole numbers
             return $"{percentage:F0}%";
         }
+    }
+    
+    private tbl_images CreateImageFromSample(AISample sample)
+    {
+        return new tbl_images
+        {
+            ImageId = sample.ImageId,
+            FileName = sample.FileName,
+            // Add other required properties as needed
+            IsDeleted = 0,
+            FileExists = 1
+        };
     }
 }

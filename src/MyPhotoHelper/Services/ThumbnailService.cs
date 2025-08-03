@@ -5,7 +5,7 @@ namespace MyPhotoHelper.Services
 {
     public interface IThumbnailService
     {
-        Task<byte[]> GetThumbnailAsync(string imagePath, int width = 100, int height = 100);
+        Task<byte[]> GetThumbnailAsync(string imagePath, int width = 200, int height = 200);
     }
 
     public class ThumbnailService : IThumbnailService
@@ -17,7 +17,7 @@ namespace MyPhotoHelper.Services
             _logger = logger;
         }
 
-        public async Task<byte[]> GetThumbnailAsync(string imagePath, int width = 100, int height = 100)
+        public async Task<byte[]> GetThumbnailAsync(string imagePath, int width = 200, int height = 200)
         {
             return await Task.Run(() =>
             {

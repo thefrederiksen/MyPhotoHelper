@@ -143,10 +143,10 @@
                     </div>
                 </div>
 
-                <!-- Expand/Collapse All Buttons -->
+                <!-- Expand/Collapse All Buttons - Hidden for now
                 <div class="d-flex justify-content-end mb-3">
                     <div class="btn-group">
-                        <button class="btn btn-outline-secondary" @onclick="() => ExpandAll()" title="Expand all months">
+                        <button class="btn btn-outline-secondary" @onclick="async () => await ExpandAll()" title="Expand all months">
                             <i class="oi oi-expand-down"></i> Expand All
                         </button>
                         <button class="btn btn-outline-secondary" @onclick="() => CollapseAll()" title="Collapse all months">
@@ -154,6 +154,7 @@
                         </button>
                     </div>
                 </div>
+                -->
 
                 <!-- Year/Month Groups -->
                 @foreach (var yearGroup in yearGroups)
@@ -195,11 +196,23 @@
                                     else
                                     {
                                         <div class="row g-2">
-                                            @foreach (var photo in monthGroup.Photos)
+                                            @{
+                                                var photosToShow = monthGroup.Photos.Take(50).ToList();
+                                                var remainingCount = monthGroup.Photos.Count - photosToShow.Count;
+                                            }
+                                            @foreach (var photo in photosToShow)
                                             {
                                                 <ImageViewer Photo="photo" 
                                                            ContainerClass="@(isCompactView ? "col-2 col-sm-1" : "col-6 col-sm-4 col-md-3 col-lg-2")"
                                                            ShowTime="true" />
+                                            }
+                                            @if (remainingCount > 0)
+                                            {
+                                                <div class="col-12 text-center mt-3">
+                                                    <div class="alert alert-info">
+                                                        <i class="oi oi-info"></i> Showing first 50 photos. @remainingCount more photos available.
+                                                    </div>
+                                                </div>
                                             }
                                         </div>
                                     }

@@ -11,16 +11,16 @@ namespace MyPhotoHelper.Services
     {
         private readonly IDbContextFactory<MyPhotoHelperDbContext> _contextFactory;
         private readonly IThumbnailService _thumbnailService;
-        private readonly IHeicCacheService _heicCacheService;
+        private readonly IThumbnailCacheService _thumbnailCacheService;
 
         public ImageDisplayService(
             IDbContextFactory<MyPhotoHelperDbContext> contextFactory,
             IThumbnailService thumbnailService,
-            IHeicCacheService heicCacheService)
+            IThumbnailCacheService thumbnailCacheService)
         {
             _contextFactory = contextFactory;
             _thumbnailService = thumbnailService;
-            _heicCacheService = heicCacheService;
+            _thumbnailCacheService = thumbnailCacheService;
         }
 
         public async Task<string?> GetThumbnailDataUriAsync(int imageId)
@@ -48,22 +48,8 @@ namespace MyPhotoHelper.Services
                     return null;
                 }
 
-                // Check if this is a HEIC file
-                var extension = (image.FileExtension ?? "").ToLowerInvariant();
-                var isHeicFile = extension == ".heic" || extension == ".heif";
-
-                byte[]? thumbnailBytes = null;
-
-                if (isHeicFile)
-                {
-                    // Use cached HEIC converter
-                    thumbnailBytes = await _heicCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
-                }
-                else
-                {
-                    // Use standard thumbnail service
-                    thumbnailBytes = await _thumbnailService.GetThumbnailAsync(fullPath);
-                }
+                // Use the unified thumbnail cache service for all image types
+                byte[]? thumbnailBytes = await _thumbnailCacheService.GetCachedThumbnailAsync(fullPath, 200);
 
                 if (thumbnailBytes == null || thumbnailBytes.Length == 0)
                 {
@@ -125,7 +111,7 @@ namespace MyPhotoHelper.Services
             }
         }
 
-        public async Task<string?> GetThumbnailDataUriFromPathAsync(string filePath, int maxSize = 250)
+        public async Task<string?> GetThumbnailDataUriFromPathAsync(string filePath, int maxSize = 200)
         {
             try
             {
@@ -148,22 +134,8 @@ namespace MyPhotoHelper.Services
                     return null;
                 }
 
-                // Check if this is a HEIC file
-                var extension = Path.GetExtension(filePath).ToLowerInvariant();
-                var isHeicFile = extension == ".heic" || extension == ".heif";
-
-                byte[]? thumbnailBytes = null;
-
-                if (isHeicFile)
-                {
-                    // Use HEIC converter
-                    thumbnailBytes = await _heicCacheService.GetCachedHeicThumbnailAsync(filePath, maxSize);
-                }
-                else
-                {
-                    // Use standard thumbnail service
-                    thumbnailBytes = await _thumbnailService.GetThumbnailAsync(filePath);
-                }
+                // Use the unified thumbnail cache service for all image types
+                byte[]? thumbnailBytes = await _thumbnailCacheService.GetCachedThumbnailAsync(filePath, maxSize);
 
                 if (thumbnailBytes == null || thumbnailBytes.Length == 0)
                 {

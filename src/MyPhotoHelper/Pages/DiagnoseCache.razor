@@ -1,6 +1,6 @@
 @page "/diagnose-cache"
 @using System.IO
-@inject IHeicCacheService HeicCacheService
+@inject IThumbnailCacheService ThumbnailCacheService
 
 <h3>Cache Diagnostics</h3>
 
@@ -69,7 +69,7 @@
 
     private void RefreshDirInfo()
     {
-        cacheDir = HeicCacheService.GetCacheDirectory();
+        cacheDir = ThumbnailCacheService.GetCacheDirectory();
         dirExists = Directory.Exists(cacheDir);
         
         if (dirExists)

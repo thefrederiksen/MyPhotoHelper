@@ -1,5 +1,6 @@
 @using MyPhotoHelper.Services
 @using MyPhotoHelper.Models
+@inject IImageDisplayService ImageDisplayService
 
 <div class="photo-thumbnail-container">
     @if (imageLoaded && !string.IsNullOrEmpty(imageUrl))
@@ -36,14 +37,6 @@
         </div>
     </div>
     
-    @if (!string.IsNullOrEmpty(imageUrl) && !imageLoaded)
-    {
-        <!-- Hidden image to preload -->
-        <img src="@imageUrl" 
-             style="display: none;"
-             @onload="OnImageLoaded"
-             @onerror="OnImageError" />
-    }
 </div>
 
 @code {
@@ -56,43 +49,36 @@
     private bool imageLoaded = false;
     private bool hasError = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         try
         {
-            // For HEIC files, use the thumbnail endpoint which caches
-            // For other files, use raw endpoint
-            if (IsHeicFile())
+            isLoading = true;
+            // Use the secure IImageDisplayService to get thumbnail data URI
+            imageUrl = await ImageDisplayService.GetThumbnailDataUriAsync(Photo.ImageId) ?? string.Empty;
+            
+            if (!string.IsNullOrEmpty(imageUrl))
             {
-                imageUrl = $"/api/images/{Photo.ImageId}/thumbnail";
+                imageLoaded = true;
+                isLoading = false;
             }
             else
             {
-                imageUrl = $"/api/images/{Photo.ImageId}/raw";
+                hasError = true;
+                isLoading = false;
             }
-            isLoading = true;
+            
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Error setting image URL for {Photo.FileName}: {ex.Message}");
+            Logger.Warning($"Error loading thumbnail for {Photo.FileName}: {ex.Message}");
             isLoading = false;
             hasError = true;
+            StateHasChanged();
         }
     }
 
-    private void OnImageLoaded()
-    {
-        imageLoaded = true;
-        isLoading = false;
-        StateHasChanged();
-    }
-
-    private void OnImageError()
-    {
-        hasError = true;
-        isLoading = false;
-        StateHasChanged();
-    }
 
     private bool IsHeicFile()
     {

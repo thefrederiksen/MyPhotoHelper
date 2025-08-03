@@ -36,11 +36,11 @@ Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs creat
 
 [Icons]
 ; Start Menu shortcuts (always created)
-Name: "{group}\MyPhotoHelper"; Filename: "{app}\MyPhotoHelper.exe"; WorkingDir: "{app}"
+Name: "{group}\MyPhotoHelper"; Filename: "{app}\MyPhotoHelper.exe"; WorkingDir: "{app}"; IconFilename: "{app}\MyPhotoHelper.exe"; IconIndex: 0
 Name: "{group}\{cm:UninstallProgram,MyPhotoHelper}"; Filename: "{uninstallexe}"
 
-; Desktop shortcut (optional)
-Name: "{commondesktop}\MyPhotoHelper"; Filename: "{app}\MyPhotoHelper.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+; Desktop shortcut (optional)  
+Name: "{commondesktop}\MyPhotoHelper"; Filename: "{app}\MyPhotoHelper.exe"; WorkingDir: "{app}"; IconFilename: "{app}\MyPhotoHelper.exe"; IconIndex: 0; Tasks: desktopicon
 
 [Registry]
 ; Windows startup entry (optional)

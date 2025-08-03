@@ -13,6 +13,8 @@ namespace MyPhotoHelper.Pages
         [Inject] private MyPhotoHelperDbContext DbContext { get; set; } = null!;
         [Inject] private IScanStatusService ScanStatusService { get; set; } = null!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+        [Inject] private IBackgroundPhotoLoader BackgroundPhotoLoader { get; set; } = null!;
+        [Inject] private IGalleryStateService GalleryStateService { get; set; } = null!;
 
         private class YearGroup
         {
@@ -40,10 +42,13 @@ namespace MyPhotoHelper.Pages
         private bool showCategoryDropdown = false;
         private HashSet<string> selectedCategories = new() { "photo", "unknown" };
         private HashSet<string> loadingMonths = new();
+        private readonly SemaphoreSlim _stateChangeSemaphore = new(1, 1);
+        private CancellationTokenSource _componentCts = new();
 
         protected override async Task OnInitializedAsync()
         {
             ScanStatusService.StatusChanged += OnScanStatusChanged;
+            GalleryStateService.PhotosBatchLoaded += OnPhotosBatchLoaded;
             await LoadGalleryStructure();
             
             // Set up scroll detection for scroll-to-top button
@@ -164,59 +169,38 @@ namespace MyPhotoHelper.Pages
             }
         }
 
-        private async Task LoadMonthPhotos(int year, int month)
+        private Task LoadMonthPhotos(int year, int month)
         {
             var yearGroup = yearGroups.FirstOrDefault(y => y.Year == year);
             var monthGroup = yearGroup?.MonthGroups.FirstOrDefault(m => m.Month == month);
             
-            if (monthGroup == null || monthGroup.Photos != null) return;
+            if (monthGroup == null || monthGroup.Photos != null) return Task.CompletedTask;
 
+            var key = $"{year}-{month}";
+            if (loadingMonths.Contains(key)) return Task.CompletedTask;
+            
+            loadingMonths.Add(key);
+            
             try
             {
-                // Load photos for this specific month
-                var startDate = new DateTime(year, month, 1);
-                var endDate = startDate.AddMonths(1);
-
-                // Build base query with category filter
-                var monthQuery = DbContext.tbl_images
-                    .Where(img => img.FileExists == 1 && img.IsDeleted == 0);
-                
-                // Apply category filter if not all categories are selected
-                if (selectedCategories.Count > 0 && selectedCategories.Count < 3)
-                {
-                    monthQuery = monthQuery.Where(img => 
-                        // Check if image has analysis record
-                        (DbContext.tbl_image_analysis.Any(a => 
-                            a.ImageId == img.ImageId && 
-                            ((selectedCategories.Contains("photo") && a.ImageCategory == "photo") ||
-                             (selectedCategories.Contains("screenshot") && a.ImageCategory == "screenshot") ||
-                             (selectedCategories.Contains("unknown") && (a.ImageCategory == null || a.ImageCategory == "unknown")))
-                        )) ||
-                        // Include images without analysis only if "unknown" is selected
-                        (selectedCategories.Contains("unknown") && !DbContext.tbl_image_analysis.Any(a => a.ImageId == img.ImageId))
-                    );
-                }
-
-                monthGroup.Photos = await monthQuery
-                    .Join(DbContext.tbl_image_metadata,
-                          img => img.ImageId,
-                          meta => meta.ImageId,
-                          (img, meta) => new { img, meta })
-                    .Where(x => (x.meta.DateTaken ?? x.img.DateCreated) >= startDate &&
-                               (x.meta.DateTaken ?? x.img.DateCreated) < endDate)
-                    .OrderByDescending(x => x.meta.DateTaken ?? x.img.DateCreated)
-                    .Select(x => x.img)
-                    .Include(img => img.tbl_image_metadata)
-                    .Include(img => img.tbl_image_analysis)
-                    .Include(img => img.ScanDirectory)
-                    .ToListAsync();
-
-                StateHasChanged();
+                // Start loading in background
+                BackgroundPhotoLoader.StartBackgroundLoading(
+                    new List<(int, int)> { (year, month) },
+                    selectedCategories,
+                    (loadedYear, loadedMonth, photos) =>
+                    {
+                        // Queue photos for batched display update
+                        GalleryStateService.QueuePhotosForDisplay(loadedYear, loadedMonth, photos);
+                        loadingMonths.Remove($"{loadedYear}-{loadedMonth}");
+                    });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading photos for {year}-{month}: {ex.Message}");
+                Console.WriteLine($"Error starting photo load for {year}-{month}: {ex.Message}");
+                loadingMonths.Remove(key);
             }
+            
+            return Task.CompletedTask;
         }
 
         private async Task ToggleMonth(int year, int month)
@@ -259,24 +243,59 @@ namespace MyPhotoHelper.Pages
 
         private async Task RefreshGallery()
         {
+            BackgroundPhotoLoader.CancelBackgroundLoading();
+            GalleryStateService.Clear();
             expandedMonths.Clear();
             await LoadGalleryStructure();
         }
 
-        private void ExpandAll()
+        private async Task ExpandAll()
         {
+            // IMMEDIATE FEEDBACK - expand UI instantly
             foreach (var yearGroup in yearGroups)
             {
                 foreach (var monthGroup in yearGroup.MonthGroups)
                 {
                     var key = $"{yearGroup.Year}-{monthGroup.Month}";
                     expandedMonths[key] = true;
-                    
-                    // Don't load photos immediately - let them load on-demand as user scrolls
-                    // This prevents memory issues and crashes
                 }
             }
-            StateHasChanged();
+            StateHasChanged(); // Show expanded state immediately
+            
+            // Then load photos progressively in background
+            await Task.Delay(100); // Let UI update first
+            await LoadPhotosProgressively();
+        }
+        
+        private Task LoadPhotosProgressively()
+        {
+            var allMonths = new List<(int year, int month)>();
+            
+            foreach (var yearGroup in yearGroups)
+            {
+                foreach (var monthGroup in yearGroup.MonthGroups)
+                {
+                    if (monthGroup.Photos == null)
+                    {
+                        allMonths.Add((yearGroup.Year, monthGroup.Month));
+                    }
+                }
+            }
+            
+            if (allMonths.Any())
+            {
+                // Start loading all months in background
+                BackgroundPhotoLoader.StartBackgroundLoading(
+                    allMonths,
+                    selectedCategories,
+                    (loadedYear, loadedMonth, photos) =>
+                    {
+                        // Queue photos for batched display update
+                        GalleryStateService.QueuePhotosForDisplay(loadedYear, loadedMonth, photos);
+                    });
+            }
+            
+            return Task.CompletedTask;
         }
 
         private void CollapseAll()
@@ -310,6 +329,35 @@ namespace MyPhotoHelper.Pages
                 }
             });
         }
+        
+        private async void OnPhotosBatchLoaded(object? sender, PhotosBatchLoadedEventArgs e)
+        {
+            if (_componentCts?.Token.IsCancellationRequested ?? true) return;
+            
+            await InvokeAsync(async () =>
+            {
+                if (_componentCts?.Token.IsCancellationRequested ?? true) return;
+                
+                var yearGroup = yearGroups.FirstOrDefault(y => y.Year == e.Year);
+                var monthGroup = yearGroup?.MonthGroups.FirstOrDefault(m => m.Month == e.Month);
+                
+                if (monthGroup != null && monthGroup.Photos == null)
+                {
+                    monthGroup.Photos = e.Photos;
+                    
+                    // Debounced state update
+                    await _stateChangeSemaphore.WaitAsync();
+                    try
+                    {
+                        StateHasChanged();
+                    }
+                    finally
+                    {
+                        _stateChangeSemaphore.Release();
+                    }
+                }
+            });
+        }
 
         private void ToggleCategoryDropdown()
         {
@@ -334,6 +382,8 @@ namespace MyPhotoHelper.Pages
         private async Task ApplyCategoryFilter()
         {
             showCategoryDropdown = false;
+            BackgroundPhotoLoader.CancelBackgroundLoading();
+            GalleryStateService.Clear();
             await RefreshGallery();
         }
 
@@ -387,16 +437,13 @@ namespace MyPhotoHelper.Pages
                 }
             }
             
-            // Load photos for expanded months
-            foreach (var (year, month) in monthsToLoad)
+            // Load photos for expanded months using background loader
+            if (monthsToLoad.Any())
             {
-                var key = $"{year}-{month}";
-                loadingMonths.Add(key);
-                _ = Task.Run(async () => 
+                foreach (var (year, month) in monthsToLoad)
                 {
                     await LoadMonthPhotos(year, month);
-                    loadingMonths.Remove(key);
-                });
+                }
             }
         }
 
@@ -410,7 +457,13 @@ namespace MyPhotoHelper.Pages
 
         public void Dispose()
         {
+            _componentCts?.Cancel();
             ScanStatusService.StatusChanged -= OnScanStatusChanged;
+            GalleryStateService.PhotosBatchLoaded -= OnPhotosBatchLoaded;
+            BackgroundPhotoLoader.CancelBackgroundLoading();
+            GalleryStateService.Clear();
+            _stateChangeSemaphore?.Dispose();
+            _componentCts?.Dispose();
         }
     }
 }

@@ -15,13 +15,13 @@ public class ImagesController : ControllerBase
     private readonly MyPhotoHelperDbContext _context;
     private readonly IPathService _pathService;
     private readonly IPythonEnvironment? _pythonEnv;
-    private readonly IHeicCacheService _heicCacheService;
+    private readonly IThumbnailCacheService _thumbnailCacheService;
 
-    public ImagesController(MyPhotoHelperDbContext context, IPathService pathService, IServiceProvider serviceProvider, IHeicCacheService heicCacheService)
+    public ImagesController(MyPhotoHelperDbContext context, IPathService pathService, IServiceProvider serviceProvider, IThumbnailCacheService thumbnailCacheService)
     {
         _context = context;
         _pathService = pathService;
-        _heicCacheService = heicCacheService;
+        _thumbnailCacheService = thumbnailCacheService;
         
         // Try to get Python environment for HEIC support
         try
@@ -77,7 +77,7 @@ public class ImagesController : ControllerBase
                     Logger.Info($"Using cached HEIC converter for thumbnail: {image.FileName}");
                     
                     // Use cached HEIC thumbnail
-                    var heicBytes = await _heicCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
+                    var heicBytes = await _thumbnailCacheService.GetCachedHeicThumbnailAsync(fullPath, 250);
                     
                     if (heicBytes != null)
                     {
@@ -224,7 +224,7 @@ public class ImagesController : ControllerBase
                     
                     // Convert HEIC on-demand (not cached for full size)
                     // Using 2000 as max dimension to get high quality while keeping file size reasonable
-                    var jpegBytes = await _heicCacheService.ConvertHeicToJpegAsync(fullPath, 2000, 85);
+                    var jpegBytes = await _thumbnailCacheService.ConvertHeicToJpegAsync(fullPath, 2000, 85);
                     
                     if (jpegBytes != null)
                     {

@@ -256,7 +256,7 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IMemoryService, MemoryService>();
             builder.Services.AddScoped<IPhotoPathService, PhotoPathService>();
             builder.Services.AddScoped<IFolderDialogService, FolderDialogService>();
-            builder.Services.AddScoped<IThumbnailService, ThumbnailService>();
+            builder.Services.AddSingleton<IThumbnailService, ThumbnailService>();
             builder.Services.AddScoped<IPhotoScanService, PhotoScanService>();
             builder.Services.AddSingleton<IScanStatusService, ScanStatusService>();
             builder.Services.AddScoped<IMetadataExtractionService, MetadataExtractionService>();
@@ -266,10 +266,13 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IPhasedScanService, PhasedScanService>();
             builder.Services.AddScoped<IDuplicateDetectionService, DuplicateDetectionService>();
             builder.Services.AddScoped<IImageDetailsService, ImageDetailsService>();
-            builder.Services.AddSingleton<IHeicCacheService, HeicCacheService>();
+            builder.Services.AddSingleton<IThumbnailCacheService, ThumbnailCacheService>();
+            builder.Services.AddSingleton<IHeicCacheService>(provider => provider.GetRequiredService<IThumbnailCacheService>());
             builder.Services.AddScoped<IMetadataClassificationService, MetadataClassificationService>();
             builder.Services.AddScoped<IMetadataClassificationTestService, MetadataClassificationTestService>();
             builder.Services.AddScoped<IImageDisplayService, ImageDisplayService>();
+            builder.Services.AddScoped<IBackgroundPhotoLoader, BackgroundPhotoLoader>();
+            builder.Services.AddScoped<IGalleryStateService, GalleryStateService>();
             
             // Add Blazor services
             builder.Services.AddRazorPages();

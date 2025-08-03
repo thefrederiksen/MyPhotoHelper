@@ -3,7 +3,7 @@
 @using MyPhotoHelper.Data
 @using Microsoft.EntityFrameworkCore
 @inject MyPhotoHelperDbContext DbContext
-@inject IHeicCacheService HeicCacheService
+@inject IThumbnailCacheService ThumbnailCacheService
 
 @if (IsVisible && Image != null)
 {
@@ -150,7 +150,7 @@
                                             <td><strong>HEIC Cache:</strong></td>
                                             <td class="text-break small">
                                                 <div><strong>Cache Directory:</strong></div>
-                                                <code>@HeicCacheService.GetCacheDirectory()</code>
+                                                <code>@ThumbnailCacheService.GetCacheDirectory()</code>
                                                 <div class="mt-2"><strong>Thumbnail Cache File:</strong></div>
                                                 <code>@GetCachedThumbnailPath()</code>
                                                 @if (File.Exists(GetCachedThumbnailPath()))
@@ -220,7 +220,7 @@
         // Use same subdirectory structure as HeicCacheService
         var subDir = cacheKey.Substring(0, 2).ToLower();
         
-        return Path.Combine(HeicCacheService.GetCacheDirectory(), subDir, $"thumb_{cacheKey}.jpg");
+        return Path.Combine(ThumbnailCacheService.GetCacheDirectory(), subDir, $"thumb_{cacheKey}.jpg");
     }
 
     private string GetCacheKey(string filePath, int maxSize, int quality)
