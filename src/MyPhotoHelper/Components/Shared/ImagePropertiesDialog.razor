@@ -173,8 +173,11 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <a href="/api/images/@Image.ImageId/raw" target="_blank" class="btn btn-primary">
-                        <i class="oi oi-external-link"></i> View Full Image
+                    <button type="button" class="btn btn-primary" @onclick="OpenInDefaultViewer">
+                        <i class="oi oi-external-link"></i> Open in Default Viewer
+                    </button>
+                    <a href="/api/images/@Image.ImageId/raw" target="_blank" class="btn btn-secondary">
+                        <i class="oi oi-browser"></i> View in Browser
                     </a>
                     <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
                 </div>
@@ -297,6 +300,31 @@
         scanDirectory = "";
         fileExists = false;
         await OnClose.InvokeAsync();
+    }
+    
+    private async Task OpenInDefaultViewer()
+    {
+        try
+        {
+            await CalculateFullPath();
+            if (fileExists && !string.IsNullOrEmpty(fullPath))
+            {
+                Logger.Info($"Opening image in default viewer: {fullPath}");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = fullPath,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                Logger.Warning($"Cannot open image - file not found: {fullPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error opening image in default viewer: {ex.Message}");
+        }
     }
 
     private string FormatFileSize(int bytes)

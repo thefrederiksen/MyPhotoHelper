@@ -124,16 +124,16 @@ namespace MyPhotoHelper
         {
             try
             {
-                // Configure AutoUpdater - standard mode with UI
+                // Configure AutoUpdater - silent mode unless update is available
                 AutoUpdater.RunUpdateAsAdmin = false;
                 AutoUpdater.Synchronous = true; // Wait for update check to complete
                 AutoUpdater.ShowSkipButton = false;
                 AutoUpdater.ShowRemindLaterButton = true;
                 AutoUpdater.Mandatory = false;
-                AutoUpdater.UpdateMode = Mode.Normal; // Show standard UI
-                AutoUpdater.ReportErrors = true;
+                AutoUpdater.UpdateMode = Mode.Normal; // Show UI only when update is available
+                AutoUpdater.ReportErrors = false; // Don't show "no update available" messages
                 
-                // Check for updates before app starts - this will show UI if update is available
+                // Check for updates before app starts - this will show UI only if update is available
                 AutoUpdater.Start("https://raw.githubusercontent.com/thefrederiksen/MyPhotoHelper/main/update.xml");
                 
                 // Check if we should minimize (started from Windows startup)

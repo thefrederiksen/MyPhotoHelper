@@ -38,7 +38,7 @@ namespace MyPhotoHelper.Pages
         private bool showScrollTop = false;
         private Dictionary<string, bool> expandedMonths = new();
         private bool showCategoryDropdown = false;
-        private HashSet<string> selectedCategories = new() { "photo", "screenshot", "unknown" };
+        private HashSet<string> selectedCategories = new() { "photo", "unknown" };
         private HashSet<string> loadingMonths = new();
 
         protected override async Task OnInitializedAsync()

@@ -12,6 +12,7 @@
 @inject IJSRuntime JSRuntime
 @inject IFolderDialogService FolderDialog
 @inject IServiceProvider ServiceProvider
+@inject IImageDisplayService ImageDisplayService
 
 <PageTitle>Welcome to MyPhotoHelper</PageTitle>
 
@@ -52,10 +53,10 @@
                             else if (defaultPicturesScanResult != null)
                             {
                                 <div class="ms-3 d-flex align-items-center gap-3">
-                                    @if (!string.IsNullOrEmpty(defaultPicturesScanResult.LatestImagePath))
+                                    @if (!string.IsNullOrEmpty(defaultPicturesScanResult.LatestImagePath) && thumbnailDataUris.ContainsKey(defaultPicturesScanResult.LatestImagePath))
                                     {
                                         <div class="folder-thumbnail">
-                                            <img src="@GetThumbnailUrl(defaultPicturesScanResult.LatestImagePath)" 
+                                            <img src="@thumbnailDataUris[defaultPicturesScanResult.LatestImagePath]" 
                                                  alt="Latest photo" 
                                                  class="img-thumbnail" />
                                         </div>
@@ -92,10 +93,10 @@
                                         <div class="text-muted small">@dir.Path</div>
                                     </div>
                                     <div class="ms-3 d-flex align-items-center gap-3">
-                                        @if (!string.IsNullOrEmpty(dir.LatestImagePath))
+                                        @if (!string.IsNullOrEmpty(dir.LatestImagePath) && thumbnailDataUris.ContainsKey(dir.LatestImagePath))
                                         {
                                             <div class="folder-thumbnail">
-                                                <img src="@GetThumbnailUrl(dir.LatestImagePath)" 
+                                                <img src="@thumbnailDataUris[dir.LatestImagePath]" 
                                                      alt="Latest photo" 
                                                      class="img-thumbnail" />
                                             </div>
@@ -264,10 +265,10 @@
                         else
                         {
                             <div class="text-center mb-4">
-                                @if (!string.IsNullOrEmpty(folderPreviewData.LatestImagePath))
+                                @if (!string.IsNullOrEmpty(folderPreviewData.LatestImagePath) && thumbnailDataUris.ContainsKey(folderPreviewData.LatestImagePath))
                                 {
                                     <div class="preview-image mb-3">
-                                        <img src="@GetThumbnailUrl(folderPreviewData.LatestImagePath)" 
+                                        <img src="@thumbnailDataUris[folderPreviewData.LatestImagePath]" 
                                              alt="Latest photo from folder" 
                                              class="img-fluid rounded" 
                                              style="max-height: 300px;" />
@@ -569,6 +570,9 @@
     private bool showFolderPreview = false;
     private FolderPreviewData? folderPreviewData = null;
     private bool isScanningFolder = false;
+    
+    // Store data URIs for thumbnails
+    private Dictionary<string, string> thumbnailDataUris = new();
     private bool showDirectoryModal = false;
     private string newDirectoryPath = "";
     private string directoryError = "";
@@ -701,10 +705,17 @@
                     preview.LatestImageDate = latestDate;
             });
             
-            await InvokeAsync(() =>
+            await InvokeAsync(async () =>
             {
                 defaultPicturesScanResult = preview;
                 isScanningDefault = false;
+                
+                // Generate data URI for the latest image
+                if (!string.IsNullOrEmpty(preview.LatestImagePath))
+                {
+                    await GetThumbnailUrlAsync(preview.LatestImagePath);
+                }
+                
                 StateHasChanged();
             });
         }
@@ -859,6 +870,13 @@
                         folderPreviewData.LatestImagePath = latestPath;
                         folderPreviewData.LatestImageDate = latestDate;
                         isScanningFolder = false;
+                        
+                        // Generate data URI for the preview image
+                        if (!string.IsNullOrEmpty(latestPath))
+                        {
+                            _ = GetThumbnailUrlAsync(latestPath);
+                        }
+                        
                         StateHasChanged();
                     }
                 });
@@ -1238,10 +1256,24 @@
         }
     }
     
-    private string GetThumbnailUrl(string imagePath)
+    private async Task<string> GetThumbnailUrlAsync(string imagePath)
     {
-        // Use raw image endpoint for better performance - no thumbnail processing needed
-        return $"/api/images/raw/{Uri.EscapeDataString(imagePath)}";
+        // Check if we already have a data URI for this path
+        if (thumbnailDataUris.ContainsKey(imagePath))
+        {
+            return thumbnailDataUris[imagePath];
+        }
+        
+        // Generate data URI and cache it
+        var dataUri = await ImageDisplayService.GetThumbnailDataUriFromPathAsync(imagePath);
+        if (!string.IsNullOrEmpty(dataUri))
+        {
+            thumbnailDataUris[imagePath] = dataUri;
+            return dataUri;
+        }
+        
+        // Return a placeholder if thumbnail generation fails
+        return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y4ZjlmYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZmlsbD0iIzZjNzU3ZCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPkltYWdlPC90ZXh0Pjwvc3ZnPg==";
     }
     
     private void CancelFolderPreview()
@@ -1254,11 +1286,17 @@
         StateHasChanged();
     }
     
-    private void ConfirmFolderPreview()
+    private async void ConfirmFolderPreview()
     {
         if (folderPreviewData != null)
         {
             showFolderPreview = false;
+            
+            // Generate data URI for the latest image if available
+            if (!string.IsNullOrEmpty(folderPreviewData.LatestImagePath))
+            {
+                await GetThumbnailUrlAsync(folderPreviewData.LatestImagePath);
+            }
             
             // Just add to the list - don't save to database until finish
             customDirectories.Add(new DirectoryInfo 
