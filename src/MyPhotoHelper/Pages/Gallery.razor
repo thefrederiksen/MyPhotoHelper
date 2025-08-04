@@ -196,23 +196,11 @@
                                     else
                                     {
                                         <div class="row g-2">
-                                            @{
-                                                var photosToShow = monthGroup.Photos.Take(50).ToList();
-                                                var remainingCount = monthGroup.Photos.Count - photosToShow.Count;
-                                            }
-                                            @foreach (var photo in photosToShow)
+                                            @foreach (var photo in monthGroup.Photos)
                                             {
                                                 <ImageViewer Photo="photo" 
                                                            ContainerClass="@(isCompactView ? "col-2 col-sm-1" : "col-6 col-sm-4 col-md-3 col-lg-2")"
                                                            ShowTime="true" />
-                                            }
-                                            @if (remainingCount > 0)
-                                            {
-                                                <div class="col-12 text-center mt-3">
-                                                    <div class="alert alert-info">
-                                                        <i class="oi oi-info"></i> Showing first 50 photos. @remainingCount more photos available.
-                                                    </div>
-                                                </div>
                                             }
                                         </div>
                                     }
@@ -297,3 +285,40 @@
         margin-bottom: 0.5rem !important;
     }
 </style>
+
+<script>
+    window.galleryHelpers = {
+        saveScrollPosition: function() {
+            return {
+                scrollTop: window.pageYOffset || document.documentElement.scrollTop,
+                scrollLeft: window.pageXOffset || document.documentElement.scrollLeft
+            };
+        },
+        restoreScrollPosition: function(position) {
+            if (position) {
+                // Use requestAnimationFrame for smoother scrolling
+                requestAnimationFrame(() => {
+                    window.scrollTo(position.scrollLeft, position.scrollTop);
+                });
+            }
+        },
+        restoreScrollPositionWithRetry: function(position, maxRetries = 5) {
+            if (!position) return;
+            
+            let retries = 0;
+            const tryRestore = () => {
+                window.scrollTo(position.scrollLeft, position.scrollTop);
+                
+                // Check if scroll was successful
+                const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                if (Math.abs(currentScrollTop - position.scrollTop) > 10 && retries < maxRetries) {
+                    retries++;
+                    setTimeout(tryRestore, 100);
+                }
+            };
+            
+            // Initial attempt after a small delay to let DOM settle
+            setTimeout(tryRestore, 50);
+        }
+    };
+</script>

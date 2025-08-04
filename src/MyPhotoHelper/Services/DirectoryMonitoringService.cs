@@ -51,8 +51,8 @@ namespace MyPhotoHelper.Services
             _serviceProvider = serviceProvider;
             _galleryUpdateService = galleryUpdateService;
             
-            // Process batch events every 2 seconds
-            _batchProcessTimer = new System.Threading.Timer(ProcessBatchEvents, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+            // Process batch events every 500ms for faster response
+            _batchProcessTimer = new System.Threading.Timer(ProcessBatchEvents, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)

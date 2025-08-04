@@ -12,6 +12,7 @@ using MyPhotoHelper.Models;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using MyPhotoHelper.Forms;
 
 namespace MyPhotoHelper.Services
 {
@@ -261,6 +262,11 @@ namespace MyPhotoHelper.Services
                 openMenuItem.Font = new Font(openMenuItem.Font, FontStyle.Bold); // Make default action bold
                 contextMenu.Items.Add(openMenuItem);
                 
+                // Gallery - Opens native WinForms gallery
+                var galleryMenuItem = new ToolStripMenuItem("Photo Gallery");
+                galleryMenuItem.Click += (s, e) => OpenGallery();
+                contextMenu.Items.Add(galleryMenuItem);
+                
                 contextMenu.Items.Add(new ToolStripSeparator());
                 
                 // Scan Status
@@ -488,6 +494,38 @@ namespace MyPhotoHelper.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to open browser");
+            }
+        }
+        
+        private void OpenGallery()
+        {
+            try
+            {
+                _logger.LogInformation("Opening Modern Gallery");
+                
+                // Check if a gallery form is already open
+                foreach (Form form in Application.OpenForms)
+                {
+                    if (form is MyPhotoHelper.Forms.BasicGalleryForm)
+                    {
+                        form.Activate();
+                        form.WindowState = FormWindowState.Normal;
+                        return;
+                    }
+                }
+                
+                // Create and show the basic gallery form that actually works
+                var galleryForm = new MyPhotoHelper.Forms.BasicGalleryForm(_serviceProvider);
+                galleryForm.Show();
+                
+                _logger.LogInformation("Gallery window opened");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open gallery: {Message}", ex.Message);
+                var innerEx = ex.InnerException != null ? $"\n\nInner Exception: {ex.InnerException.Message}" : "";
+                MessageBox.Show($"Failed to open gallery:\n\n{ex.Message}{innerEx}\n\nStack Trace:\n{ex.StackTrace}", "Gallery Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

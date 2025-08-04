@@ -245,10 +245,16 @@ namespace MyPhotoHelper.Pages
 
         private async Task RefreshGallery()
         {
+            // Save current scroll position
+            var scrollPosition = await JSRuntime.InvokeAsync<object>("galleryHelpers.saveScrollPosition");
+            
             BackgroundPhotoLoader.CancelBackgroundLoading();
             GalleryStateService.Clear();
             expandedMonths.Clear();
             await LoadGalleryStructure();
+            
+            // Restore scroll position after refresh with retry logic
+            await JSRuntime.InvokeVoidAsync("galleryHelpers.restoreScrollPositionWithRetry", scrollPosition);
         }
 
         private async Task ExpandAll()
@@ -327,7 +333,13 @@ namespace MyPhotoHelper.Pages
                 // Refresh if scan completed
                 if (!ScanStatusService.IsScanning)
                 {
+                    // Save current scroll position
+                    var scrollPosition = await JSRuntime.InvokeAsync<object>("galleryHelpers.saveScrollPosition");
+                    
                     await LoadGalleryStructure();
+                    
+                    // Restore scroll position with retry logic
+                    await JSRuntime.InvokeVoidAsync("galleryHelpers.restoreScrollPositionWithRetry", scrollPosition);
                 }
             });
         }
@@ -386,7 +398,14 @@ namespace MyPhotoHelper.Pages
             showCategoryDropdown = false;
             BackgroundPhotoLoader.CancelBackgroundLoading();
             GalleryStateService.Clear();
-            await RefreshGallery();
+            
+            // Save current scroll position
+            var scrollPosition = await JSRuntime.InvokeAsync<object>("galleryHelpers.saveScrollPosition");
+            
+            await LoadGalleryStructure();
+            
+            // Restore scroll position with retry logic
+            await JSRuntime.InvokeVoidAsync("galleryHelpers.restoreScrollPositionWithRetry", scrollPosition);
         }
 
         private void SelectAllCategories()
@@ -467,6 +486,9 @@ namespace MyPhotoHelper.Pages
                     // If photos were added or deleted, reload the gallery structure
                     if (e.AddedPaths.Any() || e.DeletedPaths.Any())
                     {
+                        // Save current scroll position before update
+                        var scrollPosition = await JSRuntime.InvokeAsync<object>("galleryHelpers.saveScrollPosition");
+                        
                         // Clear any cached photos in expanded months
                         foreach (var yearGroup in yearGroups)
                         {
@@ -501,6 +523,9 @@ namespace MyPhotoHelper.Pages
                         }
                         
                         StateHasChanged();
+                        
+                        // Restore scroll position after DOM update with retry logic
+                        await JSRuntime.InvokeVoidAsync("galleryHelpers.restoreScrollPositionWithRetry", scrollPosition);
                     }
                 }
                 catch (Exception ex)
