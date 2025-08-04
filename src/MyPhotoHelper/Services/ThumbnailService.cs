@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 
 namespace MyPhotoHelper.Services
 {
@@ -31,6 +32,9 @@ namespace MyPhotoHelper.Services
 
                     using var image = Image.FromFile(imagePath);
                     
+                    // Apply EXIF orientation if present
+                    ApplyExifOrientation(image);
+                    
                     // Calculate aspect ratio
                     var ratioX = (double)width / image.Width;
                     var ratioY = (double)height / image.Height;
@@ -42,9 +46,9 @@ namespace MyPhotoHelper.Services
                     using var thumbnail = new Bitmap(newWidth, newHeight);
                     using var graphics = Graphics.FromImage(thumbnail);
                     
-                    graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                    graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    graphics.CompositingQuality = CompositingQuality.HighQuality;
+                    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    graphics.SmoothingMode = SmoothingMode.HighQuality;
                     
                     graphics.DrawImage(image, 0, 0, newWidth, newHeight);
 
@@ -58,6 +62,61 @@ namespace MyPhotoHelper.Services
                     return Array.Empty<byte>();
                 }
             });
+        }
+
+        private void ApplyExifOrientation(Image image)
+        {
+            const int OrientationPropertyId = 0x0112;
+
+            if (!image.PropertyIdList.Contains(OrientationPropertyId))
+                return;
+
+            var orientationProperty = image.GetPropertyItem(OrientationPropertyId);
+            if (orientationProperty?.Value == null || orientationProperty.Value.Length == 0)
+                return;
+
+            int orientation = orientationProperty.Value[0];
+
+            switch (orientation)
+            {
+                case 1:
+                    // Normal - no rotation needed
+                    break;
+                case 2:
+                    // Mirror horizontal
+                    image.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                    break;
+                case 3:
+                    // Rotate 180
+                    image.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                    break;
+                case 4:
+                    // Mirror vertical
+                    image.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                    break;
+                case 5:
+                    // Mirror horizontal and rotate 90 CW
+                    image.RotateFlip(RotateFlipType.Rotate90FlipX);
+                    break;
+                case 6:
+                    // Rotate 90 CW
+                    image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                    break;
+                case 7:
+                    // Mirror horizontal and rotate 270 CW
+                    image.RotateFlip(RotateFlipType.Rotate270FlipX);
+                    break;
+                case 8:
+                    // Rotate 270 CW
+                    image.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                    break;
+            }
+
+            // Remove the orientation property to prevent double-rotation
+            if (image.PropertyIdList.Contains(OrientationPropertyId))
+            {
+                image.RemovePropertyItem(OrientationPropertyId);
+            }
         }
     }
 }

@@ -43,6 +43,14 @@ def convert_heic_to_jpeg(heic_path: str, max_size: int = 800, quality: int = 85)
             
         # Open HEIC file with Pillow
         with Image.open(heic_path) as img:
+            # Apply EXIF orientation if present
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+            except:
+                # If exif_transpose is not available or fails, continue without rotation
+                pass
+            
             # Convert to RGB if necessary (HEIC might be in different color space)
             if img.mode != 'RGB':
                 img = img.convert('RGB')
