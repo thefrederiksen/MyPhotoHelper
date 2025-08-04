@@ -27,7 +27,6 @@ namespace MyPhotoHelper.Services
     {
         private readonly ILogger<DirectoryMonitoringService> _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IPhotoScanService _photoScanService;
         private readonly IGalleryUpdateService _galleryUpdateService;
         private readonly Dictionary<string, FileSystemWatcher> _watchers = new();
         private readonly SemaphoreSlim _processingLock = new(1, 1);
@@ -46,12 +45,10 @@ namespace MyPhotoHelper.Services
         public DirectoryMonitoringService(
             ILogger<DirectoryMonitoringService> logger,
             IServiceProvider serviceProvider,
-            IPhotoScanService photoScanService,
             IGalleryUpdateService galleryUpdateService)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
-            _photoScanService = photoScanService;
             _galleryUpdateService = galleryUpdateService;
             
             // Process batch events every 2 seconds
@@ -272,7 +269,11 @@ namespace MyPhotoHelper.Services
                     _logger.LogInformation("Processing {Count} new/changed files", uniqueFiles.Count);
                     
                     // Process files using the photo scan service
-                    await _photoScanService.ScanSpecificFilesAsync(uniqueFiles);
+                    using (var scope = _serviceProvider.CreateScope())
+                    {
+                        var photoScanService = scope.ServiceProvider.GetRequiredService<IPhotoScanService>();
+                        await photoScanService.ScanSpecificFilesAsync(uniqueFiles);
+                    }
 
                     foreach (var file in uniqueFiles)
                     {
@@ -381,7 +382,11 @@ namespace MyPhotoHelper.Services
                 else
                 {
                     // Treat as a new file if not found
-                    await _photoScanService.ScanSpecificFilesAsync(new[] { newPath });
+                    using (var innerScope = _serviceProvider.CreateScope())
+                    {
+                        var photoScanService = innerScope.ServiceProvider.GetRequiredService<IPhotoScanService>();
+                        await photoScanService.ScanSpecificFilesAsync(new[] { newPath });
+                    }
                 }
             }
             catch (Exception ex)
