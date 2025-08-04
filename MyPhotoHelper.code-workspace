@@ -10,6 +10,8 @@
 			"titleBar.activeForeground": "#ffffff",
 			"titleBar.inactiveBackground": "#f8073c",
 			"titleBar.inactiveForeground": "#e3e3e3"
-		}
+		},
+		"window.title": "MyPhotoHelper",
+		"window.titleBarStyle": "custom"
 	}	    
 }
