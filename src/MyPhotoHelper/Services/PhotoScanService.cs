@@ -246,8 +246,12 @@ namespace MyPhotoHelper.Services
                 // Final progress report
                 ReportProgress();
                 
+                // Check for deleted files
+                _logger.LogInformation("Checking for deleted files...");
+                var deletedCount = await CheckAndRemoveDeletedFilesAsync(dbContext, cancellationToken);
+                
                 var duration = DateTime.UtcNow - startTime;
-                _logger.LogInformation($"Photo scan completed. Processed: {totalFilesProcessed}, New: {newFilesAdded}, Errors: {errorCount}, Duration: {duration}");
+                _logger.LogInformation($"Photo scan completed. Processed: {totalFilesProcessed}, New: {newFilesAdded}, Deleted: {deletedCount}, Errors: {errorCount}, Duration: {duration}");
                 
                 // Trigger metadata extraction for new images
                 if (newFilesAdded > 0)
@@ -310,6 +314,156 @@ namespace MyPhotoHelper.Services
                     ErrorCount = _currentProgress.ErrorCount
                 });
             }
+        }
+        
+        public async Task ScanSpecificFilesAsync(IEnumerable<string> filePaths, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var fileList = filePaths.ToList();
+                _logger.LogInformation("Starting scan of {Count} specific files", fileList.Count);
+                
+                using var scope = _serviceProvider.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                
+                // Load scan directories to determine which directory each file belongs to
+                var scanDirectories = await context.tbl_scan_directory.ToListAsync(cancellationToken);
+                
+                var processedCount = 0;
+                var newFilesAdded = 0;
+                var errors = 0;
+                
+                foreach (var filePath in fileList)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+                        
+                    try
+                    {
+                        // Find which scan directory this file belongs to
+                        var scanDir = scanDirectories
+                            .Where(sd => filePath.StartsWith(sd.DirectoryPath, StringComparison.OrdinalIgnoreCase))
+                            .OrderByDescending(sd => sd.DirectoryPath.Length)
+                            .FirstOrDefault();
+                            
+                        if (scanDir == null)
+                        {
+                            _logger.LogWarning("File {FilePath} is not in any scan directory", filePath);
+                            continue;
+                        }
+                        
+                        var relativePath = Path.GetRelativePath(scanDir.DirectoryPath, filePath);
+                        
+                        // Check if file already exists in database
+                        var existingImage = await context.tbl_images
+                            .FirstOrDefaultAsync(i => i.RelativePath == relativePath && i.ScanDirectoryId == scanDir.ScanDirectoryId, cancellationToken);
+                            
+                        if (existingImage == null && File.Exists(filePath))
+                        {
+                            // Add new image
+                            var fileInfo = new FileInfo(filePath);
+                            var image = new tbl_images
+                            {
+                                RelativePath = relativePath,
+                                FileName = fileInfo.Name,
+                                FileExtension = fileInfo.Extension.ToLower(),
+                                FileHash = "", // Will be calculated later if needed
+                                FileSizeBytes = (int)Math.Min(fileInfo.Length, int.MaxValue),
+                                DateCreated = DateTime.UtcNow,
+                                DateModified = fileInfo.LastWriteTime,
+                                FileExists = 1,
+                                IsDeleted = 0,
+                                ScanDirectoryId = scanDir.ScanDirectoryId
+                            };
+                            
+                            context.tbl_images.Add(image);
+                            await context.SaveChangesAsync(cancellationToken);
+                            newFilesAdded++;
+                        }
+                        
+                        processedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing file: {FilePath}", filePath);
+                        errors++;
+                    }
+                }
+                
+                _logger.LogInformation("Completed scan of specific files. Processed: {Processed}, New: {New}, Errors: {Errors}", 
+                    processedCount, newFilesAdded, errors);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ScanSpecificFilesAsync");
+                throw;
+            }
+        }
+        
+        private async Task<int> CheckAndRemoveDeletedFilesAsync(MyPhotoHelperDbContext context, CancellationToken cancellationToken)
+        {
+            var deletedCount = 0;
+            const int BATCH_SIZE = 100;
+            
+            try
+            {
+                // Get all scan directories
+                var scanDirectories = await context.tbl_scan_directory
+                    .ToDictionaryAsync(sd => sd.ScanDirectoryId, sd => sd.DirectoryPath, cancellationToken);
+                
+                // Process images in batches to avoid loading too many at once
+                var hasMore = true;
+                var skip = 0;
+                
+                while (hasMore && !cancellationToken.IsCancellationRequested)
+                {
+                    var imageBatch = await context.tbl_images
+                        .Where(img => img.FileExists == 1 && img.IsDeleted == 0)
+                        .OrderBy(img => img.ImageId)
+                        .Skip(skip)
+                        .Take(BATCH_SIZE)
+                        .ToListAsync(cancellationToken);
+                    
+                    if (imageBatch.Count == 0)
+                    {
+                        hasMore = false;
+                        break;
+                    }
+                    
+                    foreach (var image in imageBatch)
+                    {
+                        if (scanDirectories.TryGetValue(image.ScanDirectoryId, out var scanDirPath))
+                        {
+                            var fullPath = Path.Combine(scanDirPath, image.RelativePath);
+                            
+                            if (!File.Exists(fullPath))
+                            {
+                                _logger.LogInformation($"File no longer exists, removing from database: {fullPath}");
+                                context.tbl_images.Remove(image);
+                                deletedCount++;
+                            }
+                        }
+                    }
+                    
+                    if (deletedCount > 0)
+                    {
+                        await context.SaveChangesAsync(cancellationToken);
+                    }
+                    
+                    skip += BATCH_SIZE;
+                }
+                
+                if (deletedCount > 0)
+                {
+                    _logger.LogInformation($"Removed {deletedCount} deleted files from database");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking for deleted files");
+            }
+            
+            return deletedCount;
         }
         
         private IEnumerable<string> GetImageFiles(string directory)

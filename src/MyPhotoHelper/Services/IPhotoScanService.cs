@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +14,7 @@ namespace MyPhotoHelper.Services
         ScanProgress? CurrentProgress { get; }
         
         Task StartScanAsync(CancellationToken cancellationToken = default);
+        Task ScanSpecificFilesAsync(IEnumerable<string> filePaths, CancellationToken cancellationToken = default);
         void CancelScan();
     }
     

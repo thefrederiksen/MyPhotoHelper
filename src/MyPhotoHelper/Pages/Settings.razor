@@ -92,6 +92,16 @@
                                     <small class="text-muted d-block">Automatically scan for new photos when the app starts</small>
                                 </label>
                             </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="directoryMonitoring" 
+                                       checked="@enableDirectoryMonitoring"
+                                       @onchange="@((e) => enableDirectoryMonitoring = (bool)e.Value!)">
+                                <label class="form-check-label" for="directoryMonitoring">
+                                    Enable Directory Monitoring
+                                    <small class="text-muted d-block">Automatically detect and scan new photos, remove deleted files</small>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -267,6 +277,7 @@
     private string themeName = "default";
     private bool runOnWindowsStartup = true;
     private bool autoScanOnStartup = true;
+    private bool enableDirectoryMonitoring = true;
     private int batchSize = 100;
     private int maxConcurrentTasks = 4;
     
@@ -295,6 +306,7 @@
             themeName = await SettingsService.GetSettingAsync<string>(SettingNames.ThemeName, "default");
             runOnWindowsStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.RunOnWindowsStartup, true);
             autoScanOnStartup = await SettingsService.GetSettingAsync<bool>(SettingNames.AutoScanOnStartup, true);
+            enableDirectoryMonitoring = await SettingsService.GetSettingAsync<bool>(SettingNames.EnableDirectoryMonitoring, true);
             batchSize = await SettingsService.GetSettingAsync<int>(SettingNames.BatchSize, 100);
             maxConcurrentTasks = await SettingsService.GetSettingAsync<int>(SettingNames.MaxConcurrentTasks, 4);
             
@@ -352,6 +364,7 @@
             {
                 { SettingNames.RunOnWindowsStartup, runOnWindowsStartup },
                 { SettingNames.AutoScanOnStartup, autoScanOnStartup },
+                { SettingNames.EnableDirectoryMonitoring, enableDirectoryMonitoring },
                 { SettingNames.BatchSize, batchSize },
                 { SettingNames.MaxConcurrentTasks, maxConcurrentTasks }
             });

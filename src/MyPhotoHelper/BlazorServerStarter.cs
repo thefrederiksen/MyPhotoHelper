@@ -274,6 +274,14 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IBackgroundPhotoLoader, BackgroundPhotoLoader>();
             builder.Services.AddScoped<IGalleryStateService, GalleryStateService>();
             
+            // Gallery update notification service
+            builder.Services.AddSingleton<IGalleryUpdateService, GalleryUpdateService>();
+            
+            // Directory monitoring service
+            builder.Services.AddSingleton<DirectoryMonitoringService>();
+            builder.Services.AddSingleton<IDirectoryMonitoringService>(provider => provider.GetRequiredService<DirectoryMonitoringService>());
+            builder.Services.AddHostedService(provider => provider.GetRequiredService<DirectoryMonitoringService>());
+            
             // Add Blazor services
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();

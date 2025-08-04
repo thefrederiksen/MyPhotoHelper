@@ -15,6 +15,7 @@ namespace MyPhotoHelper.Pages
         [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
         [Inject] private IBackgroundPhotoLoader BackgroundPhotoLoader { get; set; } = null!;
         [Inject] private IGalleryStateService GalleryStateService { get; set; } = null!;
+        [Inject] private IGalleryUpdateService GalleryUpdateService { get; set; } = null!;
 
         private class YearGroup
         {
@@ -49,6 +50,7 @@ namespace MyPhotoHelper.Pages
         {
             ScanStatusService.StatusChanged += OnScanStatusChanged;
             GalleryStateService.PhotosBatchLoaded += OnPhotosBatchLoaded;
+            GalleryUpdateService.GalleryUpdated += OnGalleryUpdated;
             await LoadGalleryStructure();
             
             // Set up scroll detection for scroll-to-top button
@@ -455,11 +457,65 @@ namespace MyPhotoHelper.Pages
             return Task.CompletedTask;
         }
 
+        private async void OnGalleryUpdated(object? sender, GalleryUpdateEventArgs e)
+        {
+            // Handle real-time updates from file system monitoring
+            await InvokeAsync(async () =>
+            {
+                try
+                {
+                    // If photos were added or deleted, reload the gallery structure
+                    if (e.AddedPaths.Any() || e.DeletedPaths.Any())
+                    {
+                        // Clear any cached photos in expanded months
+                        foreach (var yearGroup in yearGroups)
+                        {
+                            foreach (var monthGroup in yearGroup.MonthGroups)
+                            {
+                                if (monthGroup.Photos != null)
+                                {
+                                    monthGroup.Photos = null;
+                                }
+                            }
+                        }
+                        
+                        // Reload the gallery structure
+                        await LoadGalleryStructure();
+                        
+                        // Re-load any expanded months
+                        var expandedMonthsToReload = new List<(int Year, int Month)>();
+                        foreach (var yearGroup in yearGroups)
+                        {
+                            foreach (var monthGroup in yearGroup.MonthGroups)
+                            {
+                                if (IsMonthExpanded(yearGroup.Year, monthGroup.Month))
+                                {
+                                    expandedMonthsToReload.Add((yearGroup.Year, monthGroup.Month));
+                                }
+                            }
+                        }
+                        
+                        foreach (var (year, month) in expandedMonthsToReload)
+                        {
+                            await LoadMonthPhotos(year, month);
+                        }
+                        
+                        StateHasChanged();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error handling gallery update: {ex}");
+                }
+            });
+        }
+
         public void Dispose()
         {
             _componentCts?.Cancel();
             ScanStatusService.StatusChanged -= OnScanStatusChanged;
             GalleryStateService.PhotosBatchLoaded -= OnPhotosBatchLoaded;
+            GalleryUpdateService.GalleryUpdated -= OnGalleryUpdated;
             BackgroundPhotoLoader.CancelBackgroundLoading();
             GalleryStateService.Clear();
             _stateChangeSemaphore?.Dispose();

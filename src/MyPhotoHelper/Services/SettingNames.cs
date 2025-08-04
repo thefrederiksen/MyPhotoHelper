@@ -11,6 +11,7 @@ public static class SettingNames
     public const string AutoScanOnStartup = "AutoScanOnStartup";
     public const string RunOnWindowsStartup = "RunOnWindowsStartup";
     public const string ScanSubdirectories = "ScanSubdirectories";
+    public const string EnableDirectoryMonitoring = "EnableDirectoryMonitoring";
     
     // File Type Support
     public const string SupportJpeg = "SupportJpeg";
