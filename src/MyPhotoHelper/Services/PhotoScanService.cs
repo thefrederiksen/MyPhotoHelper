@@ -369,7 +369,7 @@ namespace MyPhotoHelper.Services
                                 FileExtension = fileInfo.Extension.ToLower(),
                                 FileHash = "", // Will be calculated later if needed
                                 FileSizeBytes = (int)Math.Min(fileInfo.Length, int.MaxValue),
-                                DateCreated = DateTime.UtcNow,
+                                DateCreated = DateTime.UtcNow, // Use current time so new files show in current month
                                 DateModified = fileInfo.LastWriteTime,
                                 FileExists = 1,
                                 IsDeleted = 0,
@@ -392,6 +392,21 @@ namespace MyPhotoHelper.Services
                 
                 _logger.LogInformation("Completed scan of specific files. Processed: {Processed}, New: {New}, Errors: {Errors}", 
                     processedCount, newFilesAdded, errors);
+                    
+                // Trigger metadata extraction for new images
+                if (newFilesAdded > 0)
+                {
+                    _logger.LogInformation("Starting metadata extraction for {Count} new files", newFilesAdded);
+                    try
+                    {
+                        var metadataService = scope.ServiceProvider.GetRequiredService<IMetadataExtractionService>();
+                        await metadataService.ExtractMetadataForNewImagesAsync(cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during metadata extraction for specific files");
+                    }
+                }
             }
             catch (Exception ex)
             {

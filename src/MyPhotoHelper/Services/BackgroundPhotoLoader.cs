@@ -54,13 +54,14 @@ public class BackgroundPhotoLoader : IBackgroundPhotoLoader, IDisposable
         }
 
         var photos = await monthQuery
-            .Join(context.tbl_image_metadata,
+            .GroupJoin(context.tbl_image_metadata,
                   img => img.ImageId,
                   meta => meta.ImageId,
-                  (img, meta) => new { img, meta })
-            .Where(x => (x.meta.DateTaken ?? x.img.DateCreated) >= startDate &&
-                       (x.meta.DateTaken ?? x.img.DateCreated) < endDate)
-            .OrderByDescending(x => x.meta.DateTaken ?? x.img.DateCreated)
+                  (img, metas) => new { img, meta = metas.FirstOrDefault() })
+            .Where(x => 
+                (x.meta != null && x.meta.DateTaken != null ? x.meta.DateTaken.Value : x.img.DateCreated) >= startDate &&
+                (x.meta != null && x.meta.DateTaken != null ? x.meta.DateTaken.Value : x.img.DateCreated) < endDate)
+            .OrderByDescending(x => x.meta != null && x.meta.DateTaken != null ? x.meta.DateTaken.Value : x.img.DateCreated)
             .Select(x => x.img)
             .Include(img => img.tbl_image_metadata)
             .Include(img => img.tbl_image_analysis)

@@ -187,7 +187,14 @@ namespace MyPhotoHelper.Services
                 _deletedFiles.Enqueue(e.FullPath);
             }
             
-            Task.Run(async () => await HandleFileDeleted(e.FullPath));
+            // Handle deletion and notify gallery after database update
+            Task.Run(async () => 
+            {
+                await HandleFileDeleted(e.FullPath);
+                // Notify gallery after database is updated
+                _galleryUpdateService.NotifyImageDeleted(e.FullPath);
+            });
+            
             FileDeleted?.Invoke(this, e);
         }
 
@@ -195,7 +202,14 @@ namespace MyPhotoHelper.Services
         {
             _logger.LogDebug("File renamed: {OldPath} -> {NewPath}", e.OldFullPath, e.FullPath);
             
-            Task.Run(async () => await HandleFileRenamed(e.OldFullPath, e.FullPath));
+            // Handle rename and notify gallery after database update
+            Task.Run(async () => 
+            {
+                await HandleFileRenamed(e.OldFullPath, e.FullPath);
+                // Notify gallery after database is updated - treat as delete old and add new
+                _galleryUpdateService.NotifyImagesChanged(new[] { e.FullPath }, new[] { e.OldFullPath });
+            });
+            
             FileRenamed?.Invoke(this, e);
         }
 
@@ -272,7 +286,18 @@ namespace MyPhotoHelper.Services
                     using (var scope = _serviceProvider.CreateScope())
                     {
                         var photoScanService = scope.ServiceProvider.GetRequiredService<IPhotoScanService>();
+                        _logger.LogInformation("Starting scan of new files: {Files}", string.Join(", ", uniqueFiles));
                         await photoScanService.ScanSpecificFilesAsync(uniqueFiles);
+                        _logger.LogInformation("Completed scan of {Count} files", uniqueFiles.Count);
+                    }
+                    
+                    // Run additional phases on the new files
+                    if (uniqueFiles.Count > 0)
+                    {
+                        using (var additionalScope = _serviceProvider.CreateScope())
+                        {
+                            await RunAdditionalPhasesOnNewFiles(additionalScope, uniqueFiles, CancellationToken.None);
+                        }
                     }
 
                     foreach (var file in uniqueFiles)
@@ -281,10 +306,11 @@ namespace MyPhotoHelper.Services
                     }
                 }
                 
-                // Notify gallery of changes
-                if (uniqueFiles.Count > 0 || deletedFilesToNotify.Count > 0)
+                // Notify gallery of changes (only for added files, deletions are handled immediately)
+                if (uniqueFiles.Count > 0)
                 {
-                    _galleryUpdateService.NotifyImagesChanged(uniqueFiles, deletedFilesToNotify);
+                    _logger.LogInformation("Notifying gallery of {Count} new files", uniqueFiles.Count);
+                    _galleryUpdateService.NotifyImagesChanged(uniqueFiles, new List<string>());
                 }
             }
             catch (Exception ex)
@@ -327,11 +353,17 @@ namespace MyPhotoHelper.Services
                 
                 if (image != null)
                 {
-                    _logger.LogInformation("Removing deleted file from database: {Path}", filePath);
+                    _logger.LogInformation("Removing deleted file from database: {Path} (ImageId: {ImageId})", filePath, image.ImageId);
                     
                     // Remove the image and cascade delete related records
                     context.tbl_images.Remove(image);
                     await context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Successfully removed image {ImageId} from database", image.ImageId);
+                }
+                else
+                {
+                    _logger.LogWarning("Deleted file not found in database: {Path}", filePath);
                 }
             }
             catch (Exception ex)
@@ -392,6 +424,128 @@ namespace MyPhotoHelper.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling file rename: {OldPath} -> {NewPath}", oldPath, newPath);
+            }
+        }
+
+        private async Task RunAdditionalPhasesOnNewFiles(IServiceScope scope, List<string> filePaths, CancellationToken cancellationToken)
+        {
+            try
+            {
+                _logger.LogInformation("Running additional scan phases on {Count} new files", filePaths.Count);
+                
+                var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelperDbContext>();
+                var scanDirectories = await dbContext.tbl_scan_directory.ToListAsync(cancellationToken);
+                
+                // Process each new file
+                foreach (var filePath in filePaths)
+                {
+                    try
+                    {
+                        // Find which scan directory this file belongs to
+                        var scanDir = scanDirectories
+                            .Where(sd => filePath.StartsWith(sd.DirectoryPath, StringComparison.OrdinalIgnoreCase))
+                            .OrderByDescending(sd => sd.DirectoryPath.Length)
+                            .FirstOrDefault();
+                            
+                        if (scanDir == null) continue;
+                        
+                        var relativePath = Path.GetRelativePath(scanDir.DirectoryPath, filePath);
+                        var image = await dbContext.tbl_images
+                            .FirstOrDefaultAsync(i => i.RelativePath == relativePath && i.ScanDirectoryId == scanDir.ScanDirectoryId, cancellationToken);
+                            
+                        if (image == null) continue;
+                        
+                        // Phase 3: Screenshot Detection using filename patterns
+                        _logger.LogInformation("Running screenshot detection on: {Path}", filePath);
+                        
+                        var fileName = Path.GetFileName(filePath).ToLower();
+                        var isScreenshot = false;
+                        var confidence = 0.0;
+                        
+                        // Check common screenshot patterns
+                        var screenshotPatterns = new[] { "screenshot", "screen shot", "screen capture", "screencap", "snip", "screenshot_" };
+                        foreach (var pattern in screenshotPatterns)
+                        {
+                            if (fileName.Contains(pattern))
+                            {
+                                isScreenshot = true;
+                                confidence = 0.95;
+                                break;
+                            }
+                        }
+                        
+                        // Check metadata for resolution if not detected by filename
+                        if (!isScreenshot)
+                        {
+                            var metadata = await dbContext.tbl_image_metadata
+                                .FirstOrDefaultAsync(m => m.ImageId == image.ImageId, cancellationToken);
+                                
+                            if (metadata != null && metadata.Width.HasValue && metadata.Height.HasValue)
+                            {
+                                // Common screenshot resolutions
+                                var screenshotResolutions = new[]
+                                {
+                                    (1920, 1080), (2560, 1440), (3840, 2160), (1366, 768),
+                                    (1440, 900), (1536, 864), (1280, 720), (1600, 900)
+                                };
+                                
+                                foreach (var (width, height) in screenshotResolutions)
+                                {
+                                    if (metadata.Width == width && metadata.Height == height)
+                                    {
+                                        isScreenshot = true;
+                                        confidence = 0.80;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Create analysis record
+                        var existingAnalysis = await dbContext.tbl_image_analysis
+                            .FirstOrDefaultAsync(a => a.ImageId == image.ImageId, cancellationToken);
+                            
+                        if (existingAnalysis == null)
+                        {
+                            var analysis = new tbl_image_analysis
+                            {
+                                ImageId = image.ImageId,
+                                ImageCategory = isScreenshot ? "screenshot" : "photo",
+                                AIAnalyzedAt = DateTime.UtcNow,
+                                AIModelUsed = "fast_categorizer",
+                                AIAnalysisJson = $"{{\"confidence\": {confidence}, \"method\": \"directory_monitor\"}}",
+                                AIDescription = isScreenshot ? "Detected as screenshot" : "Detected as photo"
+                            };
+                            dbContext.tbl_image_analysis.Add(analysis);
+                            
+                            _logger.LogInformation("Image categorized as: {Category} with confidence {Confidence}", 
+                                analysis.ImageCategory, confidence);
+                        }
+                        
+                        // Phase 4: Hash Calculation
+                        _logger.LogInformation("Calculating hash for: {Path}", filePath);
+                        var hashService = scope.ServiceProvider.GetRequiredService<IHashCalculationService>();
+                        var hash = await hashService.CalculateFileHashAsync(filePath, cancellationToken);
+                        
+                        if (!string.IsNullOrEmpty(hash))
+                        {
+                            image.FileHash = hash;
+                            _logger.LogInformation("Hash calculated: {Hash}", hash);
+                        }
+                        
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing file through additional phases: {Path}", filePath);
+                    }
+                }
+                
+                _logger.LogInformation("Completed additional phases for new files");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error running additional phases on new files");
             }
         }
 

@@ -16,6 +16,7 @@ namespace MyPhotoHelper.Pages
         [Inject] private IBackgroundPhotoLoader BackgroundPhotoLoader { get; set; } = null!;
         [Inject] private IGalleryStateService GalleryStateService { get; set; } = null!;
         [Inject] private IGalleryUpdateService GalleryUpdateService { get; set; } = null!;
+        [Inject] private ILogger<Gallery> _logger { get; set; } = null!;
 
         private class YearGroup
         {
@@ -92,18 +93,17 @@ namespace MyPhotoHelper.Pages
 
                 // Get photo counts grouped by year and month
                 var photoStats = await baseQuery
-                    .Join(DbContext.tbl_image_metadata,
+                    .GroupJoin(DbContext.tbl_image_metadata,
                           img => img.ImageId,
                           meta => meta.ImageId,
-                          (img, meta) => new { img, meta })
+                          (img, metas) => new { img, meta = metas.FirstOrDefault() })
                     .Select(x => new
                     {
                         x.img.ImageId,
-                        // Always use DateTaken from metadata, which should never be null
-                        // If it is null for some reason, fall back to DateCreated
-                        Date = x.meta.DateTaken ?? x.img.DateCreated,
-                        Year = (x.meta.DateTaken ?? x.img.DateCreated).Year,
-                        Month = (x.meta.DateTaken ?? x.img.DateCreated).Month
+                        // Use DateTaken from metadata if available, otherwise use DateCreated from image
+                        Date = x.meta != null && x.meta.DateTaken != null ? x.meta.DateTaken.Value : x.img.DateCreated,
+                        Year = x.meta != null && x.meta.DateTaken != null ? x.meta.DateTaken.Value.Year : x.img.DateCreated.Year,
+                        Month = x.meta != null && x.meta.DateTaken != null ? x.meta.DateTaken.Value.Month : x.img.DateCreated.Month
                     })
                     .GroupBy(x => new { x.Year, x.Month })
                     .Select(g => new
@@ -486,6 +486,8 @@ namespace MyPhotoHelper.Pages
                     // If photos were added or deleted, reload the gallery structure
                     if (e.AddedPaths.Any() || e.DeletedPaths.Any())
                     {
+                        _logger.LogInformation("Gallery update received - Added: {AddedCount}, Deleted: {DeletedCount}", 
+                            e.AddedPaths.Count(), e.DeletedPaths.Count());
                         // Save current scroll position before update
                         var scrollPosition = await JSRuntime.InvokeAsync<object>("galleryHelpers.saveScrollPosition");
                         
