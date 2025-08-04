@@ -159,9 +159,26 @@
                                         <i class="oi oi-warning"></i> @FormatBytes(group.PotentialSavings) can be saved
                                     </span>
                                 </div>
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDuplicateDetails(group)">
-                                    <i class="oi oi-eye"></i> View Details
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-danger" 
+                                            @onclick="() => DeleteGroupDuplicates(group)" 
+                                            disabled="@(isDeletingAll || deletingGroups.Contains(group.FileHash))"
+                                            title="Delete all duplicates in this group (keeps oldest)">
+                                        @if (deletingGroups.Contains(group.FileHash))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            <text>Deleting...</text>
+                                        }
+                                        else
+                                        {
+                                            <i class="oi oi-trash"></i>
+                                            <text>Delete All in Group</text>
+                                        }
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDuplicateDetails(group)">
+                                        <i class="oi oi-eye"></i> View Details
+                                    </button>
+                                </div>
                             </div>
                             <div class="card-body" style="overflow: visible;">
                                 <div class="row g-3" style="overflow: visible;">
@@ -356,6 +373,7 @@
     private bool showDeleteAllConfirmation = false;
     private bool isDeletingAll = false;
     private HashSet<int> deletingImages = new();
+    private HashSet<string> deletingGroups = new();
     private DateTime lastLoadTime = DateTime.MinValue;
     private bool isDisposed = false;
     private readonly TimeSpan minLoadInterval = TimeSpan.FromSeconds(2);
@@ -867,6 +885,96 @@
         finally
         {
             isDeletingAll = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task DeleteGroupDuplicates(DuplicateGroup group)
+    {
+        // Stop auto-refresh during deletion
+        StopAutoRefresh();
+        
+        // Add to deleting set for UI feedback
+        deletingGroups.Add(group.FileHash);
+        StateHasChanged();
+        
+        try
+        {
+            var deletedCount = 0;
+            var errors = 0;
+            
+            using var scope = ServiceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MyPhotoHelper.Data.MyPhotoHelperDbContext>();
+            
+            // Delete all duplicates in this group (skip first image - the one to keep)
+            for (int i = 1; i < group.Images.Count; i++)
+            {
+                var image = group.Images[i];
+                try
+                {
+                    // Get full path and delete physical file
+                    var fullPath = await PhotoPathService.GetFullPathAsync(image.RelativePath);
+                    if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+                    {
+                        File.Delete(fullPath);
+                        Logger.LogInformation($"Deleted file: {fullPath}");
+                    }
+                    
+                    // Mark as deleted in database
+                    var dbImage = await dbContext.tbl_images
+                        .FirstOrDefaultAsync(img => img.ImageId == image.ImageId);
+                        
+                    if (dbImage != null)
+                    {
+                        dbImage.IsDeleted = 1;
+                        dbImage.FileExists = 0;
+                        dbImage.DateModified = DateTime.Now;
+                        dbContext.Update(dbImage);
+                    }
+                    
+                    deletedCount++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"Failed to delete file: {image.FileName}");
+                    errors++;
+                }
+            }
+            
+            await dbContext.SaveChangesAsync();
+            Logger.LogInformation($"Deleted {deletedCount} files from duplicate group with {errors} errors");
+            
+            // Show result if there were errors
+            if (errors > 0)
+            {
+                errorMessage = $"Deleted {deletedCount} files from group with {errors} errors.";
+            }
+            else
+            {
+                errorMessage = null;
+            }
+            
+            // Give UI time to show the deletion happened
+            await Task.Delay(500);
+            
+            // Refresh the list
+            await LoadDuplicates();
+            
+            // Restart auto-refresh if scanning is still active
+            if (ScanStatusService.IsScanning)
+            {
+                StartAutoRefresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete duplicate group: {ex.Message}";
+            lastException = ex;
+            Logger.LogError(ex, $"Error deleting duplicate group {group.FileHash}");
+        }
+        finally
+        {
+            deletingGroups.Remove(group.FileHash);
             StateHasChanged();
         }
     }
