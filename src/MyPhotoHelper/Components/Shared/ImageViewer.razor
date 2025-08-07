@@ -3,6 +3,7 @@
 @using System.Collections.Generic
 @inject IJSRuntime JSRuntime
 @inject IPhotoPathService PhotoPathService
+@implements IDisposable
 
 <div class="@ContainerClass" style="overflow: visible !important;">
     <div class="card border-0 shadow-sm photo-card">
@@ -91,6 +92,7 @@
     
     private bool isDropdownOpen = false;
     private bool showPropertiesDialog = false;
+    private static List<ImageViewer> openDropdowns = new();
 
     private async Task OpenImage()
     {
@@ -125,8 +127,30 @@
 
     private void ToggleDropdown()
     {
-        isDropdownOpen = !isDropdownOpen;
-        StateHasChanged();
+        try
+        {
+            if (isDropdownOpen)
+            {
+                // Close this dropdown
+                CloseDropdown();
+            }
+            else
+            {
+                // Close all other dropdowns first
+                CloseAllDropdowns();
+                // Open this dropdown
+                isDropdownOpen = true;
+                openDropdowns.Add(this);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error toggling dropdown: {ex.Message}");
+            // Reset state on error
+            isDropdownOpen = false;
+            StateHasChanged();
+        }
     }
 
     private async Task HandleOpenImage()
@@ -190,7 +214,19 @@
     private void CloseDropdown()
     {
         isDropdownOpen = false;
+        openDropdowns.Remove(this);
         StateHasChanged();
+    }
+    
+    private static void CloseAllDropdowns()
+    {
+        var dropdownsToClose = openDropdowns.ToList();
+        openDropdowns.Clear();
+        foreach (var dropdown in dropdownsToClose)
+        {
+            dropdown.isDropdownOpen = false;
+            dropdown.StateHasChanged();
+        }
     }
 
     private void HandleShowProperties()
@@ -219,6 +255,11 @@
             
         var fullPath = await PhotoPathService.GetFullPathAsync(Photo.RelativePath);
         return fullPath ?? string.Empty;
+    }
+    
+    public void Dispose()
+    {
+        openDropdowns.Remove(this);
     }
 
 }
@@ -371,3 +412,4 @@
         to { opacity: 1; }
     }
 </style>
+

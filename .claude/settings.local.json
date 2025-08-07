@@ -34,7 +34,14 @@
       "WebFetch(domain:docs.velopack.io)",
       "Bash(git mv:*)",
       "Bash(dotnet nuget list:*)",
-      "Bash(dotnet nuget remove source:*)"
+      "Bash(dotnet nuget remove source:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(node_modules.bintailwindcss init)",
+      "Bash(\"./node_modules/.bin/tailwindcss\" init)",
+      "Bash(npm run build-css-prod:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

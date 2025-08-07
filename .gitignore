@@ -195,3 +195,12 @@ publish/
 
 # Installer output
 Output/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local settings
+.claude/settings.local.json

@@ -13,11 +13,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MyPhotoHelper (also referenced as FaceVault in documentation) is a .NET 9 Blazor Server application for photo organization and management with AI-powered features. The application combines C# for the web UI and database operations with Python for image processing and AI analysis.
 
+## Reference Projects
+
+- `C:\ReposFred\MyGithubHelper` This is a similar app we can look at and see if we can find any improvement from
+- `C:\ReposFred\MyDataHelper` This is a similar app you can see if you can find any improvement from
+
 ## Key Commands
 
 ### Build and Run
 - `dotnet build src/MyPhotoHelper.sln` - Build the solution
-- `dotnet run --project src/MyPhotoHelper` - Run the application
+- `miscellaneous/start-app.bat` - **Recommended**: Start application (shows command window)
+- `miscellaneous/start-app-dev.bat` - Development mode with console output visible
+- `dotnet run --project src/MyPhotoHelper` - Manual run via command line
 - Application runs on `http://localhost:5113` by default
 
 ### Testing
@@ -42,7 +49,7 @@ MyPhotoHelper (also referenced as FaceVault in documentation) is a .NET 9 Blazor
 - **Backend**: ASP.NET Core with Entity Framework Core
 - **Database**: SQLite with code-first migrations
 - **Python Integration**: CSnakes Runtime for Python interop
-- **UI Framework**: Bootstrap with custom CSS
+- **UI Framework**: Custom Tailwind CSS implementation with Drata-inspired design
 
 ### Project Structure
 ```
@@ -83,8 +90,10 @@ src/
 
 ### Application Startup
 - WinForms entry point in `Program.cs` with single-instance checking
-- `BlazorServerStarter` manages Blazor server startup
+- `BlazorServerStarter` manages Blazor server startup and system tray integration
+- Supports `--minimized` parameter to start directly to system tray
 - Can run as WinForms app (default) or console app based on build configuration
+- Single instance enforcement - additional launches open browser to existing instance
 
 ### Important Configuration
 - `UseWinFormsStartup` property controls startup mode
@@ -98,6 +107,19 @@ src/
 - Backup files are in `Backup_RemovedFiles/` and excluded from build
 - Test images are in `MyPhotoHelper.Tests/Images/`
 - Documentation is primarily in `docs/` directory
+
+### UI/CSS Development
+- **CSS Framework**: Custom Tailwind CSS implementation in `tailwind.css`
+- **Design System**: Based on Drata-inspired theme with consistent design tokens
+- **Component Styles**: Self-contained with utility-first approach
+- **Responsive Design**: Mobile-first with consistent breakpoints
+- **Color Palette**: Custom CSS variables for easy theming
+- **Build Process**: Tailwind configured via `tailwind.config.js`
+- **CSS Files**:
+  - `site.css` - Main entry point, imports Tailwind
+  - `tailwind.css` - Custom Tailwind implementation with design system
+  - `tailwind-input.css` - Source file for Tailwind compilation
+  - `tailwind-base.css` - Base Tailwind CSS utilities
 
 ### Python Development
 - Use `pytest.ini` for test configuration

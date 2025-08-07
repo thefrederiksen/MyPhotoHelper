@@ -1,0 +1,374 @@
+@import "tailwindcss";
+
+/* MyPhotoHelper Custom Base Styles */
+@layer base {
+  html, body {
+    font-family: theme('fontFamily.sans');
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-size: 14px;
+  }
+
+  h1:focus {
+    outline: none;
+  }
+
+  /* Ensure Blazor app container takes full height */
+  #app, app {
+    height: 100%;
+    width: 100%;
+    display: block;
+  }
+}
+
+/* MyPhotoHelper Component Styles */
+@layer components {
+  /* Layout Structure */
+  .app-container {
+    @apply flex h-screen overflow-hidden w-full relative;
+  }
+
+  .main-content {
+    @apply flex-1 flex flex-col overflow-hidden;
+  }
+
+  .app-header {
+    @apply h-header bg-gray-100 border-b border-gray-200 px-8 flex items-center justify-between flex-shrink-0 w-full;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold text-gray-800 m-0;
+  }
+
+  .page-content {
+    @apply flex-1 overflow-y-auto p-8 bg-gray-50 w-full;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    @apply w-sidebar bg-primary text-white h-screen overflow-y-auto flex-shrink-0;
+  }
+
+  .sidebar.open {
+    @apply left-0;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-gray-100 border border-gray-200 rounded-md shadow-card p-6 mb-6 transition-all duration-fast;
+  }
+
+  .card:hover {
+    @apply shadow-md -translate-y-px;
+  }
+
+  .card-header {
+    @apply flex justify-between items-center mb-4 pb-4 border-b border-gray-200;
+  }
+
+  .card-title {
+    @apply text-lg font-semibold text-gray-800 m-0;
+  }
+
+  .card-body {
+    @apply p-0;
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    @apply grid gap-5 mb-8;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  .stat-card {
+    @apply bg-gray-100 border border-gray-200 rounded-md p-6 shadow-card;
+  }
+
+  .stat-header {
+    @apply flex items-center gap-4 mb-5;
+  }
+
+  .stat-icon {
+    @apply w-12 h-12 rounded-md flex items-center justify-center text-2xl font-bold;
+  }
+
+  .stat-icon.blue {
+    @apply bg-blue-50 text-accent-blue;
+  }
+
+  .stat-icon.green {
+    @apply bg-green-50 text-accent-green;
+  }
+
+  .stat-icon.orange {
+    @apply bg-orange-50 text-accent-orange;
+  }
+
+  .stat-icon.red {
+    @apply bg-red-50 text-accent-red;
+  }
+
+  .stat-info {
+    @apply flex-1;
+  }
+
+  .stat-value {
+    @apply text-3xl font-bold text-gray-800 leading-none mb-1;
+  }
+
+  .stat-label {
+    @apply text-sm text-gray-500;
+  }
+
+  /* Progress Bars */
+  .progress-container {
+    @apply my-4;
+  }
+
+  .progress-header {
+    @apply flex justify-between items-center mb-2;
+  }
+
+  .progress-label {
+    @apply text-sm text-gray-600;
+  }
+
+  .progress-value {
+    @apply text-sm font-semibold text-gray-800;
+  }
+
+  .progress-bar {
+    @apply h-2 bg-gray-200 rounded overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full transition-all duration-300;
+  }
+
+  .progress-fill.green {
+    @apply bg-accent-green;
+  }
+
+  .progress-fill.blue {
+    @apply bg-accent-blue;
+  }
+
+  .progress-fill.orange {
+    @apply bg-accent-orange;
+  }
+
+  .progress-fill.red {
+    @apply bg-accent-red;
+  }
+
+  .progress-details {
+    @apply flex justify-between mt-2 text-xs text-gray-500;
+  }
+
+  /* Status Badges */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium capitalize;
+  }
+
+  .status-badge.pending {
+    @apply bg-orange-50 text-orange-700;
+  }
+
+  .status-badge.active,
+  .status-badge.signed {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .status-badge.expired {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .status-badge.draft {
+    @apply bg-gray-50 text-gray-600;
+  }
+
+  /* Tables */
+  .data-table {
+    @apply bg-gray-100 border border-gray-200 rounded-md shadow-card overflow-hidden;
+  }
+
+  .data-table table {
+    @apply w-full border-collapse;
+  }
+
+  .data-table thead {
+    @apply bg-gray-50 border-b border-gray-200;
+  }
+
+  .data-table th {
+    @apply px-5 py-3 text-left font-semibold text-xs uppercase tracking-wider text-gray-500;
+  }
+
+  .data-table td {
+    @apply px-5 py-4 border-b border-gray-200 text-gray-700;
+  }
+
+  .data-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table tr:hover {
+    @apply bg-gray-50;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply px-4 py-2 rounded font-medium text-sm cursor-pointer transition-all duration-fast border-none inline-flex items-center gap-1.5;
+  }
+
+  .btn-primary {
+    @apply bg-accent-blue text-white;
+  }
+
+  .btn-primary:hover {
+    @apply bg-blue-700 -translate-y-px;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-700 border border-gray-200;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-gray-50 border-gray-300;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .btn-link {
+    @apply text-blue-600 no-underline bg-transparent border-none p-0;
+  }
+
+  /* Forms */
+  .form-group {
+    @apply mb-6;
+  }
+
+  .form-label {
+    @apply block mb-2 font-medium text-gray-700 text-sm;
+  }
+
+  .form-control {
+    @apply w-full px-3 py-2 text-sm border border-gray-200 rounded transition-all duration-fast bg-white;
+  }
+
+  .form-control:focus {
+    @apply outline-none border-accent-blue ring-2 ring-blue-100;
+  }
+
+  .form-check-input:focus {
+    @apply ring-2 ring-blue-100 ring-offset-0;
+  }
+
+  /* Bootstrap-like utilities we need to maintain */
+  .container-fluid {
+    @apply px-0 mx-0 max-w-full;
+  }
+
+  .valid.modified:not([type=checkbox]) {
+    @apply outline-1 outline-green-500;
+  }
+
+  .invalid {
+    @apply outline-1 outline-red-500;
+  }
+
+  .validation-message {
+    @apply text-red-500;
+  }
+
+  /* Blazor Error UI */
+  #blazor-error-ui {
+    @apply bg-yellow-100 bottom-0 shadow-lg hidden left-0 px-5 py-2 fixed w-full z-50;
+  }
+
+  #blazor-error-ui .dismiss {
+    @apply cursor-pointer absolute right-3 top-2;
+  }
+
+  .blazor-error-boundary {
+    @apply bg-red-700 px-4 py-4 text-white;
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=");
+    background-repeat: no-repeat;
+    background-size: 1.8rem;
+    padding-left: 3.7rem;
+    background-position: 1rem center;
+  }
+
+  .blazor-error-boundary::after {
+    content: "An error has occurred.";
+  }
+}
+
+/* Utility Classes */
+@layer utilities {
+  /* Text Utilities */
+  .text-muted {
+    @apply text-gray-500;
+  }
+
+  /* Page Layout Override */
+  .page {
+    @apply flex flex-row h-screen m-0 p-0;
+  }
+
+  /* Fade Animation */
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+
+  /* Responsive Sidebar */
+  @media (max-width: 768px) {
+    .sidebar {
+      @apply fixed -left-full z-50 transition-all duration-300;
+    }
+    
+    .sidebar.open {
+      @apply left-0;
+    }
+    
+    .stats-grid {
+      @apply grid-cols-1;
+    }
+    
+    .page-content {
+      @apply p-4;
+    }
+  }
+}

@@ -149,7 +149,7 @@
             StateHasChanged();
 
             // Show the modal
-            await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('imageDetailsModal')).show()");
+            await JSRuntime.InvokeVoidAsync("showModal", "imageDetailsModal");
         }
         catch (Exception ex)
         {
