@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* MyPhotoHelper Custom Base Styles */
 @layer base {
@@ -35,7 +37,7 @@
   }
 
   .app-header {
-    @apply h-header bg-gray-100 border-b border-gray-200 px-8 flex items-center justify-between flex-shrink-0 w-full;
+    @apply h-16 bg-gray-100 border-b border-gray-200 px-8 flex items-center justify-between flex-shrink-0 w-full;
   }
 
   .page-title {
@@ -48,7 +50,7 @@
 
   /* Sidebar */
   .sidebar {
-    @apply w-sidebar bg-primary text-white h-screen overflow-y-auto flex-shrink-0;
+    @apply w-56 bg-blue-900 text-white h-screen overflow-y-auto flex-shrink-0;
   }
 
   .sidebar.open {
@@ -57,7 +59,7 @@
 
   /* Cards */
   .card {
-    @apply bg-gray-100 border border-gray-200 rounded-md shadow-card p-6 mb-6 transition-all duration-fast;
+    @apply bg-gray-100 border border-gray-200 rounded-md shadow-sm p-6 mb-6 transition-all duration-150;
   }
 
   .card:hover {
@@ -83,7 +85,7 @@
   }
 
   .stat-card {
-    @apply bg-gray-100 border border-gray-200 rounded-md p-6 shadow-card;
+    @apply bg-gray-100 border border-gray-200 rounded-md p-6 shadow-sm;
   }
 
   .stat-header {
@@ -95,19 +97,19 @@
   }
 
   .stat-icon.blue {
-    @apply bg-blue-50 text-accent-blue;
+    @apply bg-blue-50 text-blue-600;
   }
 
   .stat-icon.green {
-    @apply bg-green-50 text-accent-green;
+    @apply bg-green-50 text-green-600;
   }
 
   .stat-icon.orange {
-    @apply bg-orange-50 text-accent-orange;
+    @apply bg-orange-50 text-orange-600;
   }
 
   .stat-icon.red {
-    @apply bg-red-50 text-accent-red;
+    @apply bg-red-50 text-red-600;
   }
 
   .stat-info {
@@ -148,19 +150,19 @@
   }
 
   .progress-fill.green {
-    @apply bg-accent-green;
+    @apply bg-green-600;
   }
 
   .progress-fill.blue {
-    @apply bg-accent-blue;
+    @apply bg-blue-600;
   }
 
   .progress-fill.orange {
-    @apply bg-accent-orange;
+    @apply bg-orange-600;
   }
 
   .progress-fill.red {
-    @apply bg-accent-red;
+    @apply bg-red-600;
   }
 
   .progress-details {
@@ -191,7 +193,7 @@
 
   /* Tables */
   .data-table {
-    @apply bg-gray-100 border border-gray-200 rounded-md shadow-card overflow-hidden;
+    @apply bg-gray-100 border border-gray-200 rounded-md shadow-sm overflow-hidden;
   }
 
   .data-table table {
@@ -220,11 +222,11 @@
 
   /* Buttons */
   .btn {
-    @apply px-4 py-2 rounded font-medium text-sm cursor-pointer transition-all duration-fast border-none inline-flex items-center gap-1.5;
+    @apply px-4 py-2 rounded font-medium text-sm cursor-pointer transition-all duration-150 border-none inline-flex items-center gap-1.5;
   }
 
   .btn-primary {
-    @apply bg-accent-blue text-white;
+    @apply bg-blue-600 text-white;
   }
 
   .btn-primary:hover {
@@ -257,11 +259,11 @@
   }
 
   .form-control {
-    @apply w-full px-3 py-2 text-sm border border-gray-200 rounded transition-all duration-fast bg-white;
+    @apply w-full px-3 py-2 text-sm border border-gray-200 rounded transition-all duration-150 bg-white;
   }
 
   .form-control:focus {
-    @apply outline-none border-accent-blue ring-2 ring-blue-100;
+    @apply outline-none border-blue-600 ring-2 ring-blue-100;
   }
 
   .form-check-input:focus {

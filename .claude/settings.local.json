@@ -41,7 +41,10 @@
       "Bash(node_modules.bintailwindcss init)",
       "Bash(\"./node_modules/.bin/tailwindcss\" init)",
       "Bash(npm run build-css-prod:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(./node_modules/.bin/tailwindcss:*)",
+      "Bash(\"./node_modules/.bin/tailwindcss\" -i ./src/MyPhotoHelper/wwwroot/css/tailwind-input.css -o ./src/MyPhotoHelper/wwwroot/css/tailwind.css)",
+      "Bash(node_modules\\\\.bin\\\\tailwindcss:*)"
     ],
     "deny": []
   }

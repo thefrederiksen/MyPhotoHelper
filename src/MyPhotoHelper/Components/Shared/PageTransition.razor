@@ -35,17 +35,26 @@
     {
         _isNavigating = true;
         InvokeAsync(StateHasChanged);
+        
+        // Set a timeout to hide the spinner if navigation doesn't occur
+        // This handles the case where user clicks the same link twice
+        Task.Run(async () =>
+        {
+            await Task.Delay(500); // Wait 500ms for navigation
+            if (_isNavigating)
+            {
+                _isNavigating = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        // Only hide spinner if URL actually changed
-        if (_lastUrl != e.Location)
-        {
-            _lastUrl = e.Location;
-            _isNavigating = false;
-            InvokeAsync(StateHasChanged);
-        }
+        // Always hide spinner on location change
+        _lastUrl = e.Location;
+        _isNavigating = false;
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

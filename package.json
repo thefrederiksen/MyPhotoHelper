@@ -21,6 +21,6 @@
   "homepage": "https://github.com/thefrederiksen/MyPhotoHelper#readme",
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^3.4.17"
   }
 }

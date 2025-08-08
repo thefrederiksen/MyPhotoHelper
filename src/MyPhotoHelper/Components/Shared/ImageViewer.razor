@@ -301,7 +301,8 @@
     
     /* Ensure card with open dropdown is on top */
     .photo-card:has(.custom-dropdown-menu) {
-        z-index: 1000;
+        z-index: 99999;
+        position: relative;
     }
 
     .photo-card:hover {
@@ -369,7 +370,7 @@
         position: absolute;
         top: 0.25rem;
         right: 0.25rem;
-        z-index: 100;
+        z-index: 99998;
         overflow: visible !important;
     }
 
@@ -406,7 +407,7 @@
         border-radius: 0.25rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
         min-width: 200px;
-        z-index: 10000;
+        z-index: 999999;
         padding: 0.5rem 0;
         animation: fadeIn 0.15s ease-in;
         margin-top: 0.25rem;

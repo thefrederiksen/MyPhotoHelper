@@ -24,11 +24,12 @@
                 <div class="flex gap-2">
                     @if (statistics?.TotalDuplicateGroups > 0 && !showDeleteAllConfirmation)
                     {
-                        <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
-                            <i class="oi oi-trash"></i> Delete All Duplicates
+                        <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
+                            <i class="oi oi-trash"></i> 
+                            <span>Delete All Duplicates</span>
                         </button>
                     }
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
                         @if (isLoading)
                         {
                             <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" role="status"></span>
@@ -40,28 +41,50 @@
             
             @if (showDeleteAllConfirmation)
             {
-                <div class="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    <h5 class="font-bold text-lg">⚠️ Delete All Duplicates - Are you sure?</h5>
-                    <p>This will permanently delete all duplicate files marked with the red "Delete?" badge.</p>
-                    <p class="mb-2"><strong>This action cannot be undone!</strong></p>
-                    <p class="mb-0">Total files to be deleted: <strong>@(statistics?.DuplicateGroups.Sum(g => g.Images.Count - 1) ?? 0)</strong></p>
-                    <hr>
-                    <div class="flex gap-2">
-                        <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded" @onclick="DeleteAllDuplicates" disabled="@isDeletingAll">
-                            @if (isDeletingAll)
-                            {
-                                <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" role="status"></span>
-                                <text>Deleting...</text>
-                            }
-                            else
-                            {
-                                <i class="oi oi-trash"></i>
-                                <text>Yes, Delete All Duplicates</text>
-                            }
-                        </button>
-                        <button class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded" @onclick="CancelDeleteAll" disabled="@isDeletingAll">
-                            <i class="oi oi-x"></i> Cancel
-                        </button>
+                <div class="bg-red-50 border-2 border-red-300 rounded-lg mb-4 p-6 shadow-lg">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <div class="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-red-800 mb-2">Delete All Duplicates - Are you sure?</h3>
+                            <div class="text-red-700 space-y-2">
+                                <p>This will permanently delete all duplicate files marked with the red "Delete?" badge.</p>
+                                <p class="font-semibold">⚠️ This action cannot be undone!</p>
+                                <div class="bg-white border border-red-200 rounded-md p-3 mt-3">
+                                    <p class="text-red-800 font-medium">
+                                        Total files to be deleted: 
+                                        <span class="text-2xl font-bold text-red-600">@(statistics?.DuplicateGroups.Sum(g => g.Images.Count - 1) ?? 0)</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                        @onclick="DeleteAllDuplicates" 
+                                        disabled="@isDeletingAll">
+                                    @if (isDeletingAll)
+                                    {
+                                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white" role="status"></div>
+                                        <span>Deleting...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="oi oi-trash"></i>
+                                        <span>Yes, Delete All Duplicates</span>
+                                    }
+                                </button>
+                                <button class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                        @onclick="CancelDeleteAll" 
+                                        disabled="@isDeletingAll">
+                                    <i class="oi oi-x"></i> 
+                                    <span>Cancel</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
@@ -111,30 +134,18 @@
                 @if (statistics.TotalDuplicateGroups > 0)
                 {
                     <!-- Statistics Cards -->
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="card-title text-primary">Duplicate Groups</h5>
-                                    <p class="display-6 mb-0">@statistics.TotalDuplicateGroups</p>
-                                </div>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+                            <h5 class="text-sm font-medium text-blue-600 mb-2">Duplicate Groups</h5>
+                            <p class="text-3xl font-bold text-gray-900">@statistics.TotalDuplicateGroups</p>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="card-title text-warning">Duplicate Files</h5>
-                                    <p class="display-6 mb-0">@statistics.TotalDuplicateFiles</p>
-                                </div>
-                            </div>
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+                            <h5 class="text-sm font-medium text-yellow-600 mb-2">Duplicate Files</h5>
+                            <p class="text-3xl font-bold text-gray-900">@statistics.TotalDuplicateFiles</p>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="card-title text-danger">Wasted Space</h5>
-                                    <p class="display-6 mb-0">@statistics.FormattedWastedSpace</p>
-                                </div>
-                            </div>
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+                            <h5 class="text-sm font-medium text-red-600 mb-2">Wasted Space</h5>
+                            <p class="text-3xl font-bold text-gray-900">@statistics.FormattedWastedSpace</p>
                         </div>
                     </div>
 
@@ -955,26 +966,33 @@
             {
                 for (int i = 1; i < group.Images.Count; i++)
                 {
-                    var image = group.Images[i];
+                    var originalImage = group.Images[i];
                     try
                     {
                         // Get full path and delete physical file
-                        var fullPath = await PhotoPathService.GetFullPathAsync(image.RelativePath);
+                        var fullPath = await PhotoPathService.GetFullPathAsync(originalImage.RelativePath);
                         if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
                         {
                             File.Delete(fullPath);
                             Logger.LogInformation($"Deleted file: {fullPath}");
                         }
                         
-                        // Mark as deleted in database
-                        image.IsDeleted = 1;
-                        image.FileExists = 0;
-                        dbContext.Update(image);
-                        deletedCount++;
+                        // Reload the entity from database to avoid concurrency issues
+                        var image = await dbContext.tbl_images
+                            .FirstOrDefaultAsync(img => img.ImageId == originalImage.ImageId);
+                        
+                        if (image != null)
+                        {
+                            // Mark as deleted in database
+                            image.IsDeleted = 1;
+                            image.FileExists = 0;
+                            dbContext.Update(image);
+                            deletedCount++;
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogError(ex, $"Failed to delete file: {image.FileName}");
+                        Logger.LogError(ex, $"Failed to delete file: {originalImage.FileName}");
                         errors++;
                     }
                 }

@@ -4,6 +4,8 @@ echo   Starting MyPhotoHelper
 echo ========================================
 echo.
 
+cd /d "%~dp0\.."
+
 REM Check if dotnet is installed
 dotnet --version >nul 2>&1
 if errorlevel 1 (
@@ -13,15 +15,29 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Building and starting the application...
-echo This may take a moment on first run.
+echo Building application (Release mode)...
+dotnet build src\MyPhotoHelper.sln --configuration Release >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Build failed. Running with detailed output...
+    echo.
+    dotnet build src\MyPhotoHelper.sln --configuration Release
+    pause
+    exit /b 1
+)
+
+echo.
+echo MyPhotoHelper is starting...
+echo The application will run in the system tray.
+echo Look for the photo icon near the clock.
+echo.
+echo To access the web interface: http://localhost:5113
+echo To exit: Right-click the tray icon and select Exit
+echo.
+echo You can close this window once the app starts.
 echo.
 
-REM Run the application using dotnet run (working approach)
-start "MyPhotoHelper" dotnet run --project ..\src\MyPhotoHelper
+cd src\MyPhotoHelper
+start "" dotnet run --no-build --configuration Release
 
-echo.
-echo ========================================
-echo   MyPhotoHelper is starting...
-echo ========================================
-echo Check the new window for application output.
+timeout /t 5 >nul
+exit
