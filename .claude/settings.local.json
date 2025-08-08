@@ -53,7 +53,8 @@
       "Bash(gh pr checks:*)",
       "Bash(gh api:*)",
       "Bash(curl:*)",
-      "Bash(gh pr diff:*)"
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr comment:*)"
     ],
     "deny": []
   }
