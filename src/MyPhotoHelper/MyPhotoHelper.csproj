@@ -26,7 +26,7 @@
     <Copyright>Copyright © 2025</Copyright>
     <Description>AI-powered photo organization and management</Description>
     <!-- Application Icon -->
-    <!-- <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon> -->
+    <ApplicationIcon>MyPhotoHelper.ico</ApplicationIcon>
     <!-- Squirrel Settings -->
     <SquirrelBuildDirectory>$(MSBuildProjectDirectory)\..\..\releases</SquirrelBuildDirectory>
   </PropertyGroup>
