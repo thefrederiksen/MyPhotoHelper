@@ -3,24 +3,24 @@
   
   # MyPhotoHelper
   
-  **Free AI-Powered Photo Organization and Management**
+  **AI-Powered Photo Organization and Management**
 </div>
 
 [![Release](https://img.shields.io/github/v/release/thefrederiksen/MyPhotoHelper)](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-9.0-purple.svg)](https://dotnet.microsoft.com/download/dotnet/9.0)
 
-MyPhotoHelper is a completely **free** Windows application that helps you organize and manage your photo collection with AI-powered features. With automatic photo discovery, intelligent categorization, and duplicate detection, keeping your memories organized has never been easier.
+MyPhotoHelper is a Windows application that helps you organize and manage your photo collection with AI-powered features. With automatic photo discovery, intelligent categorization, and duplicate detection, keeping your memories organized has never been easier.
 
-## 🚀 Download Now - 100% Free!
+## 🚀 Download Now
 
 **[📥 Download MyPhotoHelper (Latest)](https://github.com/thefrederiksen/MyPhotoHelper/releases/latest/download/MyPhotoHelper-Setup.exe)**
 
-- ✅ **Completely Free** - No subscription, no ads, no premium features
 - ✅ **MIT License** - Use it however you want, modify it, redistribute it
 - ✅ **One-Click Installer** - No admin rights required
 - ✅ **Auto-Updates** - Always get the latest features automatically
 - ✅ **Privacy First** - All processing happens locally on your computer
+- 📦 **Latest Version:** v1.3.1
 
 ## ✨ Features
 
@@ -70,8 +70,6 @@ MyPhotoHelper is released under the **MIT License**, which means:
 - ✅ **Distribute copies** - Share it with friends, family, coworkers
 - ✅ **No restrictions** - The only requirement is to include the license notice
 
-**This is truly free software** - no hidden costs, no data collection, no premium upgrades. Use it, modify it, share it!
-
 ## 🛠️ Technology Stack
 
 - **Frontend:** Blazor Server (C#/.NET 9)
@@ -95,7 +93,6 @@ We'd love to hear from you! MyPhotoHelper is actively developed and we welcome:
 ## 🔄 Auto-Updates
 
 MyPhotoHelper automatically checks for updates and will notify you when new versions are available. Updates are:
-- **Always free** - No paid upgrades ever
 - **Optional** - You choose when to update
 - **Seamless** - One-click update process
 
