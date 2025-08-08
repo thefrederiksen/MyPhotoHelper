@@ -108,38 +108,22 @@
             else
             {
                 <!-- Summary Stats -->
-                <div class="row mb-4">
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body d-flex flex-column justify-content-center">
-                                <h5 class="card-title text-primary mb-3">Total Photos</h5>
-                                <p class="display-6 mb-0">@totalPhotos.ToString("N0")</p>
-                            </div>
-                        </div>
+                <div class="stats-grid mb-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Photos</div>
+                        <div class="stat-value text-primary">@totalPhotos.ToString("N0")</div>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body d-flex flex-column justify-content-center">
-                                <h5 class="card-title text-info mb-3">Years</h5>
-                                <p class="display-6 mb-0">@yearGroups.Count</p>
-                            </div>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Years</div>
+                        <div class="stat-value text-info">@yearGroups.Count</div>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body d-flex flex-column justify-content-center">
-                                <h5 class="card-title text-success mb-3">Oldest Photo</h5>
-                                <p class="display-6 mb-0">@(oldestPhoto?.ToString("yyyy") ?? "N/A")</p>
-                            </div>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Oldest Photo</div>
+                        <div class="stat-value text-success">@(oldestPhoto?.ToString("yyyy") ?? "N/A")</div>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body d-flex flex-column justify-content-center">
-                                <h5 class="card-title text-warning mb-3">Newest Photo</h5>
-                                <p class="display-6 mb-0">@(newestPhoto?.ToString("yyyy") ?? "N/A")</p>
-                            </div>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Newest Photo</div>
+                        <div class="stat-value text-warning">@(newestPhoto?.ToString("yyyy") ?? "N/A")</div>
                     </div>
                 </div>
 
@@ -195,11 +179,11 @@
                                     }
                                     else
                                     {
-                                        <div class="row g-2">
+                                        <div class="photo-grid">
                                             @foreach (var photo in monthGroup.Photos)
                                             {
                                                 <ImageViewer Photo="photo" 
-                                                           ContainerClass="@(isCompactView ? "col-2 col-sm-1" : "col-6 col-sm-4 col-md-3 col-lg-2")"
+                                                           ContainerClass="@(isCompactView ? "thumbnail-container-compact" : "thumbnail-container")"
                                                            ShowTime="true" />
                                             }
                                         </div>
@@ -225,6 +209,55 @@
 <style>
     .gallery-page {
         padding-bottom: 2rem;
+    }
+    
+    .stats-grid {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: nowrap;
+        padding: 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    .stat-card {
+        flex: 1 1 25%;
+        min-width: 0;
+        text-align: center;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* On very small screens, adjust stat sizing */
+    @@media (max-width: 768px) {
+        .stat-label {
+            font-size: 0.7rem;
+        }
+        .stat-value {
+            font-size: 1rem;
+        }
+        .stats-grid {
+            gap: 1rem;
+            padding: 0.5rem;
+        }
+    }
+    
+    .photo-grid {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: flex-start;
     }
 
     .year-header {
@@ -264,15 +297,7 @@
         }
     }
 
-    /* Summary stat cards */
-    .card.h-100 {
-        min-height: 120px;
-    }
-
-    .card.h-100 .card-body {
-        min-height: 120px;
-        padding: 1rem;
-    }
+    /* Removed old stat card styles - no longer needed */
 
     .card.h-100 .display-6 {
         font-size: 2rem;
