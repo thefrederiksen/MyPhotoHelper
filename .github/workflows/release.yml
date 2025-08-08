@@ -32,6 +32,28 @@ jobs:
         echo "Building version: $VERSION"
       shell: pwsh
     
+    - name: Update version in project file
+      run: |
+        $version = "${{ steps.version.outputs.VERSION }}"
+        $versionWithBuild = "$version.0"
+        $csprojPath = "src/MyPhotoHelper/MyPhotoHelper.csproj"
+        
+        Write-Host "Updating project file with version: $versionWithBuild"
+        
+        $csproj = Get-Content $csprojPath -Raw
+        
+        # Update all version fields
+        $csproj = $csproj -replace '<AssemblyVersion>[\d\.]+</AssemblyVersion>', "<AssemblyVersion>$versionWithBuild</AssemblyVersion>"
+        $csproj = $csproj -replace '<FileVersion>[\d\.]+</FileVersion>', "<FileVersion>$versionWithBuild</FileVersion>"
+        $csproj = $csproj -replace '<ProductVersion>[\d\.]+</ProductVersion>', "<ProductVersion>$versionWithBuild</ProductVersion>"
+        $csproj = $csproj -replace '<Version>[\d\.]+</Version>', "<Version>$versionWithBuild</Version>"
+        $csproj = $csproj -replace '<AssemblyInformationalVersion>[\d\.]+</AssemblyInformationalVersion>', "<AssemblyInformationalVersion>$version</AssemblyInformationalVersion>"
+        $csproj = $csproj -replace '<InformationalVersion>[\d\.]+</InformationalVersion>', "<InformationalVersion>$version</InformationalVersion>"
+        
+        $csproj | Set-Content $csprojPath -NoNewline
+        Write-Host "✅ Project file updated with version $versionWithBuild"
+      shell: pwsh
+    
     - name: Restore dependencies
       run: dotnet restore src/MyPhotoHelper.sln
     
@@ -153,14 +175,31 @@ jobs:
         Write-Host "✅ update.xml updated successfully"
       shell: pwsh
     
-    - name: Update main branch with verified XML
+    - name: Update main branch with version and XML
       if: success() && steps.verify_release.outputs.RELEASE_VERIFIED == 'true'
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git checkout main
+        
+        # Add both the updated project file and update.xml
+        git add src/MyPhotoHelper/MyPhotoHelper.csproj
         git add update.xml
-        git commit -m "Update AutoUpdater XML to v${{ steps.version.outputs.VERSION }} [skip ci]" || echo "No changes to commit"
-        git push origin main || echo "Failed to push - may be protected branch"
-        Write-Host "✅ update.xml committed to main branch"
+        
+        # Commit both changes (fail if there's an error)
+        git commit -m "Update version to v${{ steps.version.outputs.VERSION }} and AutoUpdater XML [skip ci]"
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "❌ Failed to commit version updates" -ForegroundColor Red
+          exit 1
+        }
+        
+        # Push to main (fail if there's an error)
+        git push origin main
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "❌ Failed to push version updates to main branch" -ForegroundColor Red
+          Write-Host "This might be due to branch protection rules. Please check repository settings." -ForegroundColor Yellow
+          exit 1
+        }
+        
+        Write-Host "✅ Version and update.xml successfully committed to main branch" -ForegroundColor Green
       shell: pwsh
