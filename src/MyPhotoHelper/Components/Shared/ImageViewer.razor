@@ -6,15 +6,15 @@
 @implements IDisposable
 
 <div class="@ContainerClass" style="overflow: visible !important;">
-    <div class="card border-0 shadow-sm photo-card">
-        <div class="photo-container position-relative" @onclick="() => OpenImage()" @onclick:stopPropagation="true">
+    <div class="rounded-lg shadow-sm photo-card">
+        <div class="photo-container relative" @onclick="OpenImage">
             <ImageThumbnail Photo="Photo" Size="ThumbnailSize" />
             
             <!-- Screenshot indicator -->
             @if (IsScreenshot)
             {
-                <div class="screenshot-badge position-absolute top-0 start-0 m-1">
-                    <span class="badge bg-warning text-dark">
+                <div class="screenshot-badge absolute top-0 left-0 m-1">
+                    <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">
                         <i class="oi oi-monitor"></i>
                     </span>
                 </div>
@@ -22,9 +22,9 @@
             
             <!-- Photo overlay with info -->
             <div class="photo-overlay">
-                <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                <div class="flex flex-col items-center justify-center h-full">
                     <span class="oi oi-external-link mb-1" aria-hidden="true"></span>
-                    <small class="text-white">
+                    <small class="text-white text-xs">
                         @if (ShowTime && Photo.tbl_image_metadata?.DateTaken.HasValue == true)
                         {
                             @Photo.tbl_image_metadata.DateTaken.Value.ToString("HH:mm")
@@ -39,7 +39,7 @@
             
             <!-- Dropdown Menu - Always Visible -->
             <div class="photo-dropdown-container" @onclick:stopPropagation="true">
-                <button class="btn btn-sm photo-dropdown-btn" type="button" 
+                <button class="text-sm photo-dropdown-btn" type="button" 
                         @onclick="ToggleDropdown" 
                         @onclick:stopPropagation="true" title="More options">
                     <span class="oi oi-menu" aria-hidden="true"></span>
@@ -48,20 +48,20 @@
                 {
                     <div class="custom-dropdown-menu">
                         <button class="custom-dropdown-item" @onclick="HandleOpenImage" @onclick:stopPropagation="true">
-                            <span class="oi oi-external-link me-2" aria-hidden="true"></span>
+                            <span class="oi oi-external-link mr-2" aria-hidden="true"></span>
                             Open Image
                         </button>
                         <button class="custom-dropdown-item" @onclick="HandleCopyPath" @onclick:stopPropagation="true">
-                            <span class="oi oi-clipboard me-2" aria-hidden="true"></span>
+                            <span class="oi oi-clipboard mr-2" aria-hidden="true"></span>
                             Copy Path
                         </button>
                         <button class="custom-dropdown-item" @onclick="HandleOpenLocation" @onclick:stopPropagation="true">
-                            <span class="oi oi-folder-open me-2" aria-hidden="true"></span>
+                            <span class="oi oi-folder-open mr-2" aria-hidden="true"></span>
                             Open Location
                         </button>
-                        <hr class="dropdown-divider my-1" />
+                        <hr class="border-gray-200 my-1" />
                         <button class="custom-dropdown-item" @onclick="HandleShowProperties" @onclick:stopPropagation="true">
-                            <span class="oi oi-info me-2" aria-hidden="true"></span>
+                            <span class="oi oi-info mr-2" aria-hidden="true"></span>
                             Properties
                         </button>
                     </div>
@@ -83,7 +83,7 @@
     [Parameter] public tbl_images Photo { get; set; } = default!;
     [Parameter] public bool ShowTime { get; set; } = true;
     [Parameter] public EventCallback<tbl_images> OnImageClick { get; set; }
-    [Parameter] public string ContainerClass { get; set; } = "col-3 col-sm-2 col-md-2 col-lg-1";
+    [Parameter] public string ContainerClass { get; set; } = "w-1/4 sm:w-1/6 md:w-1/6 lg:w-1/12";
     [Parameter] public int ThumbnailSize { get; set; } = 250;
     [Parameter] public RenderFragment? AdditionalContent { get; set; }
     
@@ -98,18 +98,27 @@
     {
         try
         {
+            Logger.Info($"OpenImage clicked for photo: {Photo?.RelativePath}");
+            
             if (Photo != null)
             {
                 // Get the full path from settings
                 var fullPath = await GetFullPath();
-                if (!string.IsNullOrEmpty(fullPath))
+                Logger.Info($"Full path resolved to: {fullPath}");
+                
+                if (!string.IsNullOrEmpty(fullPath) && System.IO.File.Exists(fullPath))
                 {
-                    Logger.Info($"Opening image: {fullPath}");
+                    Logger.Info($"File exists, opening: {fullPath}");
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = fullPath,
                         UseShellExecute = true
                     });
+                    Logger.Info($"Process.Start executed successfully");
+                }
+                else
+                {
+                    Logger.Error($"File not found or path empty: {fullPath}");
                 }
                 
                 // Also trigger the callback if provided
@@ -118,10 +127,15 @@
                     await OnImageClick.InvokeAsync(Photo);
                 }
             }
+            else
+            {
+                Logger.Error("Photo object is null");
+            }
         }
         catch (Exception ex)
         {
             Logger.Error($"Error opening image: {ex.Message}");
+            Logger.Error($"Stack trace: {ex.StackTrace}");
         }
     }
 
@@ -270,6 +284,9 @@
         cursor: pointer;
         overflow: visible !important;
         position: relative;
+        background-color: white;
+        border-radius: 0.5rem;
+        padding: 0;
     }
     
     /* Ensure card with open dropdown is on top */
@@ -289,6 +306,7 @@
         position: relative;
         background-color: #f8f9fa;
         z-index: 1;
+        cursor: pointer;
     }
 
     .screenshot-badge {
@@ -329,7 +347,7 @@
 
     .photo-card:hover .photo-overlay {
         opacity: 1;
-        pointer-events: auto;
+        pointer-events: none; /* Keep overlay non-interactive to allow clicks through */
     }
 
     .overlay-click-area {
@@ -350,9 +368,13 @@
         padding: 0.25rem 0.5rem;
         background-color: rgba(255, 255, 255, 0.9);
         border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 0.25rem;
         color: #333;
         opacity: 0.8;
         transition: opacity 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .photo-dropdown-btn:hover {
