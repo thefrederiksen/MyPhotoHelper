@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyHelper UI Component Library - Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css" rel="stylesheet">
+    <link href="./myhelper.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f7fa;
+        }
+        .demo-section {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .demo-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+        .demo-subtitle {
+            font-size: 1.125rem;
+            font-weight: 500;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">MyHelper UI Component Library</h1>
+        
+        <!-- Buttons Section -->
+        <div class="demo-section">
+            <h2 class="demo-title">Buttons</h2>
+            
+            <h3 class="demo-subtitle">Primary Variants</h3>
+            <div class="demo-grid">
+                <button class="btn btn-primary">Primary</button>
+                <button class="btn btn-danger">Danger</button>
+                <button class="btn btn-success">Success</button>
+                <button class="btn btn-warning">Warning</button>
+                <button class="btn btn-secondary">Secondary</button>
+            </div>
+
+            <h3 class="demo-subtitle">Outline Variants</h3>
+            <div class="demo-grid">
+                <button class="btn btn-outline-primary">Outline Primary</button>
+                <button class="btn btn-outline-danger">Outline Danger</button>
+                <button class="btn btn-outline-secondary">Outline Secondary</button>
+            </div>
+
+            <h3 class="demo-subtitle">Size Variants</h3>
+            <div class="flex gap-4 items-center">
+                <button class="btn btn-primary btn-xs">Extra Small</button>
+                <button class="btn btn-primary btn-sm">Small</button>
+                <button class="btn btn-primary">Default</button>
+                <button class="btn btn-primary btn-lg">Large</button>
+            </div>
+
+            <h3 class="demo-subtitle">Special Variants</h3>
+            <div class="demo-grid">
+                <button class="btn btn-link">Link Button</button>
+                <button class="btn btn-ghost">Ghost Button</button>
+                <button class="btn btn-primary btn-block">Block Button</button>
+                <button class="btn btn-primary" disabled>Disabled</button>
+            </div>
+
+            <h3 class="demo-subtitle">Danger Variants</h3>
+            <div class="demo-grid">
+                <button class="btn-danger-primary">Danger Primary</button>
+                <button class="btn-danger-confirm">Danger Confirm</button>
+                <button class="btn-danger-small">Small Danger</button>
+                <button class="delete-single-btn">Delete File</button>
+            </div>
+        </div>
+
+        <!-- Cards Section -->
+        <div class="demo-section">
+            <h2 class="demo-title">Cards</h2>
+            
+            <h3 class="demo-subtitle">Basic Card</h3>
+            <div class="card max-w-md">
+                <div class="card-header">
+                    <h3 class="card-title">Card Title</h3>
+                </div>
+                <div class="card-body">
+                    This is the card body content. You can put any content here.
+                </div>
+                <div class="card-footer">
+                    Card footer with actions
+                </div>
+            </div>
+
+            <h3 class="demo-subtitle">Statistics Cards</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="stat-card-enhanced blue">
+                    <div class="stat-icon-wrapper">
+                        <span>📊</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Photos</div>
+                        <div class="stat-value">1,234</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card-enhanced yellow">
+                    <div class="stat-icon-wrapper">
+                        <span>📁</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Duplicates</div>
+                        <div class="stat-value">56</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card-enhanced red">
+                    <div class="stat-icon-wrapper">
+                        <span>⚠️</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Wasted Space</div>
+                        <div class="stat-value">2.3 GB</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="demo-section">
+            <h2 class="demo-title">Alerts & Badges</h2>
+            
+            <h3 class="demo-subtitle">Alert Variants</h3>
+            <div class="space-y-3">
+                <div class="alert alert-primary">
+                    <strong>Info!</strong> This is an informational alert.
+                </div>
+                <div class="alert alert-success">
+                    <strong>Success!</strong> Your operation completed successfully.
+                </div>
+                <div class="alert alert-warning alert-dismissible">
+                    <strong>Warning!</strong> Please review your input.
+                    <button class="alert-dismiss">×</button>
+                </div>
+                <div class="alert alert-danger">
+                    <strong>Error!</strong> Something went wrong.
+                </div>
+            </div>
+
+            <h3 class="demo-subtitle">Badges</h3>
+            <div class="flex gap-2 flex-wrap">
+                <span class="badge badge-primary">Primary</span>
+                <span class="badge badge-success">Success</span>
+                <span class="badge badge-danger">Danger</span>
+                <span class="badge badge-warning">Warning</span>
+                <span class="badge badge-info">Info</span>
+                <span class="badge badge-secondary">Secondary</span>
+                <span class="badge badge-light">Light</span>
+                <span class="badge badge-dark">Dark</span>
+            </div>
+
+            <h3 class="demo-subtitle">Status Badges</h3>
+            <div class="flex gap-2 flex-wrap">
+                <span class="status-badge pending">Pending</span>
+                <span class="status-badge active">Active</span>
+                <span class="status-badge expired">Expired</span>
+                <span class="status-badge draft">Draft</span>
+            </div>
+        </div>
+
+        <!-- Forms Section -->
+        <div class="demo-section">
+            <h2 class="demo-title">Forms</h2>
+            
+            <div class="max-w-md">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" placeholder="Enter email">
+                    <span class="form-text">We'll never share your email.</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Select Option</label>
+                    <select class="form-select">
+                        <option>Choose an option</option>
+                        <option>Option 1</option>
+                        <option>Option 2</option>
+                        <option>Option 3</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-textarea" rows="3" placeholder="Enter your message"></textarea>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="check1">
+                    <label class="form-check-label" for="check1">I agree to the terms</label>
+                </div>
+
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="radio" id="radio1">
+                    <label class="form-check-label" for="radio1">Option 1</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="radio" id="radio2">
+                    <label class="form-check-label" for="radio2">Option 2</label>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-secondary">Cancel</button>
+                    <button class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress & Loading Section -->
+        <div class="demo-section">
+            <h2 class="demo-title">Progress & Loading</h2>
+            
+            <h3 class="demo-subtitle">Progress Bars</h3>
+            <div class="space-y-3">
+                <div class="progress-bar">
+                    <div class="progress-fill blue" style="width: 25%"></div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill green" style="width: 50%"></div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill orange" style="width: 75%"></div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill red" style="width: 90%"></div>
+                </div>
+            </div>
+
+            <h3 class="demo-subtitle">Spinners</h3>
+            <div class="flex gap-4 items-center">
+                <span class="spinner spinner-sm"></span>
+                <span class="spinner"></span>
+                <span class="spinner spinner-lg"></span>
+                <span class="spinner spinner-xl"></span>
+            </div>
+
+            <h3 class="demo-subtitle">Skeleton Loading</h3>
+            <div class="space-y-3">
+                <div class="skeleton h-4 w-3/4"></div>
+                <div class="skeleton h-4 w-full"></div>
+                <div class="skeleton h-4 w-5/6"></div>
+            </div>
+        </div>
+
+        <!-- Utility Classes Section -->
+        <div class="demo-section">
+            <h2 class="demo-title">Utility Classes</h2>
+            
+            <h3 class="demo-subtitle">Hover Effects</h3>
+            <div class="demo-grid">
+                <div class="card hover-scale p-4">Hover Scale</div>
+                <div class="card hover-lift p-4">Hover Lift</div>
+                <div class="card hover-glow p-4">Hover Glow</div>
+            </div>
+
+            <h3 class="demo-subtitle">Text Utilities</h3>
+            <p class="text-truncate">This is a very long text that will be truncated with ellipsis when it exceeds the container width</p>
+            <p class="text-muted">Muted text color</p>
+            <p class="text-small">Small text size</p>
+            <p class="text-tiny">Tiny text size</p>
+        </div>
+    </div>
+</body>
+</html>

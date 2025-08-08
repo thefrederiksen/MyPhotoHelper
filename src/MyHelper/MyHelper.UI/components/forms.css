@@ -1,0 +1,267 @@
+/* MyHelper UI - Form Components */
+/* Using Tailwind @apply directive for component composition */
+
+@layer components {
+  /* Form Groups */
+  .form-group {
+    @apply mb-4;
+  }
+
+  .form-group-inline {
+    @apply flex items-center gap-4 mb-4;
+  }
+
+  /* Form Labels */
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  .form-label-required::after {
+    @apply text-red-500 ml-1;
+    content: '*';
+  }
+
+  /* Form Controls */
+  .form-control {
+    @apply w-full px-3 py-2 text-sm text-gray-900 
+           bg-white border border-gray-300 rounded-md
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+           disabled:bg-gray-100 disabled:cursor-not-allowed
+           transition-colors duration-200;
+  }
+
+  .form-control-sm {
+    @apply px-2 py-1.5 text-xs;
+  }
+
+  .form-control-lg {
+    @apply px-4 py-3 text-base;
+  }
+
+  /* Input specific styles */
+  .form-input {
+    @apply form-control;
+  }
+
+  .form-input-error {
+    @apply border-red-500 focus:ring-red-500 focus:border-red-500;
+  }
+
+  .form-input-success {
+    @apply border-green-500 focus:ring-green-500 focus:border-green-500;
+  }
+
+  /* Textarea */
+  .form-textarea {
+    @apply form-control resize-y min-h-[100px];
+  }
+
+  /* Select */
+  .form-select {
+    @apply form-control appearance-none bg-no-repeat bg-right
+           pr-10 cursor-pointer;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+  }
+
+  /* Multi-select */
+  .form-multiselect {
+    @apply form-control;
+  }
+
+  /* Checkbox and Radio */
+  .form-check {
+    @apply flex items-center mb-3;
+  }
+
+  .form-check-inline {
+    @apply inline-flex items-center mr-4 mb-0;
+  }
+
+  .form-check-input {
+    @apply w-4 h-4 text-blue-600 bg-white border-gray-300 rounded
+           focus:ring-2 focus:ring-blue-500 focus:ring-offset-0
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors duration-200;
+  }
+
+  .form-check-input[type="radio"] {
+    @apply rounded-full;
+  }
+
+  .form-check-label {
+    @apply ml-2 text-sm text-gray-700 cursor-pointer select-none;
+  }
+
+  /* Switch/Toggle */
+  .form-switch {
+    @apply relative inline-flex items-center cursor-pointer;
+  }
+
+  .form-switch-input {
+    @apply sr-only peer;
+  }
+
+  .form-switch-toggle {
+    @apply w-11 h-6 bg-gray-300 rounded-full 
+           peer-focus:ring-2 peer-focus:ring-blue-500
+           peer-checked:bg-blue-600
+           after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+           after:bg-white after:rounded-full after:h-5 after:w-5
+           after:transition-all after:duration-200
+           peer-checked:after:translate-x-full peer-checked:after:border-white;
+  }
+
+  .form-switch-label {
+    @apply ml-3 text-sm text-gray-700;
+  }
+
+  /* Input Groups */
+  .input-group {
+    @apply flex;
+  }
+
+  .input-group-prepend,
+  .input-group-append {
+    @apply flex items-center px-3 text-sm text-gray-600 
+           bg-gray-100 border border-gray-300;
+  }
+
+  .input-group-prepend {
+    @apply rounded-l-md border-r-0;
+  }
+
+  .input-group-append {
+    @apply rounded-r-md border-l-0;
+  }
+
+  .input-group .form-control {
+    @apply rounded-none;
+  }
+
+  .input-group .form-control:first-child {
+    @apply rounded-l-md;
+  }
+
+  .input-group .form-control:last-child {
+    @apply rounded-r-md;
+  }
+
+  /* Form Help Text */
+  .form-text {
+    @apply mt-1 text-xs text-gray-600;
+  }
+
+  .form-text-error {
+    @apply text-red-600;
+  }
+
+  .form-text-success {
+    @apply text-green-600;
+  }
+
+  /* Form Validation Messages */
+  .invalid-feedback {
+    @apply mt-1 text-xs text-red-600;
+  }
+
+  .valid-feedback {
+    @apply mt-1 text-xs text-green-600;
+  }
+
+  /* File Input */
+  .form-file {
+    @apply relative;
+  }
+
+  .form-file-input {
+    @apply relative z-10 m-0 block w-full min-w-0 flex-auto cursor-pointer
+           rounded-md border border-gray-300 bg-white px-3 py-2
+           text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0
+           file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs
+           file:font-medium file:text-white file:cursor-pointer
+           hover:file:bg-blue-700 focus:outline-none focus:ring-2
+           focus:ring-blue-500 focus:border-blue-500;
+  }
+
+  .form-file-label {
+    @apply absolute inset-0 flex items-center px-3 pointer-events-none;
+  }
+
+  /* Range Input */
+  .form-range {
+    @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer;
+  }
+
+  /* Form Sections */
+  .form-section {
+    @apply mb-6 pb-6 border-b border-gray-200 last:border-b-0;
+  }
+
+  .form-section-title {
+    @apply text-lg font-semibold text-gray-900 mb-4;
+  }
+
+  .form-section-description {
+    @apply text-sm text-gray-600 mb-4;
+  }
+
+  /* Form Row */
+  .form-row {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 mb-4;
+  }
+
+  .form-row-3 {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-4 mb-4;
+  }
+
+  /* Form Actions */
+  .form-actions {
+    @apply flex items-center justify-end gap-3 pt-4 mt-6 border-t border-gray-200;
+  }
+
+  .form-actions-left {
+    @apply justify-start;
+  }
+
+  .form-actions-center {
+    @apply justify-center;
+  }
+
+  .form-actions-between {
+    @apply justify-between;
+  }
+
+  /* Fieldset */
+  .form-fieldset {
+    @apply p-4 border border-gray-300 rounded-md mb-4;
+  }
+
+  .form-legend {
+    @apply text-sm font-medium text-gray-900 px-2;
+  }
+
+  /* Floating Labels */
+  .form-floating {
+    @apply relative;
+  }
+
+  .form-floating > .form-control {
+    @apply pt-6 pb-2;
+  }
+
+  .form-floating > label {
+    @apply absolute top-2 left-3 text-xs text-gray-600
+           transition-all duration-200 pointer-events-none;
+  }
+
+  .form-floating > .form-control:placeholder-shown ~ label {
+    @apply top-4 text-sm;
+  }
+
+  .form-floating > .form-control:focus ~ label,
+  .form-floating > .form-control:not(:placeholder-shown) ~ label {
+    @apply top-2 text-xs text-blue-600;
+  }
+}

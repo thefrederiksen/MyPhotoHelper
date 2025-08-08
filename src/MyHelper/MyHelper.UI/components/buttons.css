@@ -1,0 +1,176 @@
+/* MyHelper UI - Button Components */
+/* Using Tailwind @apply directive for component composition */
+
+@layer components {
+  /* Base button styles */
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium 
+           transition-all duration-200 cursor-pointer border-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Primary Button - Blue gradient with hover effects */
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 
+           hover:from-blue-700 hover:to-blue-800 
+           text-white shadow-md hover:shadow-lg 
+           transform hover:-translate-y-0.5 active:translate-y-0
+           disabled:hover:transform-none;
+  }
+
+  /* Danger Button - Red gradient for destructive actions */
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-600 to-red-700 
+           hover:from-red-700 hover:to-red-800 
+           text-white shadow-md hover:shadow-lg 
+           transform hover:-translate-y-0.5 active:translate-y-0
+           disabled:hover:transform-none;
+  }
+
+  /* Secondary Button - Gray/neutral style */
+  .btn-secondary {
+    @apply bg-gray-500 hover:bg-gray-600 
+           text-white shadow-md hover:shadow-lg 
+           transform hover:-translate-y-0.5 active:translate-y-0
+           disabled:hover:transform-none;
+  }
+
+  /* Success Button - Green gradient for positive actions */
+  .btn-success {
+    @apply bg-gradient-to-r from-green-600 to-green-700 
+           hover:from-green-700 hover:to-green-800 
+           text-white shadow-md hover:shadow-lg 
+           transform hover:-translate-y-0.5 active:translate-y-0
+           disabled:hover:transform-none;
+  }
+
+  /* Warning Button - Yellow/Orange gradient for warning actions */
+  .btn-warning {
+    @apply bg-gradient-to-r from-yellow-500 to-orange-500 
+           hover:from-yellow-600 hover:to-orange-600 
+           text-white shadow-md hover:shadow-lg 
+           transform hover:-translate-y-0.5 active:translate-y-0
+           disabled:hover:transform-none;
+  }
+
+  /* Outline Button Variants */
+  .btn-outline-primary {
+    @apply bg-white border-2 border-blue-600 text-blue-600
+           hover:bg-blue-600 hover:text-white
+           shadow-sm hover:shadow-md
+           transform hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-outline-danger {
+    @apply bg-white border-2 border-red-600 text-red-600
+           hover:bg-red-600 hover:text-white
+           shadow-sm hover:shadow-md
+           transform hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-outline-secondary {
+    @apply bg-white border border-gray-300 text-gray-700
+           hover:bg-gray-50 hover:border-gray-400
+           shadow-sm hover:shadow-md;
+  }
+
+  /* Size Variants */
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+
+  .btn-xs {
+    @apply px-2 py-1 text-xs;
+  }
+
+  /* Icon Button */
+  .btn-icon {
+    @apply p-2 rounded-lg;
+  }
+
+  .btn-icon-sm {
+    @apply p-1.5 rounded-md text-sm;
+  }
+
+  /* Full Width Button */
+  .btn-block {
+    @apply w-full justify-center;
+  }
+
+  /* Link Button - looks like a link */
+  .btn-link {
+    @apply bg-transparent text-blue-600 hover:text-blue-800 
+           underline shadow-none hover:shadow-none
+           transform-none hover:transform-none p-0;
+  }
+
+  /* Ghost Button - minimal style */
+  .btn-ghost {
+    @apply bg-transparent text-gray-700 hover:bg-gray-100
+           shadow-none hover:shadow-sm;
+  }
+
+  /* Loading State */
+  .btn-loading {
+    @apply relative pointer-events-none;
+  }
+
+  .btn-loading::after {
+    @apply absolute inset-0 flex items-center justify-center;
+    content: '';
+    background: inherit;
+    border-radius: inherit;
+  }
+
+  /* Specific Danger Button Variants from Duplicates.razor.css */
+  .btn-danger-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold
+           text-white bg-gradient-to-r from-red-600 to-red-700
+           border-none rounded-lg shadow-md
+           hover:from-red-700 hover:to-red-800
+           hover:shadow-lg hover:-translate-y-0.5
+           active:translate-y-0 active:shadow-sm
+           disabled:opacity-60 disabled:cursor-not-allowed
+           transition-all duration-200 cursor-pointer relative overflow-hidden;
+  }
+
+  .btn-danger-confirm {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold
+           text-white bg-gradient-to-r from-red-600 to-red-800
+           border-2 border-red-600 rounded-lg shadow-md
+           hover:from-red-700 hover:to-red-900 hover:border-red-700
+           hover:shadow-lg hover:-translate-y-0.5
+           transition-all duration-200 cursor-pointer;
+  }
+
+  .btn-danger-small {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium
+           text-white bg-red-600 border-none rounded-md
+           hover:bg-red-700 hover:-translate-y-0.5 hover:shadow-sm
+           disabled:opacity-60 disabled:cursor-not-allowed
+           transition-all duration-200 cursor-pointer;
+  }
+
+  .btn-outline-small {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium
+           text-gray-600 bg-white border border-gray-300 rounded-md
+           hover:text-gray-800 hover:border-gray-400 hover:bg-gray-50
+           transition-all duration-200 cursor-pointer;
+  }
+
+  /* Delete Single File Button */
+  .delete-single-btn {
+    @apply inline-flex items-center gap-1.5 w-full mt-2 px-3 py-2 text-sm font-medium
+           text-white bg-gradient-to-r from-red-500 to-red-600
+           border-none rounded-md shadow-sm
+           hover:from-red-600 hover:to-red-700
+           hover:-translate-y-0.5 hover:shadow-md
+           active:translate-y-0 active:shadow-sm
+           disabled:opacity-60 disabled:cursor-not-allowed
+           transition-all duration-200 cursor-pointer;
+  }
+}

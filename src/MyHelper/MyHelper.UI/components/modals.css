@@ -1,0 +1,356 @@
+/* MyHelper UI - Modal/Dialog Components */
+/* Using Tailwind @apply directive for component composition */
+
+@layer components {
+  /* Modal Backdrop */
+  .modal-backdrop {
+    @apply fixed inset-0 z-40 bg-black bg-opacity-50 
+           transition-opacity duration-300;
+  }
+
+  .modal-backdrop-blur {
+    @apply backdrop-blur-sm;
+  }
+
+  /* Modal Container */
+  .modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center 
+           p-4 overflow-x-hidden overflow-y-auto;
+  }
+
+  .modal-top {
+    @apply items-start pt-20;
+  }
+
+  .modal-bottom {
+    @apply items-end pb-20;
+  }
+
+  /* Modal Dialog */
+  .modal-dialog {
+    @apply relative w-full max-w-lg bg-white rounded-lg shadow-xl
+           transform transition-all duration-300;
+  }
+
+  .modal-dialog-sm {
+    @apply max-w-sm;
+  }
+
+  .modal-dialog-md {
+    @apply max-w-md;
+  }
+
+  .modal-dialog-lg {
+    @apply max-w-2xl;
+  }
+
+  .modal-dialog-xl {
+    @apply max-w-4xl;
+  }
+
+  .modal-dialog-fullwidth {
+    @apply max-w-full mx-4;
+  }
+
+  /* Modal Content */
+  .modal-content {
+    @apply relative bg-white rounded-lg shadow-xl;
+  }
+
+  /* Modal Header */
+  .modal-header {
+    @apply flex items-center justify-between p-5 border-b border-gray-200;
+  }
+
+  .modal-title {
+    @apply text-xl font-semibold text-gray-900;
+  }
+
+  .modal-close {
+    @apply ml-auto -mx-1.5 -my-1.5 p-1.5 text-gray-400 
+           hover:text-gray-900 hover:bg-gray-100 rounded-lg
+           focus:outline-none focus:ring-2 focus:ring-gray-300
+           transition-colors duration-200;
+  }
+
+  /* Modal Body */
+  .modal-body {
+    @apply p-6 space-y-4;
+  }
+
+  .modal-body-scroll {
+    @apply max-h-96 overflow-y-auto;
+  }
+
+  /* Modal Footer */
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 p-5 
+           border-t border-gray-200 bg-gray-50 rounded-b-lg;
+  }
+
+  .modal-footer-left {
+    @apply justify-start;
+  }
+
+  .modal-footer-center {
+    @apply justify-center;
+  }
+
+  .modal-footer-between {
+    @apply justify-between;
+  }
+
+  /* Dialog Variants */
+  
+  /* Confirmation Dialog */
+  .modal-confirm {
+    @apply max-w-md;
+  }
+
+  .modal-confirm .modal-header {
+    @apply bg-yellow-50 border-yellow-200;
+  }
+
+  .modal-confirm .modal-title {
+    @apply text-yellow-900;
+  }
+
+  /* Alert Dialog */
+  .modal-alert {
+    @apply max-w-md;
+  }
+
+  .modal-alert .modal-header {
+    @apply bg-red-50 border-red-200;
+  }
+
+  .modal-alert .modal-title {
+    @apply text-red-900;
+  }
+
+  /* Success Dialog */
+  .modal-success {
+    @apply max-w-md;
+  }
+
+  .modal-success .modal-header {
+    @apply bg-green-50 border-green-200;
+  }
+
+  .modal-success .modal-title {
+    @apply text-green-900;
+  }
+
+  /* Info Dialog */
+  .modal-info {
+    @apply max-w-md;
+  }
+
+  .modal-info .modal-header {
+    @apply bg-blue-50 border-blue-200;
+  }
+
+  .modal-info .modal-title {
+    @apply text-blue-900;
+  }
+
+  /* Side Panel/Drawer */
+  .drawer {
+    @apply fixed inset-y-0 z-50 flex flex-col bg-white shadow-xl
+           transform transition-transform duration-300;
+  }
+
+  .drawer-left {
+    @apply left-0 -translate-x-full;
+  }
+
+  .drawer-left.open {
+    @apply translate-x-0;
+  }
+
+  .drawer-right {
+    @apply right-0 translate-x-full;
+  }
+
+  .drawer-right.open {
+    @apply translate-x-0;
+  }
+
+  .drawer-sm {
+    @apply w-64;
+  }
+
+  .drawer-md {
+    @apply w-80;
+  }
+
+  .drawer-lg {
+    @apply w-96;
+  }
+
+  .drawer-header {
+    @apply flex items-center justify-between p-5 border-b border-gray-200;
+  }
+
+  .drawer-title {
+    @apply text-lg font-semibold text-gray-900;
+  }
+
+  .drawer-body {
+    @apply flex-1 p-5 overflow-y-auto;
+  }
+
+  .drawer-footer {
+    @apply p-5 border-t border-gray-200 bg-gray-50;
+  }
+
+  /* Toast/Notification Popup */
+  .toast-container {
+    @apply fixed z-50 flex flex-col gap-3 p-4;
+  }
+
+  .toast-container-top-right {
+    @apply top-0 right-0;
+  }
+
+  .toast-container-top-left {
+    @apply top-0 left-0;
+  }
+
+  .toast-container-bottom-right {
+    @apply bottom-0 right-0;
+  }
+
+  .toast-container-bottom-left {
+    @apply bottom-0 left-0;
+  }
+
+  .toast-container-top-center {
+    @apply top-0 left-1/2 -translate-x-1/2;
+  }
+
+  .toast-container-bottom-center {
+    @apply bottom-0 left-1/2 -translate-x-1/2;
+  }
+
+  .toast {
+    @apply flex items-center w-full max-w-xs p-4 bg-white 
+           rounded-lg shadow-lg border border-gray-200
+           transform transition-all duration-300;
+  }
+
+  .toast-success {
+    @apply bg-green-50 border-green-200;
+  }
+
+  .toast-error {
+    @apply bg-red-50 border-red-200;
+  }
+
+  .toast-warning {
+    @apply bg-yellow-50 border-yellow-200;
+  }
+
+  .toast-info {
+    @apply bg-blue-50 border-blue-200;
+  }
+
+  .toast-icon {
+    @apply flex-shrink-0 w-5 h-5 mr-3;
+  }
+
+  .toast-message {
+    @apply flex-1 text-sm font-normal;
+  }
+
+  .toast-close {
+    @apply ml-auto -mx-1.5 -my-1.5 p-1.5 text-gray-400 
+           hover:text-gray-900 hover:bg-gray-100 rounded-lg
+           focus:outline-none focus:ring-2 focus:ring-gray-300;
+  }
+
+  /* Popup/Popover */
+  .popover {
+    @apply absolute z-40 p-3 bg-white border border-gray-200 
+           rounded-lg shadow-lg;
+  }
+
+  .popover-arrow {
+    @apply absolute w-3 h-3 bg-white border-gray-200 
+           transform rotate-45;
+  }
+
+  .popover-top .popover-arrow {
+    @apply -bottom-1.5 border-r border-b;
+  }
+
+  .popover-bottom .popover-arrow {
+    @apply -top-1.5 border-l border-t;
+  }
+
+  .popover-left .popover-arrow {
+    @apply -right-1.5 border-t border-r;
+  }
+
+  .popover-right .popover-arrow {
+    @apply -left-1.5 border-b border-l;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 
+           rounded-md shadow-sm whitespace-nowrap;
+  }
+
+  .tooltip-arrow {
+    @apply absolute w-2 h-2 bg-gray-900 transform rotate-45;
+  }
+
+  .tooltip-top .tooltip-arrow {
+    @apply -bottom-1;
+  }
+
+  .tooltip-bottom .tooltip-arrow {
+    @apply -top-1;
+  }
+
+  .tooltip-left .tooltip-arrow {
+    @apply -right-1;
+  }
+
+  .tooltip-right .tooltip-arrow {
+    @apply -left-1;
+  }
+
+  /* Action Sheet (Mobile) */
+  .action-sheet {
+    @apply fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-xl
+           transform transition-transform duration-300 translate-y-full;
+  }
+
+  .action-sheet.open {
+    @apply translate-y-0;
+  }
+
+  .action-sheet-header {
+    @apply flex items-center justify-center p-4 border-b border-gray-200;
+  }
+
+  .action-sheet-handle {
+    @apply w-12 h-1 bg-gray-300 rounded-full;
+  }
+
+  .action-sheet-body {
+    @apply p-4 max-h-96 overflow-y-auto;
+  }
+
+  .action-sheet-item {
+    @apply flex items-center px-4 py-3 text-gray-700 
+           hover:bg-gray-50 rounded-lg cursor-pointer
+           transition-colors duration-200;
+  }
+
+  .action-sheet-item-danger {
+    @apply text-red-600 hover:bg-red-50;
+  }
+}

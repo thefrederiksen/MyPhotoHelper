@@ -1,0 +1,420 @@
+/* MyHelper UI - Utility/Helper Classes */
+/* Using Tailwind @apply directive for component composition */
+
+@layer utilities {
+  /* Loading States */
+  .loading {
+    @apply pointer-events-none opacity-50;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+
+  .skeleton-text {
+    @apply h-4 bg-gray-200 rounded animate-pulse;
+  }
+
+  .skeleton-circle {
+    @apply rounded-full bg-gray-200 animate-pulse;
+  }
+
+  /* Spinner */
+  .spinner {
+    @apply inline-block w-4 h-4 border-2 border-gray-300 
+           border-t-blue-600 rounded-full animate-spin;
+  }
+
+  .spinner-sm {
+    @apply w-3 h-3 border;
+  }
+
+  .spinner-lg {
+    @apply w-6 h-6 border-2;
+  }
+
+  .spinner-xl {
+    @apply w-8 h-8 border-4;
+  }
+
+  /* Progress Bars */
+  .progress-bar {
+    @apply h-2 overflow-hidden rounded-full bg-gray-200;
+  }
+
+  .progress-fill {
+    @apply h-full transition-all duration-300;
+  }
+
+  .progress-fill.green {
+    @apply bg-green-600;
+  }
+
+  .progress-fill.blue {
+    @apply bg-blue-600;
+  }
+
+  .progress-fill.orange {
+    @apply bg-orange-600;
+  }
+
+  .progress-fill.red {
+    @apply bg-red-600;
+  }
+
+  /* Dividers */
+  .divider {
+    @apply my-4 border-t border-gray-200;
+  }
+
+  .divider-thick {
+    @apply border-t-2;
+  }
+
+  .divider-dotted {
+    @apply border-dotted;
+  }
+
+  .divider-dashed {
+    @apply border-dashed;
+  }
+
+  .divider-vertical {
+    @apply inline-block mx-2 h-4 border-l border-gray-300;
+  }
+
+  /* Text Utilities */
+  .text-truncate {
+    @apply truncate;
+  }
+
+  .text-truncate-2 {
+    @apply line-clamp-2;
+  }
+
+  .text-truncate-3 {
+    @apply line-clamp-3;
+  }
+
+  .text-muted {
+    @apply text-gray-600;
+  }
+
+  .text-small {
+    @apply text-sm;
+  }
+
+  .text-tiny {
+    @apply text-xs;
+  }
+
+  /* Hover Effects */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  .hover-scale-sm {
+    @apply transition-transform duration-200 hover:scale-102;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .hover-glow {
+    @apply transition-shadow duration-200 hover:shadow-xl;
+  }
+
+  /* Click Effects */
+  .click-scale {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  .animate-slide-in-up {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  /* Aspect Ratios */
+  .aspect-square {
+    @apply aspect-w-1 aspect-h-1;
+  }
+
+  .aspect-video {
+    @apply aspect-w-16 aspect-h-9;
+  }
+
+  .aspect-4-3 {
+    @apply aspect-w-4 aspect-h-3;
+  }
+
+  /* Containers */
+  .container-fluid {
+    @apply w-full px-4 mx-auto;
+  }
+
+  .container-narrow {
+    @apply max-w-4xl mx-auto px-4;
+  }
+
+  .container-wide {
+    @apply max-w-7xl mx-auto px-4;
+  }
+
+  /* Sections */
+  .section {
+    @apply py-12;
+  }
+
+  .section-sm {
+    @apply py-8;
+  }
+
+  .section-lg {
+    @apply py-16;
+  }
+
+  .section-header {
+    @apply mb-6;
+  }
+
+  .section-title {
+    @apply text-2xl font-semibold text-gray-900 mb-2;
+  }
+
+  .section-description {
+    @apply text-base text-gray-600;
+  }
+
+  /* Overlays */
+  .overlay {
+    @apply absolute inset-0 bg-black bg-opacity-50;
+  }
+
+  .overlay-light {
+    @apply absolute inset-0 bg-white bg-opacity-75;
+  }
+
+  .overlay-dark {
+    @apply absolute inset-0 bg-black bg-opacity-75;
+  }
+
+  /* Gradients */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-r from-green-600 to-green-700;
+  }
+
+  .gradient-danger {
+    @apply bg-gradient-to-r from-red-600 to-red-700;
+  }
+
+  .gradient-warning {
+    @apply bg-gradient-to-r from-yellow-500 to-orange-500;
+  }
+
+  /* Shadows */
+  .shadow-soft {
+    @apply shadow-sm;
+  }
+
+  .shadow-medium {
+    @apply shadow-md;
+  }
+
+  .shadow-hard {
+    @apply shadow-lg;
+  }
+
+  .shadow-intense {
+    @apply shadow-2xl;
+  }
+
+  /* Borders */
+  .border-soft {
+    @apply border border-gray-200;
+  }
+
+  .border-medium {
+    @apply border border-gray-300;
+  }
+
+  .border-hard {
+    @apply border-2 border-gray-400;
+  }
+
+  /* Rounded Corners */
+  .rounded-soft {
+    @apply rounded;
+  }
+
+  .rounded-medium {
+    @apply rounded-lg;
+  }
+
+  .rounded-hard {
+    @apply rounded-xl;
+  }
+
+  .rounded-full {
+    @apply rounded-full;
+  }
+
+  /* Utility Classes from Existing Code */
+  .file-diff-highlight {
+    @apply bg-yellow-100 text-yellow-800 px-1 py-0.5 
+           rounded font-bold border border-yellow-300 
+           inline-block mx-0.5;
+  }
+
+  /* Scrollbar Styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Focus Styles */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  .focus-ring-success {
+    @apply focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  }
+
+  .focus-ring-danger {
+    @apply focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+
+  /* Disabled States */
+  .disabled {
+    @apply opacity-50 cursor-not-allowed pointer-events-none;
+  }
+
+  /* Visibility */
+  .invisible-until-hover {
+    @apply invisible group-hover:visible;
+  }
+
+  .opacity-until-hover {
+    @apply opacity-0 group-hover:opacity-100 transition-opacity duration-200;
+  }
+
+  /* Z-Index Utilities */
+  .z-dropdown {
+    @apply z-10;
+  }
+
+  .z-modal-backdrop {
+    @apply z-40;
+  }
+
+  .z-modal {
+    @apply z-50;
+  }
+
+  .z-notification {
+    @apply z-[60];
+  }
+
+  .z-tooltip {
+    @apply z-[70];
+  }
+
+  /* Print Utilities */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    .print-only {
+      display: block !important;
+    }
+  }
+
+  /* Responsive Utilities */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+
+  .tablet-only {
+    @apply hidden sm:block lg:hidden;
+  }
+
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Grid Layouts */
+  .photo-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4;
+  }
+
+  .duplicate-photos-grid {
+    @apply flex flex-wrap gap-4 justify-start overflow-visible;
+  }
+
+  .duplicate-image-container {
+    @apply flex-none w-[200px];
+  }
+}

@@ -1,0 +1,201 @@
+/* MyHelper UI Component Library
+ * A centralized Tailwind CSS component library for consistent UI across MyPhotoHelper and related projects
+ * 
+ * This file serves as the main entry point that imports all component styles
+ */
+
+/* Import Tailwind base styles */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Import MyHelper UI Components */
+@import './components/buttons.css';
+@import './components/cards.css';
+@import './components/forms.css';
+@import './components/modals.css';
+@import './components/alerts.css';
+
+/* Import Utility Classes */
+@import './utilities/helpers.css';
+
+/* Custom Design System Variables */
+@layer base {
+  :root {
+    /* Colors */
+    --color-primary: theme('colors.blue.600');
+    --color-primary-hover: theme('colors.blue.700');
+    --color-secondary: theme('colors.gray.500');
+    --color-secondary-hover: theme('colors.gray.600');
+    --color-success: theme('colors.green.600');
+    --color-success-hover: theme('colors.green.700');
+    --color-danger: theme('colors.red.600');
+    --color-danger-hover: theme('colors.red.700');
+    --color-warning: theme('colors.yellow.500');
+    --color-warning-hover: theme('colors.yellow.600');
+    --color-info: theme('colors.cyan.600');
+    --color-info-hover: theme('colors.cyan.700');
+
+    /* Spacing */
+    --spacing-xs: theme('spacing.1');
+    --spacing-sm: theme('spacing.2');
+    --spacing-md: theme('spacing.4');
+    --spacing-lg: theme('spacing.6');
+    --spacing-xl: theme('spacing.8');
+
+    /* Border Radius */
+    --radius-sm: theme('borderRadius.DEFAULT');
+    --radius-md: theme('borderRadius.md');
+    --radius-lg: theme('borderRadius.lg');
+    --radius-xl: theme('borderRadius.xl');
+
+    /* Shadows */
+    --shadow-sm: theme('boxShadow.sm');
+    --shadow-md: theme('boxShadow.md');
+    --shadow-lg: theme('boxShadow.lg');
+    --shadow-xl: theme('boxShadow.xl');
+
+    /* Transitions */
+    --transition-fast: 150ms;
+    --transition-normal: 200ms;
+    --transition-slow: 300ms;
+  }
+
+  /* Dark mode variables (optional future enhancement) */
+  [data-theme='dark'] {
+    --color-primary: theme('colors.blue.500');
+    --color-primary-hover: theme('colors.blue.400');
+    /* Add more dark mode overrides as needed */
+  }
+}
+
+/* Global Styles */
+@layer base {
+  /* Ensure consistent box-sizing */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visible for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-600;
+  }
+
+  /* Remove default button styles */
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    outline: inherit;
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded-md;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+/* Print Styles */
+@media print {
+  /* Hide unnecessary elements when printing */
+  .no-print,
+  .btn,
+  .modal,
+  .drawer,
+  .toast,
+  .notification-banner {
+    display: none !important;
+  }
+
+  /* Ensure content fits on page */
+  .page-content {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Remove backgrounds and shadows for print */
+  * {
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure text is black for print */
+  body, 
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700 {
+    color: black !important;
+  }
+
+  /* Show links */
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+}
+
+/* Responsive Design Breakpoints */
+@layer utilities {
+  /* Custom breakpoint utilities if needed */
+  @responsive {
+    .container-responsive {
+      @apply w-full px-4 mx-auto;
+    }
+  }
+}
+
+/* Animation Keyframes */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Additional animation utilities */
+@layer utilities {
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  .animate-bounce-in {
+    animation: bounce-in 0.3s ease-out;
+  }
+}
