@@ -176,13 +176,13 @@
                     {
                         <hr>
                         <h6>Recent Screenshots</h6>
-                        <div class="row">
+                        <div class="screenshots-grid">
                             @foreach (var sample in screenshotSamples.Take(6))
                             {
-                                <div class="col-md-4 col-lg-3 col-xl-2 mb-3">
+                                <div class="screenshot-item">
                                     <!-- Use ImageViewer with standard 200x200 thumbnails -->
                                     <ImageViewer Photo="sample" 
-                                               ContainerClass="w-100" 
+                                               ContainerClass="screenshot-thumbnail" 
                                                ShowTime="true"
                                                OnImageClick="EventCallback.Factory.Create<tbl_images>(this, (img) => ShowImageDetails(img.ImageId))">
                                         <AdditionalContent>
@@ -210,16 +210,16 @@
                     <h5 class="mb-0"><span class="oi oi-image" aria-hidden="true"></span> Recently Analyzed Photos</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="analyzed-photos-grid">
                         @foreach (var sample in aiSamples.Take(6))
                         {
-                            <div class="col-md-4 col-lg-3 col-xl-2 mb-3">
+                            <div class="analyzed-photo-item">
                                 @{
                                     var sampleImage = CreateImageFromSample(sample);
                                 }
                                 <!-- Use ImageViewer with standard 200x200 thumbnails -->
                                 <ImageViewer Photo="sampleImage" 
-                                           ContainerClass="w-100" 
+                                           ContainerClass="analyzed-thumbnail" 
                                            ShowTime="true"
                                            OnImageClick="EventCallback.Factory.Create<tbl_images>(this, (img) => ShowImageDetails(img.ImageId))">
                                     <AdditionalContent>
@@ -265,20 +265,20 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
+                    <div class="duplicate-stats-grid mb-3">
+                        <div class="duplicate-stat-item">
                             <div class="alert alert-warning text-center">
                                 <h4>@duplicateGroups.Count</h4>
                                 <small>Duplicate Groups</small>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="duplicate-stat-item">
                             <div class="alert alert-danger text-center">
                                 <h4>@duplicateCount</h4>
                                 <small>Duplicate Files</small>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="duplicate-stat-item">
                             <div class="alert alert-info text-center">
                                 <h4>@FormatFileSize(duplicateGroups.Sum(g => g.FileSize * (g.Files.Count - 1)))</h4>
                                 <small>Wasted Space</small>
@@ -450,10 +450,10 @@
                     <h5 class="mb-0"><span class="oi oi-pie-chart" aria-hidden="true"></span> File Type Distribution</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="file-type-grid">
                         @foreach (var fileType in fileTypeStats.OrderByDescending(f => f.Count))
                         {
-                            <div class="col-md-3 mb-3">
+                            <div class="file-type-item">
                                 <div class="text-center">
                                     <h6>@fileType.Extension.ToUpper()</h6>
                                     <h4 class="text-primary">@fileType.Count.ToString("N0")</h4>
@@ -497,6 +497,60 @@
     
     .report-thumbnail {
         width: 100%;
+    }
+    
+    /* Screenshots grid */
+    .screenshots-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .screenshot-item {
+        flex: 0 0 150px;
+    }
+    
+    .screenshot-thumbnail {
+        width: 150px;
+    }
+    
+    /* Analyzed photos grid */
+    .analyzed-photos-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .analyzed-photo-item {
+        flex: 0 0 150px;
+    }
+    
+    .analyzed-thumbnail {
+        width: 150px;
+    }
+    
+    /* File type distribution grid */
+    .file-type-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+    
+    .file-type-item {
+        flex: 1 1 calc(25% - 1.125rem);
+        min-width: 120px;
+    }
+    
+    /* Duplicate stats grid */
+    .duplicate-stats-grid {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: nowrap;
+    }
+    
+    .duplicate-stat-item {
+        flex: 1 1 33.33%;
+        min-width: 0;
     }
     
     /* Summary stats grid */
