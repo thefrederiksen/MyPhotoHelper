@@ -3,30 +3,30 @@
 
 <PageTitle>Memories - @selectedDate.ToString("MMMM d") - MyPhotoHelper</PageTitle>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="w-full">
+    <div class="flex justify-between items-center mb-4">
         <div>
-            <h1 class="display-5">📸 Memories</h1>
-            <p class="lead text-muted">Photos from @selectedDate.ToString("MMMM d") in previous years</p>
+            <h1 class="text-4xl font-light">📸 Memories</h1>
+            <p class="text-lg text-gray-500">Photos from @selectedDate.ToString("MMMM d") in previous years</p>
             @if (selectedDate.Date != DateTime.Today)
             {
-                <p class="text-info small mb-0">
+                <p class="text-cyan-600 text-sm mb-0">
                     <i class="oi oi-calendar"></i> Viewing: @selectedDate.ToString("dddd, MMMM d, yyyy")
                     @if (selectedDate.Date > DateTime.Today)
                     {
-                        <span class="badge bg-info ms-2">Future Date</span>
+                        <span class="bg-cyan-100 text-cyan-800 text-sm font-medium px-2.5 py-0.5 rounded ml-2">Future Date</span>
                     }
                 </p>
             }
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" @onclick="PreviousDay">
+        <div class="flex gap-2">
+            <button class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded" @onclick="PreviousDay">
                 <i class="oi oi-chevron-left"></i> Previous Day
             </button>
-            <button class="btn btn-outline-secondary" @onclick="NextDay">
+            <button class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded" @onclick="NextDay">
                 <i class="oi oi-chevron-right"></i> Next Day
             </button>
-            <button class="btn btn-primary" @onclick="GoToToday">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded" @onclick="GoToToday">
                 <i class="oi oi-home"></i> Today
             </button>
         </div>
@@ -34,9 +34,9 @@
 
     @if (ScanStatusService.IsScanning && !hasPhotos)
     {
-        <div class="alert alert-info d-flex align-items-center mb-4">
-            <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
-                <span class="visually-hidden">Scanning...</span>
+        <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4 flex items-center">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3" role="status">
+                <span class="sr-only">Scanning...</span>
             </div>
             <div>
                 <h6 class="mb-0">Scanning for photos...</h6>
@@ -48,41 +48,39 @@
     @if (isLoading)
     {
         <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading memories...</span>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" role="status">
+                <span class="sr-only">Loading memories...</span>
             </div>
-            <p class="mt-2 text-muted">Loading memories for @selectedDate.ToString("MMMM d")...</p>
+            <p class="mt-2 text-gray-500">Loading memories for @selectedDate.ToString("MMMM d")...</p>
         </div>
     }
     else if (memories?.HasMemories == true)
     {
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="alert alert-info d-flex align-items-center">
-                    <i class="oi oi-info me-2"></i>
+        <div class="mb-3">
+                <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded flex items-center">
+                    <i class="oi oi-info mr-2"></i>
                     <span>Found <strong>@memories.TotalPhotos</strong> photos from @memories.FormattedDate across <strong>@memories.YearGroups.Count</strong> years</span>
                 </div>
-            </div>
         </div>
 
         @foreach (var yearGroup in memories.YearGroups)
         {
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="bg-white rounded-lg shadow mb-4">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
                     <h3 class="mb-0">
                         @yearGroup.Year
                         @if (yearGroup.IsToday(selectedDate))
                         {
-                            <span class="badge bg-success ms-2">Today's Photos</span>
+                            <span class="bg-green-100 text-green-800 text-sm font-medium px-2.5 py-0.5 rounded ml-2">Today's Photos</span>
                         }
                         else if (yearGroup.Year == DateTime.Today.Year - 1)
                         {
-                            <span class="badge bg-info ms-2">Last Year</span>
+                            <span class="bg-cyan-100 text-cyan-800 text-sm font-medium px-2.5 py-0.5 rounded ml-2">Last Year</span>
                         }
                     </h3>
-                    <span class="badge bg-secondary">@yearGroup.PhotoCount photos</span>
+                    <span class="bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded">@yearGroup.PhotoCount photos</span>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                     <div class="photo-grid">
                         @foreach (var photo in yearGroup.Photos.Take(20))
                         {
@@ -92,7 +90,7 @@
                     @if (yearGroup.PhotoCount > 20)
                     {
                         <div class="mt-3 text-center">
-                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ShowAllPhotosForYear(yearGroup.Year)">
+                            <button class="bg-white border border-blue-500 text-blue-500 hover:bg-blue-50 font-medium py-1 px-3 rounded text-sm" @onclick="() => ShowAllPhotosForYear(yearGroup.Year)">
                                 View all @yearGroup.PhotoCount photos from @yearGroup.Year
                             </button>
                         </div>
@@ -107,14 +105,14 @@
             <div class="mb-4">
                 <i class="oi oi-camera" style="font-size: 4rem; color: #6c757d;"></i>
             </div>
-            <h3 class="text-muted">No memories for @selectedDate.ToString("MMMM d")</h3>
-            <p class="text-muted">No photos were taken on this day in previous years.</p>
-            <p class="text-muted mb-4">Try browsing other dates or make sure your photos have been scanned and have date information.</p>
-            <div class="d-flex gap-2 justify-content-center">
-                <button class="btn btn-outline-primary" @onclick="PreviousDay">
+            <h3 class="text-gray-500">No memories for @selectedDate.ToString("MMMM d")</h3>
+            <p class="text-gray-500">No photos were taken on this day in previous years.</p>
+            <p class="text-gray-500 mb-4">Try browsing other dates or make sure your photos have been scanned and have date information.</p>
+            <div class="flex gap-2 justify-center">
+                <button class="bg-white border border-blue-500 text-blue-500 hover:bg-blue-50 font-medium py-2 px-4 rounded" @onclick="PreviousDay">
                     <i class="oi oi-chevron-left"></i> Previous Day
                 </button>
-                <button class="btn btn-outline-primary" @onclick="NextDay">
+                <button class="bg-white border border-blue-500 text-blue-500 hover:bg-blue-50 font-medium py-2 px-4 rounded" @onclick="NextDay">
                     <i class="oi oi-chevron-right"></i> Next Day
                 </button>
             </div>

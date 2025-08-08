@@ -5,18 +5,18 @@
 
 <AppErrorBoundary>
     <ChildContent>
-        <div class="container-fluid gallery-page">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="w-full gallery-page">
+            <div class="flex justify-between items-center mb-4">
                 <div>
-                    <h1 class="display-5">📸 Gallery</h1>
-                    <p class="lead text-muted">
+                    <h1 class="text-4xl font-light">📸 Gallery</h1>
+                    <p class="text-lg text-gray-500">
                         Browse all your photos by date
                     </p>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
+                <div class="flex gap-2 items-center">
                     <!-- Category Filter Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" @onclick="ToggleCategoryDropdown" @onclick:stopPropagation="true">
+                    <div class="relative">
+                        <button class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded inline-flex items-center" type="button" @onclick="ToggleCategoryDropdown" @onclick:stopPropagation="true">
                             <i class="oi oi-tags"></i> 
                             @if (selectedCategories.Count == 3 || selectedCategories.Count == 0)
                             {
@@ -29,40 +29,40 @@
                         </button>
                         @if (showCategoryDropdown)
                         {
-                            <div class="dropdown-menu show p-3" style="min-width: 200px;" @onclick:stopPropagation="true">
-                                <h6 class="dropdown-header">Filter by Category</h6>
-                                <div class="dropdown-divider"></div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="cat-photo" 
+                            <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50 p-3" @onclick:stopPropagation="true">
+                                <h6 class="text-sm font-semibold text-gray-600 mb-2">Filter by Category</h6>
+                                <div class="border-t border-gray-200 my-2"></div>
+                                <div class="flex items-center mb-2">
+                                    <input class="mr-2" type="checkbox" id="cat-photo" 
                                            checked="@selectedCategories.Contains("photo")"
                                            @onchange="@(() => ToggleCategory("photo"))" />
-                                    <label class="form-check-label" for="cat-photo">
+                                    <label class="text-sm" for="cat-photo">
                                         📷 Photos
                                     </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="cat-screenshot" 
+                                <div class="flex items-center mb-2">
+                                    <input class="mr-2" type="checkbox" id="cat-screenshot" 
                                            checked="@selectedCategories.Contains("screenshot")"
                                            @onchange="@(() => ToggleCategory("screenshot"))" />
-                                    <label class="form-check-label" for="cat-screenshot">
+                                    <label class="text-sm" for="cat-screenshot">
                                         🖥️ Screenshots
                                     </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="cat-unknown" 
+                                <div class="flex items-center mb-2">
+                                    <input class="mr-2" type="checkbox" id="cat-unknown" 
                                            checked="@selectedCategories.Contains("unknown")"
                                            @onchange="@(() => ToggleCategory("unknown"))" />
-                                    <label class="form-check-label" for="cat-unknown">
+                                    <label class="text-sm" for="cat-unknown">
                                         ❓ Unknown
                                     </label>
                                 </div>
-                                <div class="dropdown-divider"></div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <button class="btn btn-sm btn-link p-0" @onclick="SelectAllCategories">Select All</button>
-                                    <button class="btn btn-sm btn-link p-0" @onclick="ClearAllCategories">Clear All</button>
+                                <div class="border-t border-gray-200 my-2"></div>
+                                <div class="flex justify-between mb-2">
+                                    <button class="text-blue-600 hover:text-blue-800 text-sm p-0" @onclick="SelectAllCategories">Select All</button>
+                                    <button class="text-blue-600 hover:text-blue-800 text-sm p-0" @onclick="ClearAllCategories">Clear All</button>
                                 </div>
-                                <div class="d-grid">
-                                    <button class="btn btn-primary btn-sm" @onclick="ApplyCategoryFilter">
+                                <div class="grid">
+                                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded w-full" @onclick="ApplyCategoryFilter">
                                         <i class="oi oi-check"></i> Apply Filter
                                     </button>
                                 </div>
@@ -70,11 +70,11 @@
                         }
                     </div>
                     
-                    <button class="btn btn-outline-secondary" @onclick="ToggleView">
+                    <button class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded" @onclick="ToggleView">
                         <i class="oi @(isCompactView ? "oi-grid-four-up" : "oi-list")"></i> 
                         @(isCompactView ? "Grid View" : "Compact View")
                     </button>
-                    <button class="btn btn-outline-primary" @onclick="RefreshGallery">
+                    <button class="bg-white border border-blue-500 text-blue-500 hover:bg-blue-50 font-medium py-2 px-4 rounded" @onclick="RefreshGallery">
                         <i class="oi oi-reload"></i> Refresh
                     </button>
                 </div>
@@ -82,24 +82,24 @@
 
             @if (isLoading)
             {
-                <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+                <div class="flex justify-center items-center" style="min-height: 400px;">
                     <div class="text-center">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-3" role="status">
+                            <span class="sr-only">Loading...</span>
                         </div>
-                        <p class="text-muted">Loading your photo collection...</p>
+                        <p class="text-gray-500">Loading your photo collection...</p>
                     </div>
                 </div>
             }
             else if (!yearGroups.Any())
             {
                 <div class="text-center py-5">
-                    <i class="display-1 text-muted">📸</i>
-                    <h3 class="mt-3 text-muted">No Photos Found</h3>
-                    <p class="text-muted">Start scanning to add photos to your gallery.</p>
+                    <i class="text-8xl text-gray-500">📸</i>
+                    <h3 class="mt-3 text-gray-500">No Photos Found</h3>
+                    <p class="text-gray-500">Start scanning to add photos to your gallery.</p>
                     @if (!ScanStatusService.IsScanning)
                     {
-                        <a href="/photoscan" class="btn btn-primary mt-3">
+                        <a href="/photoscan" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded inline-block mt-3">
                             <i class="oi oi-magnifying-glass"></i> Start Scanning
                         </a>
                     }
@@ -111,19 +111,19 @@
                 <div class="stats-grid mb-3">
                     <div class="stat-card">
                         <div class="stat-label">Total Photos</div>
-                        <div class="stat-value text-primary">@totalPhotos.ToString("N0")</div>
+                        <div class="stat-value text-blue-600">@totalPhotos.ToString("N0")</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Years</div>
-                        <div class="stat-value text-info">@yearGroups.Count</div>
+                        <div class="stat-value text-cyan-600">@yearGroups.Count</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Oldest Photo</div>
-                        <div class="stat-value text-success">@(oldestPhoto?.ToString("yyyy") ?? "N/A")</div>
+                        <div class="stat-value text-green-600">@(oldestPhoto?.ToString("yyyy") ?? "N/A")</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Newest Photo</div>
-                        <div class="stat-value text-warning">@(newestPhoto?.ToString("yyyy") ?? "N/A")</div>
+                        <div class="stat-value text-yellow-600">@(newestPhoto?.ToString("yyyy") ?? "N/A")</div>
                     </div>
                 </div>
 
@@ -144,22 +144,22 @@
                 @foreach (var yearGroup in yearGroups)
                 {
                     <div class="year-section mb-5" id="year-@yearGroup.Year">
-                        <div class="year-header sticky-top bg-white border-bottom mb-3">
-                            <h2 class="display-6 mb-0 py-2 px-3">
-                                <span class="text-primary">@yearGroup.Year</span>
-                                <small class="text-muted ms-3">@yearGroup.TotalPhotos.ToString("N0") photos</small>
+                        <div class="year-header sticky top-0 bg-white border-b border-gray-200 mb-3">
+                            <h2 class="text-4xl font-light mb-0 py-2 px-3">
+                                <span class="text-blue-600">@yearGroup.Year</span>
+                                <small class="text-gray-500 ml-3">@yearGroup.TotalPhotos.ToString("N0") photos</small>
                             </h2>
                         </div>
 
                         @foreach (var monthGroup in yearGroup.MonthGroups)
                         {
                             <div class="month-section mb-4" id="month-@yearGroup.Year-@monthGroup.Month">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h4 class="text-secondary">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="text-gray-600">
                                         @GetMonthName(monthGroup.Month)
-                                        <small class="text-muted">(@monthGroup.PhotoCount photos)</small>
+                                        <small class="text-gray-500">(@monthGroup.PhotoCount photos)</small>
                                     </h4>
-                                    <button class="btn btn-sm btn-outline-secondary" 
+                                    <button class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-1 px-2 rounded text-sm" 
                                             @onclick="() => ToggleMonth(yearGroup.Year, monthGroup.Month)">
                                         <i class="oi @(IsMonthExpanded(yearGroup.Year, monthGroup.Month) ? "oi-chevron-top" : "oi-chevron-bottom")"></i>
                                         @(IsMonthExpanded(yearGroup.Year, monthGroup.Month) ? "Collapse" : "Expand")
@@ -171,10 +171,10 @@
                                     @if (monthGroup.Photos == null)
                                     {
                                         <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                                <span class="visually-hidden">Loading photos...</span>
+                                            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" role="status">
+                                                <span class="sr-only">Loading photos...</span>
                                             </div>
-                                            <p class="text-muted mt-2">Loading photos for @GetMonthName(monthGroup.Month) @yearGroup.Year...</p>
+                                            <p class="text-gray-500 mt-2">Loading photos for @GetMonthName(monthGroup.Month) @yearGroup.Year...</p>
                                         </div>
                                     }
                                     else
@@ -199,7 +199,7 @@
         <!-- Scroll to top button -->
         @if (showScrollTop)
         {
-            <button class="btn btn-primary btn-floating" @onclick="ScrollToTop" title="Scroll to top">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full fixed bottom-8 right-8 w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300" @onclick="ScrollToTop" title="Scroll to top">
                 <i class="oi oi-arrow-top"></i>
             </button>
         }

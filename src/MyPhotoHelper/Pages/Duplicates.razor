@@ -15,23 +15,23 @@
 
 <AppErrorBoundary>
     <ChildContent>
-        <div class="container-fluid duplicates-page">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="w-full duplicates-page">
+            <div class="flex justify-between items-center mb-4">
                 <div>
-                    <h1 class="display-5">🔍 Duplicate Photos</h1>
-                    <p class="lead text-muted">Find and manage duplicate photos in your collection</p>
+                    <h1 class="text-4xl font-light">🔍 Duplicate Photos</h1>
+                    <p class="text-lg text-gray-500">Find and manage duplicate photos in your collection</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="flex gap-2">
                     @if (statistics?.TotalDuplicateGroups > 0 && !showDeleteAllConfirmation)
                     {
-                        <button class="btn btn-danger" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
+                        <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
                             <i class="oi oi-trash"></i> Delete All Duplicates
                         </button>
                     }
-                    <button class="btn btn-primary" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
                         @if (isLoading)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" role="status"></span>
                         }
                         <i class="oi oi-reload"></i> Refresh
                     </button>
@@ -40,17 +40,17 @@
             
             @if (showDeleteAllConfirmation)
             {
-                <div class="alert alert-danger border-danger mb-4" style="border-width: 2px;">
-                    <h5 class="alert-heading">⚠️ Delete All Duplicates - Are you sure?</h5>
+                <div class="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <h5 class="font-bold text-lg">⚠️ Delete All Duplicates - Are you sure?</h5>
                     <p>This will permanently delete all duplicate files marked with the red "Delete?" badge.</p>
                     <p class="mb-2"><strong>This action cannot be undone!</strong></p>
                     <p class="mb-0">Total files to be deleted: <strong>@(statistics?.DuplicateGroups.Sum(g => g.Images.Count - 1) ?? 0)</strong></p>
                     <hr>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-danger" @onclick="DeleteAllDuplicates" disabled="@isDeletingAll">
+                    <div class="flex gap-2">
+                        <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded" @onclick="DeleteAllDuplicates" disabled="@isDeletingAll">
                             @if (isDeletingAll)
                             {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" role="status"></span>
                                 <text>Deleting...</text>
                             }
                             else
@@ -59,7 +59,7 @@
                                 <text>Yes, Delete All Duplicates</text>
                             }
                         </button>
-                        <button class="btn btn-secondary" @onclick="CancelDeleteAll" disabled="@isDeletingAll">
+                        <button class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded" @onclick="CancelDeleteAll" disabled="@isDeletingAll">
                             <i class="oi oi-x"></i> Cancel
                         </button>
                     </div>
@@ -181,10 +181,10 @@
                                 </div>
                             </div>
                             <div class="card-body" style="overflow: visible;">
-                                <div class="row g-3" style="overflow: visible;">
+                                <div class="duplicate-photos-grid">
                                     @foreach (var image in group.Images.Take(4)) // Show up to 4 larger previews
                                     {
-                                        <div class="col-12 col-sm-6 col-md-6 col-lg-4 col-xl-3 position-relative duplicate-image-column">
+                                        <div class="duplicate-image-container position-relative">
                                             @if (group.Images.IndexOf(image) == 0)
                                             {
                                                 <span class="badge bg-success position-absolute top-0 start-0 m-2 z-1">Keep This</span>
@@ -194,8 +194,8 @@
                                                 <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-1">Delete?</span>
                                             }
                                             <ImageViewer Photo="image" 
-                                                        ContainerClass="" 
-                                                        ThumbnailSize="375"
+                                                        ContainerClass="duplicate-thumbnail" 
+                                                        ThumbnailSize="190"
                                                         ShowTime="false">
                                                 <AdditionalContent>
                                                     <div class="image-info mt-2 p-2 bg-light rounded">
@@ -293,13 +293,26 @@
 </AppErrorBoundary>
 
 <style>
-    /* Override ImageViewer styles for duplicates page - 50% larger thumbnails (375px) */
-    .duplicates-page .photo-container {
+    .duplicate-photos-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: flex-start;
+        overflow: visible;
+    }
+    
+    .duplicate-image-container {
+        flex: 0 0 auto;
+        width: 200px;
+    }
+    
+    /* Override ImageViewer styles for duplicates page */
+    .duplicates-page .duplicate-image-container .photo-container {
         aspect-ratio: 1;
-        width: 365px !important; /* Slightly smaller to allow for card padding */
-        height: 365px !important;
-        max-width: 365px !important;
-        max-height: 365px !important;
+        width: 190px !important;
+        height: 190px !important;
+        max-width: 190px !important;
+        max-height: 190px !important;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -309,10 +322,10 @@
         border-radius: 0.375rem;
     }
     
-    .duplicates-page .photo-card {
-        width: 375px !important;
+    .duplicates-page .duplicate-image-container .photo-card {
+        width: 190px !important;
         height: auto !important;
-        max-width: 375px !important;
+        max-width: 190px !important;
         position: relative;
         margin: 0 auto;
         box-sizing: border-box;

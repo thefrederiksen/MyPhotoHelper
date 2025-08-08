@@ -14,39 +14,39 @@
 
 <PageTitle>Settings - MyPhotoHelper</PageTitle>
 
-<div class="container-fluid">
-    <h1 class="display-4">Settings</h1>
-    <p class="lead">Configure MyPhotoHelper application settings</p>
+<div class="w-full">
+    <h1 class="text-5xl font-light">Settings</h1>
+    <p class="text-lg">Configure MyPhotoHelper application settings</p>
     
     @if (showSuccessMessage)
     {
-        <div class="alert alert-success alert-dismissible fade show shadow-lg border-success border-2" role="alert" style="animation: slideInDown 0.3s ease-out;">
-            <div class="d-flex align-items-center">
-                <span class="oi oi-check fs-4 me-3" aria-hidden="true"></span>
+        <div class="bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 rounded shadow-lg" role="alert" style="animation: slideInDown 0.3s ease-out;">
+            <div class="flex items-center">
+                <span class="oi oi-check text-xl mr-3" aria-hidden="true"></span>
                 <div>
                     <strong>Success!</strong> Your settings have been saved successfully.
                 </div>
             </div>
-            <button type="button" class="btn-close" @onclick="() => showSuccessMessage = false"></button>
+            <button type="button" class="absolute top-0 right-0 mt-4 mr-4 text-green-700 hover:text-green-900" @onclick="() => showSuccessMessage = false">×</button>
         </div>
     }
     
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show @(errorMessage.Contains("database needs to be updated") ? "border-3 shadow-lg" : "")" role="alert">
-            <div class="d-flex align-items-center justify-content-between">
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded @(errorMessage.Contains("database needs to be updated") ? "border-2 shadow-lg" : "")" role="alert">
+            <div class="flex items-center justify-between">
                 <div>
                     <span class="oi oi-x" aria-hidden="true"></span> @errorMessage
                     @if (errorMessage.Contains("database needs to be updated"))
                     {
                         <div class="mt-2">
-                            <button type="button" class="btn btn-sm btn-warning" @onclick="OpenDatabaseUpdate">
+                            <button type="button" class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-1 px-3 rounded" @onclick="OpenDatabaseUpdate">
                                 <span class="oi oi-data-transfer-download" aria-hidden="true"></span> Update Database Now
                             </button>
                         </div>
                     }
                 </div>
-                <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                <button type="button" class="text-red-700 hover:text-red-900" @onclick="() => errorMessage = string.Empty">×</button>
             </div>
         </div>
     }
@@ -54,8 +54,8 @@
     @if (isLoading)
     {
         <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading settings...</span>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" role="status">
+                <span class="sr-only">Loading settings...</span>
             </div>
             <p class="mt-2">Loading settings...</p>
         </div>
@@ -63,22 +63,22 @@
     else
     {
         <form @onsubmit="SaveSettings" @onsubmit:preventDefault="true">
-            <div class="row">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- General Settings -->
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0"><span class="oi oi-cog" aria-hidden="true"></span> General Settings</h5>
+                <div>
+                    <div class="bg-white rounded-lg shadow mb-4">
+                        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                            <h5 class="mb-0 font-semibold"><span class="oi oi-cog" aria-hidden="true"></span> General Settings</h5>
                         </div>
-                        <div class="card-body">
+                        <div class="p-4">
                             <h6>System Settings</h6>
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="runOnStartup" 
+                            <div class="flex items-center mb-3">
+                                <input class="mr-2" type="checkbox" id="runOnStartup" 
                                        checked="@runOnWindowsStartup"
                                        @onchange="@((e) => runOnWindowsStartup = (bool)e.Value!)">
-                                <label class="form-check-label" for="runOnStartup">
+                                <label class="text-sm" for="runOnStartup">
                                     Start MyPhotoHelper when Windows starts
-                                    <small class="text-muted d-block">Application will start minimized to system tray</small>
+                                    <small class="text-gray-500 block">Application will start minimized to system tray</small>
                                 </label>
                             </div>
                             
@@ -201,20 +201,20 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="d-flex justify-content-between mb-4">
+            <div class="flex justify-between mb-4">
                 <div>
-                    <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
+                    <button type="button" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded" @onclick="GoBack">
                         <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Home
                     </button>
-                    <button type="button" class="btn btn-outline-info ms-2" @onclick="OpenDatabaseUpdate">
+                    <button type="button" class="bg-white border border-cyan-500 text-cyan-500 hover:bg-cyan-50 font-medium py-2 px-4 rounded ml-2" @onclick="OpenDatabaseUpdate">
                         <span class="oi oi-data-transfer-download" aria-hidden="true"></span> Update Database
                     </button>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-outline-warning me-2" @onclick="ResetToDefaults" disabled="@isResetting">
+                    <button type="button" class="bg-white border border-yellow-500 text-yellow-500 hover:bg-yellow-50 font-medium py-2 px-4 rounded mr-2" @onclick="ResetToDefaults" disabled="@isResetting">
                         @if (isResetting)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2" role="status"></span>
                             <span>Resetting...</span>
                         }
                         else
@@ -223,10 +223,10 @@
                             <text> Reset to Defaults</text>
                         }
                     </button>
-                    <button type="submit" class="btn btn-primary btn-lg px-4" disabled="@isSaving">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg text-lg" disabled="@isSaving">
                         @if (isSaving)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" role="status"></span>
                             <span>Saving...</span>
                         }
                         else
