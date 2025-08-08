@@ -44,7 +44,15 @@
       "Bash(mkdir:*)",
       "Bash(./node_modules/.bin/tailwindcss:*)",
       "Bash(\"./node_modules/.bin/tailwindcss\" -i ./src/MyPhotoHelper/wwwroot/css/tailwind-input.css -o ./src/MyPhotoHelper/wwwroot/css/tailwind.css)",
-      "Bash(node_modules\\\\.bin\\\\tailwindcss:*)"
+      "Bash(node_modules\\\\.bin\\\\tailwindcss:*)",
+      "WebFetch(domain:github-production-user-asset-6210df.s3.amazonaws.com)",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)",
+      "Bash(git branch:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh api:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
