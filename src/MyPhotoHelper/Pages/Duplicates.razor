@@ -21,20 +21,28 @@
                     <h1 class="text-4xl font-light">🔍 Duplicate Photos</h1>
                     <p class="text-lg text-gray-500">Find and manage duplicate photos in your collection</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-3">
                     @if (statistics?.TotalDuplicateGroups > 0 && !showDeleteAllConfirmation)
                     {
-                        <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
-                            <i class="oi oi-trash"></i> 
+                        <button class="btn-danger-primary" @onclick="ShowDeleteAllConfirmation" disabled="@isDeletingAll">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
                             <span>Delete All Duplicates</span>
                         </button>
                     }
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
+                    <button class="btn-secondary" @onclick="RefreshDuplicates" disabled="@(isLoading || ScanStatusService.IsScanning)">
                         @if (isLoading)
                         {
-                            <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" role="status"></span>
+                            <span class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600" role="status"></span>
                         }
-                        <i class="oi oi-reload"></i> Refresh
+                        else
+                        {
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        }
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
@@ -63,7 +71,7 @@
                                 </div>
                             </div>
                             <div class="flex gap-3 mt-6">
-                                <button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                <button class="btn-danger-confirm" 
                                         @onclick="DeleteAllDuplicates" 
                                         disabled="@isDeletingAll">
                                     @if (isDeletingAll)
@@ -73,14 +81,18 @@
                                     }
                                     else
                                     {
-                                        <i class="oi oi-trash"></i>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
                                         <span>Yes, Delete All Duplicates</span>
                                     }
                                 </button>
-                                <button class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded inline-flex items-center gap-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                <button class="btn-secondary" 
                                         @onclick="CancelDeleteAll" 
                                         disabled="@isDeletingAll">
-                                    <i class="oi oi-x"></i> 
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
                                     <span>Cancel</span>
                                 </button>
                             </div>
@@ -135,63 +147,99 @@
                 {
                     <!-- Statistics Cards -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                            <h5 class="text-sm font-medium text-blue-600 mb-2">Duplicate Groups</h5>
-                            <p class="text-3xl font-bold text-gray-900">@statistics.TotalDuplicateGroups</p>
+                        <div class="stat-card-enhanced blue">
+                            <div class="stat-icon-wrapper">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <h5 class="stat-label">Duplicate Groups</h5>
+                                <p class="stat-value">@statistics.TotalDuplicateGroups</p>
+                            </div>
                         </div>
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                            <h5 class="text-sm font-medium text-yellow-600 mb-2">Duplicate Files</h5>
-                            <p class="text-3xl font-bold text-gray-900">@statistics.TotalDuplicateFiles</p>
+                        <div class="stat-card-enhanced yellow">
+                            <div class="stat-icon-wrapper">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <h5 class="stat-label">Duplicate Files</h5>
+                                <p class="stat-value">@statistics.TotalDuplicateFiles</p>
+                            </div>
                         </div>
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                            <h5 class="text-sm font-medium text-red-600 mb-2">Wasted Space</h5>
-                            <p class="text-3xl font-bold text-gray-900">@statistics.FormattedWastedSpace</p>
+                        <div class="stat-card-enhanced red">
+                            <div class="stat-icon-wrapper">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <h5 class="stat-label">Wasted Space</h5>
+                                <p class="stat-value">@statistics.FormattedWastedSpace</p>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Duplicate Groups -->
-                    <div class="row">
-                        <div class="col-12">
-                            <h3 class="mb-3">Duplicate Groups</h3>
-                            <p class="text-muted mb-4">Each group shows identical photos. The first photo in each group is the oldest.</p>
-                        </div>
+                    <div class="section-header">
+                        <h3 class="section-title">Duplicate Groups</h3>
+                        <p class="section-description">Each group shows identical photos. The first photo in each group will be kept, others will be deleted.</p>
                     </div>
 
                     @foreach (var group in statistics.DuplicateGroups.Take(50)) // Limit display for performance
                     {
-                        <div class="card mb-4">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>@group.Count identical photos</strong>
-                                    <span class="text-muted ms-3">
-                                        <i class="oi oi-hard-drive"></i> @FormatBytes(group.Images.FirstOrDefault()?.FileSizeBytes ?? 0) each
-                                    </span>
-                                    <span class="text-danger ms-3">
-                                        <i class="oi oi-warning"></i> @FormatBytes(group.PotentialSavings) can be saved
-                                    </span>
+                        <div class="duplicate-group-card">
+                            <div class="group-header">
+                                <div class="group-info">
+                                    <div class="group-title">
+                                        <span class="duplicate-count">@group.Count</span>
+                                        <span class="duplicate-label">identical photos</span>
+                                    </div>
+                                    <div class="group-stats">
+                                        <span class="stat-item">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                                            </svg>
+                                            @FormatBytes(group.Images.FirstOrDefault()?.FileSizeBytes ?? 0) each
+                                        </span>
+                                        <span class="stat-item warning">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                            </svg>
+                                            @FormatBytes(group.PotentialSavings) can be saved
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-danger" 
+                                <div class="group-actions">
+                                    <button class="btn-danger-small" 
                                             @onclick="() => DeleteGroupDuplicates(group)" 
                                             disabled="@(isDeletingAll || deletingGroups.Contains(group.FileHash))"
                                             title="Delete all duplicates in this group (keeps oldest)">
                                         @if (deletingGroups.Contains(group.FileHash))
                                         {
-                                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                            <text>Deleting...</text>
+                                            <span class="animate-spin rounded-full h-3 w-3 border-b-2 border-white" role="status"></span>
+                                            <span>Deleting...</span>
                                         }
                                         else
                                         {
-                                            <i class="oi oi-trash"></i>
-                                            <text>Delete All in Group</text>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                            <span>Delete Group</span>
                                         }
                                     </button>
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowDuplicateDetails(group)">
-                                        <i class="oi oi-eye"></i> View Details
+                                    <button class="btn-outline-small" @onclick="() => ShowDuplicateDetails(group)">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        <span>View Details</span>
                                     </button>
                                 </div>
                             </div>
-                            <div class="card-body" style="overflow: visible;">
+                            <div class="group-body">
                                 <div class="duplicate-photos-grid">
                                     @foreach (var image in group.Images.Take(4)) // Show up to 4 larger previews
                                     {
@@ -226,18 +274,20 @@
                                                                     @GetDifferenceDescription(image, group.Images[0], group.Images)
                                                                 </small>
                                                             </div>
-                                                            <button class="btn btn-sm btn-danger mt-2 w-100 delete-file-btn" 
+                                                            <button class="delete-single-btn" 
                                                                     @onclick="() => DeleteSingleImage(image)" 
                                                                     disabled="@(deletingImages.Contains(image.ImageId))">
                                                                 @if (deletingImages.Contains(image.ImageId))
                                                                 {
-                                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                                                    <text>Deleting...</text>
+                                                                    <span class="animate-spin rounded-full h-3 w-3 border-b-2 border-white" role="status"></span>
+                                                                    <span>Deleting...</span>
                                                                 }
                                                                 else
                                                                 {
-                                                                    <i class="oi oi-trash"></i>
-                                                                    <text>Delete This File</text>
+                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                                    </svg>
+                                                                    <span>Delete This File</span>
                                                                 }
                                                             </button>
                                                         }
@@ -302,197 +352,6 @@
         </div>
     </ChildContent>
 </AppErrorBoundary>
-
-<style>
-    .duplicate-photos-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        justify-content: flex-start;
-        overflow: visible;
-    }
-    
-    .duplicate-image-container {
-        flex: 0 0 auto;
-        width: 200px;
-    }
-    
-    /* Override ImageViewer styles for duplicates page */
-    .duplicates-page .duplicate-image-container .photo-container {
-        aspect-ratio: 1;
-        width: 190px !important;
-        height: 190px !important;
-        max-width: 190px !important;
-        max-height: 190px !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8f9fa;
-        overflow: hidden;
-        margin: 5px auto; /* Center with small margin */
-        border-radius: 0.375rem;
-    }
-    
-    .duplicates-page .duplicate-image-container .photo-card {
-        width: 190px !important;
-        height: auto !important;
-        max-width: 190px !important;
-        position: relative;
-        margin: 0 auto;
-        box-sizing: border-box;
-        padding: 0; /* Remove any inherited padding */
-        overflow: hidden; /* Ensure content stays within bounds */
-        border: 1px solid #dee2e6 !important; /* Add border around the card */
-        border-radius: 0.5rem !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-        background: white !important;
-    }
-    
-    .duplicates-page .photo-thumbnail {
-        object-fit: cover;
-        width: 100%;
-        height: 100%;
-        max-width: 375px; /* Allow larger thumbnails */
-        max-height: 375px;
-    }
-    
-    /* Force larger thumbnail container sizing */
-    .duplicates-page .photo-thumbnail-container {
-        width: 365px !important;
-        height: 365px !important;
-        max-width: 365px !important;
-        max-height: 365px !important;
-        aspect-ratio: 1 !important;
-        overflow: hidden !important;
-        border-radius: 0.375rem;
-    }
-    
-    /* Ensure consistent card heights and proper spacing */
-    .duplicate-image-column {
-        display: flex !important;
-        flex-direction: column;
-        min-width: 420px; /* Wider to accommodate 375px thumbnail + padding */
-        width: 420px;
-        max-width: 420px;
-        margin-bottom: 1rem;
-        padding: 0.5rem; /* Add padding around the entire column */
-        box-sizing: border-box;
-    }
-    
-    .duplicate-image-column .photo-card {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        max-width: 100%;
-        overflow: hidden; /* Prevent any overflow */
-    }
-    
-    .image-info {
-        font-size: 0.875rem;
-        max-width: 375px;
-        overflow: hidden;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    /* Fix text overflow for file paths - ensure text never overflows container */
-    .duplicates-page .image-info {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 0.5rem;
-    }
-    
-    .duplicates-page .image-info small {
-        max-width: 100% !important;
-        overflow: hidden !important;
-        word-wrap: break-word !important;
-        display: block !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Force path text to stay within bounds with multiple fallbacks */
-    .duplicates-page .image-info .text-muted {
-        max-width: 100% !important;
-        overflow: hidden !important;
-        word-wrap: break-word !important;
-        word-break: break-all !important;
-        hyphens: auto !important;
-        display: -webkit-box !important;
-        -webkit-line-clamp: 2 !important;
-        -webkit-box-orient: vertical !important;
-        line-height: 1.2 !important;
-        white-space: normal !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Position badges properly over ImageViewer */
-    .duplicates-page .position-relative > .badge {
-        z-index: 10;
-    }
-    
-    /* Ensure dropdown menu appears above other elements */
-    .duplicates-page .custom-dropdown-menu {
-        z-index: 1050 !important;
-    }
-    
-    /* Highlight file name differences */
-    .file-diff-highlight {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 0.1rem 0.3rem;
-        border-radius: 0.25rem;
-        font-weight: bold;
-        border: 1px solid #ffeaa7;
-        display: inline-block;
-        margin: 0 0.1rem;
-    }
-    
-    /* Delete button hover effect */
-    .duplicates-page .btn-danger:hover:not(:disabled) {
-        transform: scale(1.02);
-        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-    }
-    
-    /* Deleting state animation */
-    .duplicates-page .btn-danger:disabled {
-        opacity: 0.8;
-    }
-    
-    /* Style the Delete This File button */
-    .delete-file-btn {
-        background-color: #dc3545 !important;
-        border-color: #dc3545 !important;
-        color: white !important;
-        font-weight: 500 !important;
-        transition: all 0.2s ease !important;
-    }
-    
-    .delete-file-btn:hover:not(:disabled) {
-        background-color: #c82333 !important;
-        border-color: #bd2130 !important;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
-    }
-    
-    .delete-file-btn:active {
-        transform: translateY(0);
-    }
-    
-    /* Ensure all image info containers have consistent height */
-    .duplicates-page .image-info {
-        min-height: 120px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    
-    /* Better text layout within image info */
-    .duplicates-page .image-info .bg-warning {
-        margin-top: auto;
-        flex-shrink: 0;
-    }
-</style>
 
 @code {
     private DuplicateStatistics? statistics;
