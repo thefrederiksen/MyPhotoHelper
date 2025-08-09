@@ -1,0 +1,194 @@
+@using MyPhotoHelper.Services
+@inject IToastService ToastService
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var toast in toasts)
+    {
+        <div class="toast-notification @GetToastClass(toast.Type) @(GetAnimationClass(toast))" @key="toast.Id">
+            <div class="toast-content">
+                <i class="toast-icon oi @GetToastIcon(toast.Type)"></i>
+                <span class="toast-message">@toast.Message</span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ToastMessage> toasts = new();
+    private Dictionary<string, System.Timers.Timer> timers = new();
+    private Dictionary<string, bool> fadingOut = new();
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += ShowToast;
+    }
+
+    private void ShowToast(ToastMessage toast)
+    {
+        InvokeAsync(() =>
+        {
+            toasts.Add(toast);
+            fadingOut[toast.Id] = false;
+            StateHasChanged();
+
+            // Create timer to start fade out
+            var fadeOutTimer = new System.Timers.Timer(toast.DurationMs - 300); // Start fade 300ms before removal
+            fadeOutTimer.Elapsed += (sender, args) =>
+            {
+                InvokeAsync(() =>
+                {
+                    fadingOut[toast.Id] = true;
+                    StateHasChanged();
+                });
+                fadeOutTimer.Dispose();
+            };
+            fadeOutTimer.Start();
+
+            // Create timer to remove toast
+            var timer = new System.Timers.Timer(toast.DurationMs);
+            timer.Elapsed += (sender, args) =>
+            {
+                InvokeAsync(() =>
+                {
+                    toasts.Remove(toast);
+                    timers.Remove(toast.Id);
+                    fadingOut.Remove(toast.Id);
+                    StateHasChanged();
+                });
+                timer.Dispose();
+            };
+            timer.Start();
+            timers[toast.Id] = timer;
+        });
+    }
+
+    private string GetToastClass(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Success => "toast-success",
+            ToastType.Error => "toast-error",
+            ToastType.Warning => "toast-warning",
+            _ => "toast-info"
+        };
+    }
+
+    private string GetToastIcon(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Success => "oi-check",
+            ToastType.Error => "oi-x",
+            ToastType.Warning => "oi-warning",
+            _ => "oi-info"
+        };
+    }
+
+    private string GetAnimationClass(ToastMessage toast)
+    {
+        return fadingOut.GetValueOrDefault(toast.Id, false) ? "toast-fade-out" : "toast-slide-in";
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= ShowToast;
+        foreach (var timer in timers.Values)
+        {
+            timer?.Dispose();
+        }
+    }
+}
+
+<style>
+    .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999999;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 10px;
+        pointer-events: none;
+    }
+
+    .toast-notification {
+        min-width: 250px;
+        max-width: 400px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        pointer-events: auto;
+        transform-origin: bottom right;
+    }
+
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .toast-icon {
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .toast-message {
+        flex: 1;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .toast-success {
+        background-color: #10b981;
+        color: white;
+    }
+
+    .toast-error {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .toast-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    .toast-info {
+        background-color: #3b82f6;
+        color: white;
+    }
+
+    .toast-slide-in {
+        animation: slideIn 0.3s ease-out forwards;
+    }
+
+    .toast-fade-out {
+        animation: fadeOut 0.3s ease-out forwards;
+    }
+
+    @@keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @@keyframes fadeOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+</style>

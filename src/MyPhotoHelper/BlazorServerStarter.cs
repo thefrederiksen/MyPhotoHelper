@@ -274,6 +274,9 @@ namespace MyPhotoHelper
             builder.Services.AddScoped<IBackgroundPhotoLoader, BackgroundPhotoLoader>();
             builder.Services.AddScoped<IGalleryStateService, GalleryStateService>();
             
+            // Toast notification service
+            builder.Services.AddScoped<IToastService, ToastService>();
+            
             // Gallery update notification service
             builder.Services.AddSingleton<IGalleryUpdateService, GalleryUpdateService>();
             
