@@ -6,11 +6,16 @@ A centralized Tailwind CSS component library providing consistent, reusable UI c
 
 MyHelper UI is built on Tailwind CSS best practices using the `@apply` directive for component composition. It provides a comprehensive set of UI components including buttons, cards, forms, modals, alerts, and utility classes.
 
-## Installation
+## Build Process
 
-### For MyPhotoHelper
+### Automatic Build (Recommended for MyPhotoHelper)
+The component library is automatically built when you build the main MyPhotoHelper project. The .NET build process will:
+1. Check if node_modules exists, and run `npm install` if needed
+2. Run `npm run build` to compile the CSS
+3. Copy the compiled CSS to the output directory
 
-1. Install dependencies (if not already installed):
+### Manual Build
+1. Install dependencies (first time only):
 ```bash
 cd src/MyHelper/MyHelper.UI
 npm install
@@ -18,13 +23,20 @@ npm install
 
 2. Build the CSS:
 ```bash
-npm run build
+npm run build        # Production build (minified)
+npm run dev          # Development build with watch mode
+npm run build:watch  # Production build with watch mode
 ```
 
 3. Import in your main CSS file:
 ```css
-@import '../MyHelper/MyHelper.UI/dist/myhelper.min.css';
+@import '../../../MyHelper/MyHelper.UI/dist/myhelper.min.css';
 ```
+
+### Output
+- Compiled CSS location: `dist/myhelper.min.css`
+- The library assumes the host project includes Tailwind base styles
+- Only components and utilities are included (no base styles)
 
 ### For Other Projects
 

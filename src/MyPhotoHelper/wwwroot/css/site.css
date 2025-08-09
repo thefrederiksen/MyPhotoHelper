@@ -1,6 +1,6 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 @import url('tailwind.css');
-@import url('../../../MyHelper/MyHelper.UI/myhelper.css');
+@import url('../../../MyHelper/MyHelper.UI/dist/myhelper.min.css');
 
 html, body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

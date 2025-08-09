@@ -1,5 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Important: This is a component library configuration
+  // The host project should have its own Tailwind config for base styles
+  prefix: '', // No prefix to maintain compatibility
+  important: false, // Let host project control importance
   content: [
     // Include all files that will use these classes
     './components/**/*.css',
@@ -128,19 +132,43 @@ module.exports = {
   ],
   // Ensure we don't purge component styles
   safelist: [
-    // Button variants
-    'btn-primary', 'btn-danger', 'btn-secondary', 'btn-success', 'btn-warning',
+    // Button base and variants
+    'btn', 'btn-primary', 'btn-danger', 'btn-secondary', 'btn-success', 'btn-warning',
     'btn-outline-primary', 'btn-outline-danger', 'btn-outline-secondary',
     'btn-sm', 'btn-lg', 'btn-xs', 'btn-block', 'btn-icon', 'btn-link', 'btn-ghost',
+    'btn-loading', 'btn-icon-sm', 'delete-single-btn',
+    // Backward compatibility button variants
+    'btn-danger-primary', 'btn-danger-confirm', 'btn-danger-small', 'btn-outline-small',
     // Card variants
-    'stat-card-enhanced', 'duplicate-group-card', 'photo-card',
+    'card', 'card-body', 'card-header', 'card-footer', 'card-title',
+    'stat-card', 'stat-card-enhanced', 'duplicate-group-card', 'photo-card',
+    'card-hover', 'card-bordered', 'card-compact',
     // Alert variants
-    'alert-primary', 'alert-danger', 'alert-success', 'alert-warning', 'alert-info',
+    'alert', 'alert-primary', 'alert-danger', 'alert-success', 'alert-warning', 'alert-info',
+    'alert-dismissible', 'alert-icon',
     // Badge variants
-    'badge-primary', 'badge-danger', 'badge-success', 'badge-warning', 'badge-info',
+    'badge', 'badge-primary', 'badge-danger', 'badge-success', 'badge-warning', 'badge-info',
+    'badge-sm', 'badge-lg', 'badge-outline',
     // Status badges
-    'status-badge', 'pending', 'active', 'signed', 'expired', 'draft',
-    // Color modifiers
-    'blue', 'red', 'green', 'yellow', 'orange',
+    'status-badge', 'pending', 'active', 'signed', 'expired', 'draft', 'completed',
+    // Form elements
+    'form-control', 'form-input', 'form-textarea', 'form-select', 'form-check',
+    'form-check-input', 'form-check-label', 'form-label', 'form-group',
+    'form-input-error', 'form-input-success',
+    // Modal elements
+    'modal', 'modal-backdrop', 'modal-content', 'modal-header', 'modal-body', 'modal-footer',
+    'modal-title', 'modal-close',
+    // Utility classes
+    'spinner', 'spinner-sm', 'spinner-lg', 'skeleton', 'skeleton-text',
+    'divider', 'divider-vertical', 'hover-scale', 'hover-lift',
+    'file-diff-highlight', 'duplicate-photos-grid', 'duplicate-image-container',
+    // Progress indicators
+    'progress-bar', 'progress-fill',
+    // Color modifiers for dynamic classes
+    'blue', 'red', 'green', 'yellow', 'orange', 'purple', 'gray',
+    // Text utilities
+    'text-muted', 'text-small', 'text-tiny', 'text-truncate',
+    // Layout utilities
+    'container-responsive', 'photo-grid',
   ],
 }

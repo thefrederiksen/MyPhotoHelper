@@ -187,15 +187,15 @@
 
   /* Aspect Ratios */
   .aspect-square {
-    @apply aspect-w-1 aspect-h-1;
+    @apply aspect-[1/1];
   }
 
   .aspect-video {
-    @apply aspect-w-16 aspect-h-9;
+    @apply aspect-[16/9];
   }
 
   .aspect-4-3 {
-    @apply aspect-w-4 aspect-h-3;
+    @apply aspect-[4/3];
   }
 
   /* Containers */
@@ -309,8 +309,8 @@
     @apply rounded-xl;
   }
 
-  .rounded-full {
-    @apply rounded-full;
+  .rounded-circle {
+    border-radius: 9999px;
   }
 
   /* Utility Classes from Existing Code */

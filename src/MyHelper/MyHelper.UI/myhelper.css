@@ -2,12 +2,12 @@
  * A centralized Tailwind CSS component library for consistent UI across MyPhotoHelper and related projects
  * 
  * This file serves as the main entry point that imports all component styles
+ * Note: This library assumes the host project already includes Tailwind base styles
  */
 
-/* Import Tailwind base styles */
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+/* Only import Tailwind layers needed for @apply directives to work */
+@tailwind components;
+@tailwind utilities;
 
 /* Import MyHelper UI Components */
 @import './components/buttons.css';
@@ -19,100 +19,55 @@
 /* Import Utility Classes */
 @import './utilities/helpers.css';
 
-/* Custom Design System Variables */
-@layer base {
-  :root {
-    /* Colors */
-    --color-primary: theme('colors.blue.600');
-    --color-primary-hover: theme('colors.blue.700');
-    --color-secondary: theme('colors.gray.500');
-    --color-secondary-hover: theme('colors.gray.600');
-    --color-success: theme('colors.green.600');
-    --color-success-hover: theme('colors.green.700');
-    --color-danger: theme('colors.red.600');
-    --color-danger-hover: theme('colors.red.700');
-    --color-warning: theme('colors.yellow.500');
-    --color-warning-hover: theme('colors.yellow.600');
-    --color-info: theme('colors.cyan.600');
-    --color-info-hover: theme('colors.cyan.700');
+/* Custom Design System Variables - defined as regular CSS */
+:root {
+  /* Colors - using Tailwind color values */
+  --color-primary: #2563eb; /* blue-600 */
+  --color-primary-hover: #1d4ed8; /* blue-700 */
+  --color-secondary: #6b7280; /* gray-500 */
+  --color-secondary-hover: #4b5563; /* gray-600 */
+  --color-success: #16a34a; /* green-600 */
+  --color-success-hover: #15803d; /* green-700 */
+  --color-danger: #dc2626; /* red-600 */
+  --color-danger-hover: #b91c1c; /* red-700 */
+  --color-warning: #eab308; /* yellow-500 */
+  --color-warning-hover: #ca8a04; /* yellow-600 */
+  --color-info: #0891b2; /* cyan-600 */
+  --color-info-hover: #0e7490; /* cyan-700 */
 
-    /* Spacing */
-    --spacing-xs: theme('spacing.1');
-    --spacing-sm: theme('spacing.2');
-    --spacing-md: theme('spacing.4');
-    --spacing-lg: theme('spacing.6');
-    --spacing-xl: theme('spacing.8');
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
 
-    /* Border Radius */
-    --radius-sm: theme('borderRadius.DEFAULT');
-    --radius-md: theme('borderRadius.md');
-    --radius-lg: theme('borderRadius.lg');
-    --radius-xl: theme('borderRadius.xl');
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 
-    /* Shadows */
-    --shadow-sm: theme('boxShadow.sm');
-    --shadow-md: theme('boxShadow.md');
-    --shadow-lg: theme('boxShadow.lg');
-    --shadow-xl: theme('boxShadow.xl');
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 
-    /* Transitions */
-    --transition-fast: 150ms;
-    --transition-normal: 200ms;
-    --transition-slow: 300ms;
-  }
-
-  /* Dark mode variables (optional future enhancement) */
-  [data-theme='dark'] {
-    --color-primary: theme('colors.blue.500');
-    --color-primary-hover: theme('colors.blue.400');
-    /* Add more dark mode overrides as needed */
-  }
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
 }
 
-/* Global Styles */
-@layer base {
-  /* Ensure consistent box-sizing */
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
-
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Focus visible for accessibility */
-  :focus-visible {
-    @apply outline-2 outline-offset-2 outline-blue-600;
-  }
-
-  /* Remove default button styles */
-  button {
-    background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
-    cursor: pointer;
-    outline: inherit;
-  }
-
-  /* Custom scrollbar styles */
-  ::-webkit-scrollbar {
-    @apply w-2 h-2;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-gray-100;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 rounded-md;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500;
-  }
+/* Dark mode variables (optional future enhancement) */
+[data-theme='dark'] {
+  --color-primary: #3b82f6; /* blue-500 */
+  --color-primary-hover: #60a5fa; /* blue-400 */
+  /* Add more dark mode overrides as needed */
 }
+
+/* Component-specific styles only - no global resets */
 
 /* Print Styles */
 @media print {
@@ -156,10 +111,8 @@
 /* Responsive Design Breakpoints */
 @layer utilities {
   /* Custom breakpoint utilities if needed */
-  @responsive {
-    .container-responsive {
-      @apply w-full px-4 mx-auto;
-    }
+  .container-responsive {
+    @apply w-full px-4 mx-auto;
   }
 }
 

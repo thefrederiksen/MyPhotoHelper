@@ -126,51 +126,29 @@
     border-radius: inherit;
   }
 
-  /* Specific Danger Button Variants from Duplicates.razor.css */
+  /* Consolidated Danger Button Variants */
+  /* Use btn-danger for standard danger buttons */
+  /* Use btn-danger with btn-sm for small danger buttons */
+  /* These redundant variants are kept for backward compatibility but should be phased out */
+  
   .btn-danger-primary {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold
-           text-white bg-gradient-to-r from-red-600 to-red-700
-           border-none rounded-lg shadow-md
-           hover:from-red-700 hover:to-red-800
-           hover:shadow-lg hover:-translate-y-0.5
-           active:translate-y-0 active:shadow-sm
-           disabled:opacity-60 disabled:cursor-not-allowed
-           transition-all duration-200 cursor-pointer relative overflow-hidden;
+    @apply btn-danger;
   }
 
   .btn-danger-confirm {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold
-           text-white bg-gradient-to-r from-red-600 to-red-800
-           border-2 border-red-600 rounded-lg shadow-md
-           hover:from-red-700 hover:to-red-900 hover:border-red-700
-           hover:shadow-lg hover:-translate-y-0.5
-           transition-all duration-200 cursor-pointer;
+    @apply btn-danger border-2 border-red-600 hover:border-red-700;
   }
 
   .btn-danger-small {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium
-           text-white bg-red-600 border-none rounded-md
-           hover:bg-red-700 hover:-translate-y-0.5 hover:shadow-sm
-           disabled:opacity-60 disabled:cursor-not-allowed
-           transition-all duration-200 cursor-pointer;
+    @apply btn-danger btn-sm;
   }
 
   .btn-outline-small {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium
-           text-gray-600 bg-white border border-gray-300 rounded-md
-           hover:text-gray-800 hover:border-gray-400 hover:bg-gray-50
-           transition-all duration-200 cursor-pointer;
+    @apply btn-outline-secondary btn-sm;
   }
 
-  /* Delete Single File Button */
+  /* Delete Single File Button - specialized variant */
   .delete-single-btn {
-    @apply inline-flex items-center gap-1.5 w-full mt-2 px-3 py-2 text-sm font-medium
-           text-white bg-gradient-to-r from-red-500 to-red-600
-           border-none rounded-md shadow-sm
-           hover:from-red-600 hover:to-red-700
-           hover:-translate-y-0.5 hover:shadow-md
-           active:translate-y-0 active:shadow-sm
-           disabled:opacity-60 disabled:cursor-not-allowed
-           transition-all duration-200 cursor-pointer;
+    @apply btn-danger btn-block mt-2;
   }
 }

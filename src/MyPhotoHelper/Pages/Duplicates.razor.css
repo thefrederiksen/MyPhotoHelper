@@ -1,133 +1,35 @@
-/* Button styles are now provided by MyHelper UI Component Library */
-/* Import @import '../../../MyHelper/MyHelper.UI/myhelper.css' in site.css */
+/* 
+ * Duplicates Page Specific Styles
+ * Component library styles are provided via MyHelper UI Component Library
+ * This file contains only page-specific overrides that are unique to this page
+ */
 
-/* Statistics card styles are now provided by MyHelper UI Component Library */
-
-/* Duplicate group card styles are now provided by MyHelper UI Component Library */
-
-/* Section header styles are now provided by MyHelper UI Component Library */
-
-/* Existing styles */
-.duplicate-photos-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: flex-start;
-    overflow: visible;
-}
-
-.duplicate-image-container {
-    flex: 0 0 auto;
-    width: 200px;
-}
-
-/* Override ImageViewer styles for duplicates page */
+/* Override ImageViewer styles specifically for duplicates page */
 .duplicates-page .duplicate-image-container .photo-container {
     aspect-ratio: 1;
     width: 190px !important;
     height: 190px !important;
     max-width: 190px !important;
     max-height: 190px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f8f9fa;
-    overflow: hidden;
-    margin: 5px auto; /* Center with small margin */
-    border-radius: 0.375rem;
 }
 
 .duplicates-page .duplicate-image-container .photo-card {
     width: 190px !important;
-    height: auto !important;
-    max-width: 190px !important;
-    position: relative;
-    margin: 0 auto;
-    box-sizing: border-box;
-    padding: 0; /* Remove any inherited padding */
-    overflow: hidden; /* Ensure content stays within bounds */
-    border: 1px solid #dee2e6 !important; /* Add border around the card */
-    border-radius: 0.5rem !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-    background: white !important;
 }
 
-.duplicates-page .photo-thumbnail {
-    object-fit: cover;
-    width: 100%;
-    height: 100%;
-    max-width: 375px; /* Allow larger thumbnails */
-    max-height: 375px;
-}
-
-/* Force larger thumbnail container sizing */
+/* Force larger thumbnail container sizing for duplicates page */
 .duplicates-page .photo-thumbnail-container {
     width: 365px !important;
     height: 365px !important;
     max-width: 365px !important;
     max-height: 365px !important;
-    aspect-ratio: 1 !important;
-    overflow: hidden !important;
-    border-radius: 0.375rem;
 }
 
-/* Ensure consistent card heights and proper spacing */
+/* Ensure consistent card layout on duplicates page */
 .duplicate-image-column {
-    display: flex !important;
-    flex-direction: column;
-    min-width: 420px; /* Wider to accommodate 375px thumbnail + padding */
+    min-width: 420px;
     width: 420px;
     max-width: 420px;
-    margin-bottom: 1rem;
-    padding: 0.5rem; /* Add padding around the entire column */
-    box-sizing: border-box;
-}
-
-.duplicate-image-column .photo-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    max-width: 100%;
-    overflow: hidden; /* Prevent any overflow */
-}
-
-.image-info {
-    font-size: 0.875rem;
-    max-width: 375px;
-    overflow: hidden;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Fix text overflow for file paths - ensure text never overflows container */
-.duplicates-page .image-info {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.5rem;
-}
-
-.duplicates-page .image-info small {
-    max-width: 100% !important;
-    overflow: hidden !important;
-    word-wrap: break-word !important;
-    display: block !important;
-    box-sizing: border-box !important;
-}
-
-/* Force path text to stay within bounds with multiple fallbacks */
-.duplicates-page .image-info .text-muted {
-    max-width: 100% !important;
-    overflow: hidden !important;
-    word-wrap: break-word !important;
-    word-break: break-all !important;
-    hyphens: auto !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    line-height: 1.2 !important;
-    white-space: normal !important;
-    box-sizing: border-box !important;
 }
 
 /* Position badges properly over ImageViewer */
@@ -140,41 +42,7 @@
     z-index: 1050 !important;
 }
 
-/* Highlight file name differences */
-.file-diff-highlight {
-    background-color: #fff3cd;
-    color: #856404;
-    padding: 0.1rem 0.3rem;
-    border-radius: 0.25rem;
-    font-weight: bold;
-    border: 1px solid #ffeaa7;
-    display: inline-block;
-    margin: 0 0.1rem;
-}
-
-/* Delete button hover effect */
-.duplicates-page .btn-danger:hover:not(:disabled) {
-    transform: scale(1.02);
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-}
-
-/* Deleting state animation */
-.duplicates-page .btn-danger:disabled {
-    opacity: 0.8;
-}
-
-/* Delete button styles are now provided by MyHelper UI Component Library */
-
 /* Ensure all image info containers have consistent height */
 .duplicates-page .image-info {
     min-height: 120px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-/* Better text layout within image info */
-.duplicates-page .image-info .bg-warning {
-    margin-top: auto;
-    flex-shrink: 0;
 }
