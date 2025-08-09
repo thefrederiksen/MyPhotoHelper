@@ -1,0 +1,32 @@
+[
+  {
+    "page": "home",
+    "success": true,
+    "filename": "before_home_1754715103804.png"
+  },
+  {
+    "page": "duplicates",
+    "success": true,
+    "filename": "before_duplicates_1754715107673.png"
+  },
+  {
+    "page": "finder",
+    "success": true,
+    "filename": "before_finder_1754715122043.png"
+  },
+  {
+    "page": "metadata",
+    "success": true,
+    "filename": "before_metadata_1754715135653.png"
+  },
+  {
+    "page": "analysis",
+    "success": true,
+    "filename": "before_analysis_1754715149253.png"
+  },
+  {
+    "page": "settings",
+    "success": true,
+    "filename": "before_settings_1754715162869.png"
+  }
+]

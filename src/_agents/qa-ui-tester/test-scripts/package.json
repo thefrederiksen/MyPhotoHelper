@@ -1,0 +1,12 @@
+{
+  "name": "myphotohelper-qa-tests",
+  "version": "1.0.0",
+  "description": "QA UI Tests for MyPhotoHelper",
+  "main": "index.js",
+  "scripts": {
+    "test": "node qa-test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

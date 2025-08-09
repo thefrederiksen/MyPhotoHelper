@@ -1,0 +1,19 @@
+{
+  "passed": [
+    "Home page loads successfully",
+    "Good performance metrics"
+  ],
+  "failed": [
+    "MyHelper UI CSS not loading",
+    "Responsive issues at Desktop",
+    "Responsive issues at Tablet",
+    "Responsive issues at Mobile"
+  ],
+  "performance": {
+    "homePageLoad": 679,
+    "domContentLoaded": 0,
+    "loadComplete": 0,
+    "domInteractive": 42
+  },
+  "timestamp": "2025-08-09T04:28:47.496Z"
+}

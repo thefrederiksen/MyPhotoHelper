@@ -1,0 +1,38 @@
+[
+  {
+    "page": "home",
+    "success": true,
+    "filename": "after_home_1754715295639.png"
+  },
+  {
+    "page": "duplicates",
+    "success": true,
+    "filename": "after_duplicates_1754715299442.png"
+  },
+  {
+    "page": "finder",
+    "success": true,
+    "filename": "after_finder_1754715314143.png"
+  },
+  {
+    "page": "metadata",
+    "success": true,
+    "filename": "after_metadata_1754715327751.png"
+  },
+  {
+    "page": "analysis",
+    "success": true,
+    "filename": "after_analysis_1754715341367.png"
+  },
+  {
+    "page": "settings",
+    "success": true,
+    "filename": "after_settings_1754715354960.png"
+  },
+  {
+    "page": "css-validation",
+    "success": true,
+    "cssLoaded": true,
+    "myhelperStyles": true
+  }
+]

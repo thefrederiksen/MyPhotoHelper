@@ -1,0 +1,22 @@
+# NightlyErrorParsy Requirements
+# Python 3.8+
+
+# Database connectivity
+pyodbc>=4.0.35
+
+# Azure DevOps (installed via Azure CLI)
+# Install with: az extension add --name azure-devops
+
+# OpenAI for LLM analysis
+openai>=0.27.0
+
+# Email support
+sendgrid>=6.9.7  # Optional, for SendGrid support
+
+# Utilities
+python-dateutil>=2.8.2
+pyyaml>=6.0
+
+# For development and testing
+pytest>=7.2.0
+python-dotenv>=0.21.0
