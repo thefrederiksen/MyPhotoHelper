@@ -108,14 +108,11 @@
     <Exec Command="npm run build" 
           WorkingDirectory="$(MyHelperUIPath)" />
     
-    <Message Text="MyHelper UI Component Library CSS built successfully" Importance="high" />
+    <!-- Copy the built CSS to wwwroot/css -->
+    <Copy SourceFiles="$(MyHelperUIPath)\dist\myhelper.min.css"
+          DestinationFiles="$(MSBuildProjectDirectory)\wwwroot\css\myhelper.min.css"
+          SkipUnchangedFiles="false" />
+    
+    <Message Text="MyHelper UI Component Library CSS built and copied successfully" Importance="high" />
   </Target>
-  
-  <!-- Include the compiled CSS in the output -->
-  <ItemGroup>
-    <Content Include="..\MyHelper\MyHelper.UI\dist\myhelper.min.css">
-      <Link>wwwroot\css\myhelper.min.css</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 </Project>
