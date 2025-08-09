@@ -1,0 +1,344 @@
+/* MyHelper UI - Alert/Notification Components */
+/* Using Tailwind @apply directive for component composition */
+
+@layer components {
+  /* Base Alert */
+  .alert {
+    @apply relative p-4 mb-4 text-sm rounded-lg border;
+  }
+
+  .alert-dismissible {
+    @apply pr-12;
+  }
+
+  .alert-dismiss {
+    @apply absolute top-3 right-3 p-1 text-current opacity-70
+           hover:opacity-100 rounded-lg transition-opacity duration-200;
+  }
+
+  /* Alert Variants */
+  .alert-primary {
+    @apply bg-blue-50 text-blue-800 border-blue-200;
+  }
+
+  .alert-secondary {
+    @apply bg-gray-50 text-gray-800 border-gray-200;
+  }
+
+  .alert-success {
+    @apply bg-green-50 text-green-800 border-green-200;
+  }
+
+  .alert-danger {
+    @apply bg-red-50 text-red-800 border-red-200;
+  }
+
+  .alert-warning {
+    @apply bg-yellow-50 text-yellow-800 border-yellow-200;
+  }
+
+  .alert-info {
+    @apply bg-cyan-50 text-cyan-800 border-cyan-200;
+  }
+
+  .alert-light {
+    @apply bg-white text-gray-700 border-gray-200;
+  }
+
+  .alert-dark {
+    @apply bg-gray-800 text-gray-100 border-gray-700;
+  }
+
+  /* Alert with Icon */
+  .alert-icon {
+    @apply flex items-start;
+  }
+
+  .alert-icon-wrapper {
+    @apply flex-shrink-0 mr-3;
+  }
+
+  .alert-icon-content {
+    @apply flex-1;
+  }
+
+  .alert-heading {
+    @apply font-semibold mb-1;
+  }
+
+  .alert-link {
+    @apply font-semibold underline hover:no-underline;
+  }
+
+  /* Solid Alert Variants */
+  .alert-solid {
+    @apply text-white border-transparent;
+  }
+
+  .alert-solid.alert-primary {
+    @apply bg-blue-600;
+  }
+
+  .alert-solid.alert-secondary {
+    @apply bg-gray-600;
+  }
+
+  .alert-solid.alert-success {
+    @apply bg-green-600;
+  }
+
+  .alert-solid.alert-danger {
+    @apply bg-red-600;
+  }
+
+  .alert-solid.alert-warning {
+    @apply bg-yellow-500 text-gray-900;
+  }
+
+  .alert-solid.alert-info {
+    @apply bg-cyan-600;
+  }
+
+  /* Notification Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full 
+           text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .badge-secondary {
+    @apply bg-gray-100 text-gray-800;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-info {
+    @apply bg-cyan-100 text-cyan-800;
+  }
+
+  .badge-light {
+    @apply bg-gray-50 text-gray-700 border border-gray-200;
+  }
+
+  .badge-dark {
+    @apply bg-gray-800 text-gray-100;
+  }
+
+  /* Badge Sizes */
+  .badge-sm {
+    @apply px-2 py-0.5 text-xs;
+  }
+
+  .badge-lg {
+    @apply px-3 py-1 text-sm;
+  }
+
+  /* Badge Dot */
+  .badge-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .badge-dot-primary {
+    @apply bg-blue-600;
+  }
+
+  .badge-dot-success {
+    @apply bg-green-600;
+  }
+
+  .badge-dot-danger {
+    @apply bg-red-600;
+  }
+
+  .badge-dot-warning {
+    @apply bg-yellow-500;
+  }
+
+  /* Badge with Animation */
+  .badge-pulse {
+    @apply relative;
+  }
+
+  .badge-pulse::before {
+    @apply absolute inset-0 rounded-full animate-ping opacity-75;
+    content: '';
+    background: inherit;
+  }
+
+  /* Status Badge (from existing code) */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 
+           rounded-full text-xs font-medium capitalize;
+  }
+
+  .status-badge.pending {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+
+  .status-badge.active,
+  .status-badge.signed {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .status-badge.expired {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .status-badge.draft {
+    @apply bg-gray-50 text-gray-700;
+  }
+
+  /* Notification Banner */
+  .notification-banner {
+    @apply fixed top-0 left-0 right-0 z-50 p-4 
+           border-b shadow-md;
+  }
+
+  .notification-banner-success {
+    @apply bg-green-600 text-white border-green-700;
+  }
+
+  .notification-banner-warning {
+    @apply bg-yellow-500 text-gray-900 border-yellow-600;
+  }
+
+  .notification-banner-error {
+    @apply bg-red-600 text-white border-red-700;
+  }
+
+  .notification-banner-info {
+    @apply bg-blue-600 text-white border-blue-700;
+  }
+
+  /* Snackbar */
+  .snackbar {
+    @apply fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50
+           min-w-[250px] max-w-md px-4 py-3 
+           bg-gray-900 text-white rounded-lg shadow-lg
+           flex items-center justify-between;
+  }
+
+  .snackbar-action {
+    @apply ml-4 text-blue-400 hover:text-blue-300 
+           font-medium cursor-pointer;
+  }
+
+  /* Progress Notification */
+  .notification-progress {
+    @apply relative overflow-hidden;
+  }
+
+  .notification-progress-bar {
+    @apply absolute bottom-0 left-0 h-1 bg-current opacity-30 
+           transition-all duration-300;
+  }
+
+  /* Inline Notification */
+  .inline-notification {
+    @apply flex items-center p-3 text-sm rounded-md;
+  }
+
+  .inline-notification-info {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .inline-notification-success {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .inline-notification-warning {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+
+  .inline-notification-error {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .inline-notification-icon {
+    @apply flex-shrink-0 w-4 h-4 mr-2;
+  }
+
+  /* Callout */
+  .callout {
+    @apply p-4 border-l-4 bg-gray-50;
+  }
+
+  .callout-info {
+    @apply border-blue-500 bg-blue-50;
+  }
+
+  .callout-success {
+    @apply border-green-500 bg-green-50;
+  }
+
+  .callout-warning {
+    @apply border-yellow-500 bg-yellow-50;
+  }
+
+  .callout-danger {
+    @apply border-red-500 bg-red-50;
+  }
+
+  .callout-title {
+    @apply font-semibold mb-2;
+  }
+
+  .callout-content {
+    @apply text-sm;
+  }
+
+  /* Message Strip */
+  .message-strip {
+    @apply w-full py-2 px-4 text-center text-sm font-medium;
+  }
+
+  .message-strip-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .message-strip-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .message-strip-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .message-strip-error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /* Empty State Alert */
+  .empty-state {
+    @apply text-center py-12;
+  }
+
+  .empty-state-icon {
+    @apply mx-auto w-12 h-12 text-gray-400 mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-medium text-gray-900 mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-gray-600 mb-6;
+  }
+
+  .empty-state-action {
+    @apply inline-flex items-center;
+  }
+}

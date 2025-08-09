@@ -92,4 +92,27 @@
     <EmbeddedResource Remove="Backup_RemovedFiles\**" />
     <None Remove="Backup_RemovedFiles\**" />
   </ItemGroup>
+  
+  <!-- Build MyHelper UI Component Library CSS -->
+  <Target Name="BuildMyHelperUI" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <MyHelperUIPath>$(MSBuildProjectDirectory)\..\MyHelper\MyHelper.UI</MyHelperUIPath>
+    </PropertyGroup>
+    
+    <!-- Check if node_modules exists, if not run npm install -->
+    <Exec Command="if not exist &quot;$(MyHelperUIPath)\node_modules&quot; (cd &quot;$(MyHelperUIPath)&quot; &amp;&amp; npm install)" 
+          WorkingDirectory="$(MyHelperUIPath)"
+          Condition="!Exists('$(MyHelperUIPath)\node_modules')" />
+    
+    <!-- Build the CSS -->
+    <Exec Command="npm run build" 
+          WorkingDirectory="$(MyHelperUIPath)" />
+    
+    <!-- Copy the built CSS to wwwroot/css -->
+    <Copy SourceFiles="$(MyHelperUIPath)\dist\myhelper.min.css"
+          DestinationFiles="$(MSBuildProjectDirectory)\wwwroot\css\myhelper.min.css"
+          SkipUnchangedFiles="false" />
+    
+    <Message Text="MyHelper UI Component Library CSS built and copied successfully" Importance="high" />
+  </Target>
 </Project>
