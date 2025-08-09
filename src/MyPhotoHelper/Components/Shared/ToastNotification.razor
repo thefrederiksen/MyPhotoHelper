@@ -16,7 +16,8 @@
 
 @code {
     private List<ToastMessage> toasts = new();
-    private Dictionary<string, System.Timers.Timer> timers = new();
+    private Dictionary<string, System.Timers.Timer> fadeTimers = new();
+    private Dictionary<string, System.Timers.Timer> removeTimers = new();
     private Dictionary<string, bool> fadingOut = new();
 
     protected override void OnInitialized()
@@ -32,34 +33,49 @@
             fadingOut[toast.Id] = false;
             StateHasChanged();
 
-            // Create timer to start fade out
-            var fadeOutTimer = new System.Timers.Timer(toast.DurationMs - 300); // Start fade 300ms before removal
+            // Animation duration in milliseconds
+            const int animationDuration = 300;
+            
+            // Create timer to start fade out animation
+            var fadeOutTimer = new System.Timers.Timer(toast.DurationMs - animationDuration);
+            fadeOutTimer.AutoReset = false;
             fadeOutTimer.Elapsed += (sender, args) =>
             {
                 InvokeAsync(() =>
                 {
-                    fadingOut[toast.Id] = true;
-                    StateHasChanged();
+                    // Only start fade if toast hasn't been removed already
+                    if (toasts.Contains(toast))
+                    {
+                        fadingOut[toast.Id] = true;
+                        StateHasChanged();
+                    }
                 });
+                
+                // Clean up fade timer
+                fadeTimers.Remove(toast.Id);
                 fadeOutTimer.Dispose();
             };
             fadeOutTimer.Start();
+            fadeTimers[toast.Id] = fadeOutTimer;
 
-            // Create timer to remove toast
-            var timer = new System.Timers.Timer(toast.DurationMs);
-            timer.Elapsed += (sender, args) =>
+            // Create timer to remove toast after fade animation completes
+            var removeTimer = new System.Timers.Timer(toast.DurationMs);
+            removeTimer.AutoReset = false;
+            removeTimer.Elapsed += (sender, args) =>
             {
                 InvokeAsync(() =>
                 {
                     toasts.Remove(toast);
-                    timers.Remove(toast.Id);
                     fadingOut.Remove(toast.Id);
                     StateHasChanged();
                 });
-                timer.Dispose();
+                
+                // Clean up remove timer
+                removeTimers.Remove(toast.Id);
+                removeTimer.Dispose();
             };
-            timer.Start();
-            timers[toast.Id] = timer;
+            removeTimer.Start();
+            removeTimers[toast.Id] = removeTimer;
         });
     }
 
@@ -93,10 +109,26 @@
     public void Dispose()
     {
         ToastService.OnShow -= ShowToast;
-        foreach (var timer in timers.Values)
+        
+        // Dispose all fade timers
+        foreach (var timer in fadeTimers.Values)
         {
+            timer?.Stop();
             timer?.Dispose();
         }
+        fadeTimers.Clear();
+        
+        // Dispose all remove timers
+        foreach (var timer in removeTimers.Values)
+        {
+            timer?.Stop();
+            timer?.Dispose();
+        }
+        removeTimers.Clear();
+        
+        // Clear other collections
+        toasts.Clear();
+        fadingOut.Clear();
     }
 }
 

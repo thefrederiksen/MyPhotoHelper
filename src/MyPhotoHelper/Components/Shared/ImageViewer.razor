@@ -5,6 +5,7 @@
 @inject IJSRuntime JSRuntime
 @inject IPhotoPathService PhotoPathService
 @inject IToastService ToastService
+@inject IGalleryUpdateService GalleryUpdateService
 @inject MyPhotoHelperDbContext DbContext
 @implements IDisposable
 
@@ -93,6 +94,7 @@
     [Parameter] public tbl_images Photo { get; set; } = default!;
     [Parameter] public bool ShowTime { get; set; } = true;
     [Parameter] public EventCallback<tbl_images> OnImageClick { get; set; }
+    [Parameter] public EventCallback<tbl_images> OnImageDeleted { get; set; }
     [Parameter] public string ContainerClass { get; set; } = "thumbnail-container";
     [Parameter] public int ThumbnailSize { get; set; } = 150;
     [Parameter] public RenderFragment? AdditionalContent { get; set; }
@@ -329,15 +331,25 @@
             Logger.Info($"Marked image as deleted in database: {Photo.ImageId}");
             ToastService.ShowSuccess("Image deleted successfully");
             
+            // Notify the gallery update service
+            GalleryUpdateService.NotifyImageDeleted(Photo.RelativePath);
+            
+            // Notify parent component if callback is provided
+            if (OnImageDeleted.HasDelegate)
+            {
+                await OnImageDeleted.InvokeAsync(Photo);
+            }
+            
             showDeleteDialog = false;
             StateHasChanged();
-            
-            // TODO: Notify parent component to refresh the view
         }
         catch (Exception ex)
         {
             Logger.Error($"Error deleting image: {ex.Message}");
             ToastService.ShowError($"Failed to delete image: {ex.Message}");
+            // Ensure dialog is closed even on error
+            showDeleteDialog = false;
+            StateHasChanged();
         }
     }
 

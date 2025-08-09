@@ -80,10 +80,18 @@
     {
         if (Image != null && !isDeleting)
         {
-            isDeleting = true;
-            StateHasChanged();
-            await OnConfirm.InvokeAsync(Image);
-            isDeleting = false;
+            try
+            {
+                isDeleting = true;
+                StateHasChanged();
+                await OnConfirm.InvokeAsync(Image);
+            }
+            finally
+            {
+                // Always reset the deleting flag, even if an error occurs
+                isDeleting = false;
+                StateHasChanged();
+            }
         }
     }
 }
