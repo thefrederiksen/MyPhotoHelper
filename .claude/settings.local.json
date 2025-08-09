@@ -3,7 +3,11 @@
   "permissions": {
     "allow": [
       "*",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(dotnet msbuild:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(msbuild:*)",
+      "Bash(dotnet restore:*)"
     ],
     "deny": []
   }

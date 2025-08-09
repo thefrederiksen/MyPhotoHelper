@@ -29,5 +29,8 @@
     "myhelper.css",
     "tailwind.config.js",
     "README.md"
-  ]
+  ],
+  "dependencies": {
+    "2": "^3.0.0"
+  }
 }
