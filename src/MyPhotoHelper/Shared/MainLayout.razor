@@ -49,6 +49,9 @@
 <!-- Update Notification -->
 <UpdateNotification />
 
+<!-- Toast Notifications -->
+<ToastNotification />
+
 @code {
     private ImageDetailsModal? imageDetailsModal;
     private bool isSidebarOpen = false;
@@ -99,3 +102,17 @@
         ImageDetailsService.ShowImageDetailsRequested -= OnShowImageDetailsRequested;
     }
 }
+
+<style>
+    /* Ensure sidebar has proper z-index but lower than dropdowns */
+    .sidebar {
+        z-index: 100;
+        position: relative;
+    }
+    
+    /* Ensure main content has proper stacking context */
+    .main-content {
+        z-index: 1;
+        position: relative;
+    }
+</style>

@@ -1,0 +1,97 @@
+@using MyPhotoHelper.Models
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop fade show" @onclick="Cancel"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="oi oi-warning me-2"></i>Delete Image
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Cancel" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        @if (Image != null)
+                        {
+                            <img src="/api/images/@Image.ImageId/thumbnail" 
+                                 class="img-thumbnail mb-3" 
+                                 style="max-width: 200px; max-height: 200px;" 
+                                 alt="@Image.FileName" />
+                        }
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="oi oi-warning me-2"></i>
+                        <strong>Are you sure you want to delete this image?</strong>
+                    </div>
+                    @if (Image != null)
+                    {
+                        <div class="mb-3">
+                            <p class="mb-1"><strong>File Name:</strong> @Image.FileName</p>
+                            <p class="mb-1 text-break"><strong>Path:</strong> <small>@Image.RelativePath</small></p>
+                        </div>
+                    }
+                    <div class="alert alert-danger">
+                        <small>
+                            <i class="oi oi-trash me-1"></i>
+                            This action cannot be undone. The image file will be permanently deleted from your disk.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                        <i class="oi oi-x me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <i class="oi oi-trash me-1"></i>
+                            <span>Delete</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public tbl_images? Image { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<tbl_images> OnConfirm { get; set; }
+
+    private bool isDeleting = false;
+
+    private async Task Cancel()
+    {
+        isDeleting = false;
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (Image != null && !isDeleting)
+        {
+            try
+            {
+                isDeleting = true;
+                StateHasChanged();
+                await OnConfirm.InvokeAsync(Image);
+            }
+            finally
+            {
+                // Always reset the deleting flag, even if an error occurs
+                isDeleting = false;
+                StateHasChanged();
+            }
+        }
+    }
+}

@@ -1,8 +1,12 @@
 @using MyPhotoHelper.Services
 @using MyPhotoHelper.Models
+@using MyPhotoHelper.Data
 @using System.Collections.Generic
 @inject IJSRuntime JSRuntime
 @inject IPhotoPathService PhotoPathService
+@inject IToastService ToastService
+@inject IGalleryUpdateService GalleryUpdateService
+@inject MyPhotoHelperDbContext DbContext
 @implements IDisposable
 
 <div class="@ContainerClass" style="overflow: visible !important;">
@@ -64,6 +68,10 @@
                             <span class="oi oi-info mr-2" aria-hidden="true"></span>
                             Properties
                         </button>
+                        <button class="custom-dropdown-item text-danger" @onclick="HandleDeleteImage" @onclick:stopPropagation="true">
+                            <span class="oi oi-trash mr-2" aria-hidden="true"></span>
+                            Delete
+                        </button>
                     </div>
                 }
             </div>
@@ -78,11 +86,15 @@
 <!-- Image Properties Dialog -->
 <ImagePropertiesDialog Image="@Photo" IsVisible="@showPropertiesDialog" OnClose="ClosePropertiesDialog" />
 
+<!-- Delete Confirmation Dialog -->
+<DeleteConfirmationDialog Image="@Photo" IsVisible="@showDeleteDialog" OnCancel="CancelDelete" OnConfirm="ConfirmDelete" />
+
 
 @code {
     [Parameter] public tbl_images Photo { get; set; } = default!;
     [Parameter] public bool ShowTime { get; set; } = true;
     [Parameter] public EventCallback<tbl_images> OnImageClick { get; set; }
+    [Parameter] public EventCallback<tbl_images> OnImageDeleted { get; set; }
     [Parameter] public string ContainerClass { get; set; } = "thumbnail-container";
     [Parameter] public int ThumbnailSize { get; set; } = 150;
     [Parameter] public RenderFragment? AdditionalContent { get; set; }
@@ -92,6 +104,7 @@
     
     private bool isDropdownOpen = false;
     private bool showPropertiesDialog = false;
+    private bool showDeleteDialog = false;
     private static List<ImageViewer> openDropdowns = new();
 
     private async Task OpenImage()
@@ -172,6 +185,7 @@
         try
         {
             await OpenImage();
+            ToastService.ShowSuccess("Image opened");
         }
         finally
         {
@@ -188,11 +202,13 @@
             {
                 await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", fullPath);
                 Logger.Info($"Copied path to clipboard: {fullPath}");
+                ToastService.ShowSuccess("Path copied to clipboard");
             }
         }
         catch (Exception ex)
         {
             Logger.Error($"Error copying image path to clipboard: {ex.Message}");
+            ToastService.ShowError("Failed to copy path");
         }
         finally
         {
@@ -262,6 +278,81 @@
         StateHasChanged();
     }
 
+    private void HandleDeleteImage()
+    {
+        try
+        {
+            showDeleteDialog = true;
+            StateHasChanged();
+        }
+        finally
+        {
+            CloseDropdown();
+        }
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteDialog = false;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDelete(tbl_images imageToDelete)
+    {
+        try
+        {
+            var fullPath = await GetFullPath();
+            
+            // Delete the physical file if it exists
+            if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+            {
+                try
+                {
+                    File.Delete(fullPath);
+                    Logger.Info($"Deleted physical file: {fullPath}");
+                }
+                catch (Exception fileEx)
+                {
+                    Logger.Error($"Error deleting physical file: {fileEx.Message}");
+                    ToastService.ShowError($"Failed to delete file: {fileEx.Message}");
+                    showDeleteDialog = false;
+                    StateHasChanged();
+                    return;
+                }
+            }
+
+            // Mark as deleted in database
+            Photo.IsDeleted = 1;
+            Photo.DateModified = DateTime.Now;
+            Photo.DateDeleted = DateTime.Now;
+            DbContext.Update(Photo);
+            await DbContext.SaveChangesAsync();
+            
+            Logger.Info($"Marked image as deleted in database: {Photo.ImageId}");
+            ToastService.ShowSuccess("Image deleted successfully");
+            
+            // Notify the gallery update service
+            GalleryUpdateService.NotifyImageDeleted(Photo.RelativePath);
+            
+            // Notify parent component if callback is provided
+            if (OnImageDeleted.HasDelegate)
+            {
+                await OnImageDeleted.InvokeAsync(Photo);
+            }
+            
+            showDeleteDialog = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error deleting image: {ex.Message}");
+            ToastService.ShowError($"Failed to delete image: {ex.Message}");
+            // Ensure dialog is closed even on error
+            showDeleteDialog = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task<string> GetFullPath()
     {
         if (Photo == null)
@@ -301,7 +392,7 @@
     
     /* Ensure card with open dropdown is on top */
     .photo-card:has(.custom-dropdown-menu) {
-        z-index: 99999;
+        z-index: 1000000;
         position: relative;
     }
 
@@ -370,7 +461,7 @@
         position: absolute;
         top: 0.25rem;
         right: 0.25rem;
-        z-index: 99998;
+        z-index: 1000001;
         overflow: visible !important;
     }
 
@@ -407,7 +498,7 @@
         border-radius: 0.25rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
         min-width: 200px;
-        z-index: 999999;
+        z-index: 1000002;
         padding: 0.5rem 0;
         animation: fadeIn 0.15s ease-in;
         margin-top: 0.25rem;
@@ -438,6 +529,15 @@
         background-color: #0d6efd;
         color: white;
         outline: 0;
+    }
+
+    .custom-dropdown-item.text-danger {
+        color: #dc3545;
+    }
+
+    .custom-dropdown-item.text-danger:hover {
+        background-color: #dc3545;
+        color: white;
     }
 
     @@keyframes fadeIn {
