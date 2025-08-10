@@ -917,17 +917,8 @@
                         Logger.LogInformation($"Deleted file: {fullPath}");
                     }
                     
-                    // Mark as deleted in database
-                    var dbImage = await dbContext.tbl_images
-                        .FirstOrDefaultAsync(img => img.ImageId == image.ImageId);
-                        
-                    if (dbImage != null)
-                    {
-                        dbImage.IsDeleted = 1;
-                        dbImage.FileExists = 0;
-                        dbImage.DateModified = DateTime.Now;
-                        dbContext.Update(dbImage);
-                    }
+                    // Mark as deleted in database with retry logic for concurrency
+                    await UpdateImageWithRetry(dbContext, image.ImageId);
                     
                     deletedCount++;
                 }
@@ -937,8 +928,6 @@
                     errors++;
                 }
             }
-            
-            await dbContext.SaveChangesAsync();
             Logger.LogInformation($"Deleted {deletedCount} files from duplicate group with {errors} errors");
             
             // Show result if there were errors
@@ -1062,6 +1051,55 @@
             // Always remove from deleting set
             deletingImages.Remove(image.ImageId);
             StateHasChanged();
+        }
+    }
+
+    private async Task UpdateImageWithRetry(MyPhotoHelper.Data.MyPhotoHelperDbContext dbContext, int imageId, int maxRetries = 3)
+    {
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                // Fresh query to get current state of the image record
+                var dbImage = await dbContext.tbl_images
+                    .FirstOrDefaultAsync(img => img.ImageId == imageId);
+                    
+                if (dbImage != null)
+                {
+                    dbImage.IsDeleted = 1;
+                    dbImage.FileExists = 0;
+                    dbImage.DateModified = DateTime.Now;
+                    dbContext.Update(dbImage);
+                    await dbContext.SaveChangesAsync();
+                    return; // Success - exit retry loop
+                }
+                else
+                {
+                    Logger.LogWarning($"Image with ID {imageId} not found in database");
+                    return; // Image doesn't exist, nothing to update
+                }
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
+            {
+                Logger.LogWarning($"Concurrency conflict updating image {imageId}, attempt {attempt + 1}/{maxRetries + 1}");
+                
+                if (attempt == maxRetries)
+                {
+                    Logger.LogError(ex, $"Failed to update image {imageId} after {maxRetries + 1} attempts due to concurrency conflicts");
+                    throw; // Re-throw after all retries exhausted
+                }
+                
+                // Clear the change tracker to prevent cached entity conflicts
+                dbContext.ChangeTracker.Clear();
+                
+                // Wait a small amount before retrying
+                await Task.Delay(50 * (attempt + 1)); // Progressive backoff: 50ms, 100ms, 150ms
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Unexpected error updating image {imageId}");
+                throw; // Re-throw non-concurrency exceptions immediately
+            }
         }
     }
 
