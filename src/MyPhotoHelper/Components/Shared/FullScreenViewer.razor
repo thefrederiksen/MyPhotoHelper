@@ -7,13 +7,15 @@
 
 @if (ImageViewerService.IsViewerOpen && ImageViewerService.CurrentImage != null)
 {
-    <div class="viewer-overlay" @onclick="HandleBackdropClick" @onkeydown="HandleKeyDown" tabindex="0" @ref="overlayElement">
+    <div class="viewer-overlay" @onclick="HandleBackdropClick" @onkeydown="HandleKeyDown" tabindex="0" @ref="overlayElement" 
+         role="dialog" aria-modal="true" aria-label="Full screen image viewer">
         <!-- Top bar with photo counter and close button -->
         <div class="viewer-top-bar" @onmouseover="ShowControls" style="opacity: @(controlsVisible ? "1" : "0")">
             <div class="viewer-photo-counter">
                 Photo @(ImageViewerService.CurrentImageIndex + 1) of @ImageViewerService.PhotoCollection?.Count
             </div>
-            <button class="viewer-close-btn" @onclick="CloseViewer" @onclick:stopPropagation="true" title="Close (ESC)">
+            <button class="viewer-close-btn" @onclick="CloseViewer" @onclick:stopPropagation="true" title="Close (ESC)"
+                    aria-label="Close image viewer">
                 <span class="oi oi-x" aria-hidden="true"></span>
             </button>
         </div>
@@ -23,8 +25,8 @@
             @if (isLoading)
             {
                 <div class="viewer-loading">
-                    <div class="spinner-border text-light" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                    <div class="spinner-border text-light" role="status" aria-label="Loading image">
+                        <span class="visually-hidden">Loading image...</span>
                     </div>
                 </div>
             }
@@ -43,7 +45,8 @@
                     @onclick:stopPropagation="true"
                     @onmouseover="ShowControls"
                     style="opacity: @(controlsVisible ? "1" : "0")"
-                    title="Previous (←)">
+                    title="Previous (←)"
+                    aria-label="View previous image">
                 <span class="oi oi-chevron-left" aria-hidden="true"></span>
             </button>
         }
@@ -55,7 +58,8 @@
                     @onclick:stopPropagation="true"
                     @onmouseover="ShowControls"
                     style="opacity: @(controlsVisible ? "1" : "0")"
-                    title="Next (→)">
+                    title="Next (→)"
+                    aria-label="View next image">
                 <span class="oi oi-chevron-right" aria-hidden="true"></span>
             </button>
         }
@@ -76,10 +80,12 @@
                 </div>
             </div>
             <div class="viewer-actions">
-                <button class="viewer-action-btn" @onclick="OpenInExplorer" @onclick:stopPropagation="true" title="Open folder">
+                <button class="viewer-action-btn" @onclick="OpenInExplorer" @onclick:stopPropagation="true" title="Open folder"
+                        aria-label="Open containing folder">
                     <span class="oi oi-folder" aria-hidden="true"></span>
                 </button>
-                <button class="viewer-action-btn" @onclick="OpenExternal" @onclick:stopPropagation="true" title="Open in default app">
+                <button class="viewer-action-btn" @onclick="OpenExternal" @onclick:stopPropagation="true" title="Open in default app"
+                        aria-label="Open image in default application">
                     <span class="oi oi-external-link" aria-hidden="true"></span>
                 </button>
             </div>
@@ -287,6 +293,8 @@
     private bool isLoading = true;
     private bool controlsVisible = true;
     private System.Timers.Timer? hideControlsTimer;
+    private CancellationTokenSource? loadingCts;
+    private readonly SemaphoreSlim navigationSemaphore = new SemaphoreSlim(1, 1);
     
     protected override async Task OnInitializedAsync()
     {
@@ -300,7 +308,7 @@
         
         // Initialize auto-hide timer
         hideControlsTimer = new System.Timers.Timer(3000);
-        hideControlsTimer.Elapsed += (s, e) => HideControls();
+        hideControlsTimer.Elapsed += OnHideControlsTimerElapsed;
         hideControlsTimer.AutoReset = false;
         hideControlsTimer.Start();
     }
@@ -310,16 +318,34 @@
         if (ImageViewerService.CurrentImage == null)
             return;
             
+        // Cancel any previous loading operation
+        loadingCts?.Cancel();
+        loadingCts = new CancellationTokenSource();
+        var cancellationToken = loadingCts.Token;
+        
         isLoading = true;
         StateHasChanged();
         
         try
         {
+            // Check if cancelled before proceeding
+            if (cancellationToken.IsCancellationRequested)
+                return;
+                
             var fullPath = await PhotoPathService.GetFullPathAsync(ImageViewerService.CurrentImage.RelativePath);
+            
+            // Check again after async operation
+            if (cancellationToken.IsCancellationRequested)
+                return;
+                
             currentImageUrl = $"/api/images/photo/{ImageViewerService.CurrentImage.ImageId}?t={DateTime.Now.Ticks}";
             
             // Preload next and previous images
             _ = PreloadAdjacentImages();
+        }
+        catch (OperationCanceledException)
+        {
+            // Navigation was cancelled, this is expected behavior
         }
         catch (Exception ex)
         {
@@ -356,7 +382,8 @@
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("eval", $"new Image().src = '{url}'");
+            // Use a safer method to preload images without eval
+            await JSRuntime.InvokeVoidAsync("preloadImage", url);
         }
         catch { }
     }
@@ -376,16 +403,38 @@
     
     private async Task NavigateNext()
     {
-        ImageViewerService.NavigateNext();
-        await LoadCurrentImage();
-        ShowControls();
+        // Prevent rapid navigation clicks
+        if (!await navigationSemaphore.WaitAsync(0))
+            return;
+            
+        try
+        {
+            ImageViewerService.NavigateNext();
+            await LoadCurrentImage();
+            ShowControls();
+        }
+        finally
+        {
+            navigationSemaphore.Release();
+        }
     }
     
     private async Task NavigatePrevious()
     {
-        ImageViewerService.NavigatePrevious();
-        await LoadCurrentImage();
-        ShowControls();
+        // Prevent rapid navigation clicks
+        if (!await navigationSemaphore.WaitAsync(0))
+            return;
+            
+        try
+        {
+            ImageViewerService.NavigatePrevious();
+            await LoadCurrentImage();
+            ShowControls();
+        }
+        finally
+        {
+            navigationSemaphore.Release();
+        }
     }
     
     private void CloseViewer()
@@ -440,6 +489,11 @@
             controlsVisible = false;
             StateHasChanged();
         });
+    }
+    
+    private void OnHideControlsTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        HideControls();
     }
     
     private async Task OpenInExplorer()
@@ -507,6 +561,21 @@
     public void Dispose()
     {
         ImageViewerService.OnStateChanged -= OnViewerStateChanged;
-        hideControlsTimer?.Dispose();
+        
+        // Cancel any pending image loading
+        loadingCts?.Cancel();
+        loadingCts?.Dispose();
+        
+        // Properly dispose timer by unsubscribing from events first
+        if (hideControlsTimer != null)
+        {
+            hideControlsTimer.Stop();
+            hideControlsTimer.Elapsed -= OnHideControlsTimerElapsed;
+            hideControlsTimer.Dispose();
+            hideControlsTimer = null;
+        }
+        
+        // Dispose the navigation semaphore
+        navigationSemaphore?.Dispose();
     }
 }

@@ -56,9 +56,26 @@ public class ImagesController : ControllerBase
                 return NotFound("Scan directory not found");
             }
 
-            // Normalize the path to handle any path separator issues
+            // Normalize the path to handle any path separator issues and prevent directory traversal
             var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            
+            // Validate against path traversal attacks
+            if (normalizedRelativePath.Contains("..") || Path.IsPathRooted(normalizedRelativePath))
+            {
+                Logger.Error($"Potential path traversal attempt detected for image {id}: {normalizedRelativePath}");
+                return NotFound("Invalid path");
+            }
+            
             var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+            
+            // Ensure the resolved path is still within the scan directory
+            var resolvedPath = Path.GetFullPath(fullPath);
+            var scanDirPath = Path.GetFullPath(image.ScanDirectory.DirectoryPath);
+            if (!resolvedPath.StartsWith(scanDirPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Error($"Path traversal detected: resolved path {resolvedPath} is outside scan directory {scanDirPath}");
+                return NotFound("Invalid path");
+            }
             
             if (!System.IO.File.Exists(fullPath))
             {
@@ -140,9 +157,26 @@ public class ImagesController : ControllerBase
                 return NotFound("Scan directory not found");
             }
 
-            // Normalize the path to handle any path separator issues
+            // Normalize the path to handle any path separator issues and prevent directory traversal
             var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            
+            // Validate against path traversal attacks
+            if (normalizedRelativePath.Contains("..") || Path.IsPathRooted(normalizedRelativePath))
+            {
+                Logger.Error($"Potential path traversal attempt detected for image {id}: {normalizedRelativePath}");
+                return NotFound("Invalid path");
+            }
+            
             var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+            
+            // Ensure the resolved path is still within the scan directory
+            var resolvedPath = Path.GetFullPath(fullPath);
+            var scanDirPath = Path.GetFullPath(image.ScanDirectory.DirectoryPath);
+            if (!resolvedPath.StartsWith(scanDirPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Error($"Path traversal detected: resolved path {resolvedPath} is outside scan directory {scanDirPath}");
+                return NotFound("Invalid path");
+            }
             
             if (!System.IO.File.Exists(fullPath))
             {
@@ -287,9 +321,26 @@ public class ImagesController : ControllerBase
                 return NotFound("Scan directory not found");
             }
 
-            // Normalize the path to handle any path separator issues
+            // Normalize the path to handle any path separator issues and prevent directory traversal
             var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            
+            // Validate against path traversal attacks
+            if (normalizedRelativePath.Contains("..") || Path.IsPathRooted(normalizedRelativePath))
+            {
+                Logger.Error($"Potential path traversal attempt detected for image {id}: {normalizedRelativePath}");
+                return NotFound("Invalid path");
+            }
+            
             var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+            
+            // Ensure the resolved path is still within the scan directory
+            var resolvedPath = Path.GetFullPath(fullPath);
+            var scanDirPath = Path.GetFullPath(image.ScanDirectory.DirectoryPath);
+            if (!resolvedPath.StartsWith(scanDirPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Error($"Path traversal detected: resolved path {resolvedPath} is outside scan directory {scanDirPath}");
+                return NotFound("Invalid path");
+            }
             
             if (!System.IO.File.Exists(fullPath))
             {
@@ -363,9 +414,26 @@ public class ImagesController : ControllerBase
                 return NotFound("Scan directory not found");
             }
 
-            // Normalize the path to handle any path separator issues
+            // Normalize the path to handle any path separator issues and prevent directory traversal
             var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            
+            // Validate against path traversal attacks
+            if (normalizedRelativePath.Contains("..") || Path.IsPathRooted(normalizedRelativePath))
+            {
+                Logger.Error($"Potential path traversal attempt detected for image {id}: {normalizedRelativePath}");
+                return NotFound("Invalid path");
+            }
+            
             var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+            
+            // Ensure the resolved path is still within the scan directory
+            var resolvedPath = Path.GetFullPath(fullPath);
+            var scanDirPath = Path.GetFullPath(image.ScanDirectory.DirectoryPath);
+            if (!resolvedPath.StartsWith(scanDirPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Error($"Path traversal detected: resolved path {resolvedPath} is outside scan directory {scanDirPath}");
+                return NotFound("Invalid path");
+            }
             
             if (!System.IO.File.Exists(fullPath))
             {

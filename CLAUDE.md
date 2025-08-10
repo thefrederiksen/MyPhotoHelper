@@ -13,6 +13,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MyPhotoHelper (also referenced as FaceVault in documentation) is a .NET 9 Blazor Server application for photo organization and management with AI-powered features. The application combines C# for the web UI and database operations with Python for image processing and AI analysis.
 
+## Development Workflow for GitHub Issues
+
+When working on GitHub issues, follow this workflow:
+
+1. **Implementer**: Fetches issue, implements solution, creates PR
+2. **Code Reviewer**: Reviews PR for code quality, security, and best practices
+   - If review **passes**: Proceed to QA testing
+   - If review **fails** or has critical issues: **MUST go back to Implementer to fix issues**
+3. **QA Tester**: Only runs after code review approval
+   - Captures before/after screenshots
+   - Runs automated tests
+   - Documents results
+
+**IMPORTANT**: Never proceed to QA testing if the code review fails or identifies critical issues (compilation errors, security vulnerabilities, etc.). The implementer must fix all critical issues first, then the code must be re-reviewed before QA testing.
+
 ## Reference Projects
 
 - `C:\ReposFred\MyGithubHelper` This is a similar app we can look at and see if we can find any improvement from
