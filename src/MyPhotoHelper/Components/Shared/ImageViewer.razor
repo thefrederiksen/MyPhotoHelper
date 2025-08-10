@@ -6,6 +6,7 @@
 @inject IPhotoPathService PhotoPathService
 @inject IToastService ToastService
 @inject IGalleryUpdateService GalleryUpdateService
+@inject IImageViewerService ImageViewerService
 @inject MyPhotoHelperDbContext DbContext
 @implements IDisposable
 
@@ -98,6 +99,9 @@
     [Parameter] public string ContainerClass { get; set; } = "thumbnail-container";
     [Parameter] public int ThumbnailSize { get; set; } = 150;
     [Parameter] public RenderFragment? AdditionalContent { get; set; }
+    [Parameter] public bool UseFullScreenViewer { get; set; } = false;
+    [Parameter] public List<tbl_images>? PhotoCollection { get; set; }
+    [Parameter] public int PhotoIndex { get; set; } = 0;
     
     // Check if this image is a screenshot by looking at the analysis data
     private bool IsScreenshot => Photo.tbl_image_analysis?.ImageCategory == "screenshot";
@@ -115,23 +119,32 @@
             
             if (Photo != null)
             {
-                // Get the full path from settings
-                var fullPath = await GetFullPath();
-                Logger.Info($"Full path resolved to: {fullPath}");
-                
-                if (!string.IsNullOrEmpty(fullPath) && System.IO.File.Exists(fullPath))
+                // If using full-screen viewer, open it instead of external app
+                if (UseFullScreenViewer && PhotoCollection != null)
                 {
-                    Logger.Info($"File exists, opening: {fullPath}");
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = fullPath,
-                        UseShellExecute = true
-                    });
-                    Logger.Info($"Process.Start executed successfully");
+                    Logger.Info($"Opening full-screen viewer for photo: {Photo.RelativePath}");
+                    ImageViewerService.OpenViewer(PhotoCollection, PhotoIndex);
                 }
                 else
                 {
-                    Logger.Error($"File not found or path empty: {fullPath}");
+                    // Get the full path from settings
+                    var fullPath = await GetFullPath();
+                    Logger.Info($"Full path resolved to: {fullPath}");
+                    
+                    if (!string.IsNullOrEmpty(fullPath) && System.IO.File.Exists(fullPath))
+                    {
+                        Logger.Info($"File exists, opening: {fullPath}");
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = fullPath,
+                            UseShellExecute = true
+                        });
+                        Logger.Info($"Process.Start executed successfully");
+                    }
+                    else
+                    {
+                        Logger.Error($"File not found or path empty: {fullPath}");
+                    }
                 }
                 
                 // Also trigger the callback if provided

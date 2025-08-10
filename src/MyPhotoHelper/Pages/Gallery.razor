@@ -3,6 +3,9 @@
 
 <PageTitle>Gallery - MyPhotoHelper</PageTitle>
 
+<!-- Full-screen viewer component -->
+<FullScreenViewer />
+
 <AppErrorBoundary>
     <ChildContent>
         <div class="w-full gallery-page">
@@ -180,11 +183,16 @@
                                     else
                                     {
                                         <div class="photo-grid">
-                                            @foreach (var photo in monthGroup.Photos)
+                                            @for (int i = 0; i < monthGroup.Photos.Count; i++)
                                             {
+                                                var index = i; // Capture for closure
+                                                var photo = monthGroup.Photos[index];
                                                 <ImageViewer Photo="photo" 
                                                            ContainerClass="@(isCompactView ? "thumbnail-container-compact" : "thumbnail-container")"
-                                                           ShowTime="true" />
+                                                           ShowTime="true"
+                                                           UseFullScreenViewer="true"
+                                                           PhotoCollection="monthGroup.Photos"
+                                                           PhotoIndex="index" />
                                             }
                                         </div>
                                     }

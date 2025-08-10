@@ -280,6 +280,9 @@ namespace MyPhotoHelper
             // Gallery update notification service
             builder.Services.AddSingleton<IGalleryUpdateService, GalleryUpdateService>();
             
+            // Image viewer service for full-screen viewing
+            builder.Services.AddScoped<IImageViewerService, ImageViewerService>();
+            
             // Directory monitoring service
             builder.Services.AddSingleton<DirectoryMonitoringService>();
             builder.Services.AddSingleton<IDirectoryMonitoringService>(provider => provider.GetRequiredService<DirectoryMonitoringService>());

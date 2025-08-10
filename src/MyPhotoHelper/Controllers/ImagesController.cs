@@ -34,6 +34,90 @@ public class ImagesController : ControllerBase
         }
     }
 
+    [HttpGet("photo/{id}")]
+    public async Task<IActionResult> GetPhoto(int id)
+    {
+        try
+        {
+            var image = await _context.tbl_images
+                .Include(img => img.ScanDirectory)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(img => img.ImageId == id && img.IsDeleted == 0 && img.FileExists == 1);
+
+            if (image == null)
+            {
+                Logger.Error($"Image not found with ID: {id}");
+                return NotFound();
+            }
+
+            if (image.ScanDirectory == null)
+            {
+                Logger.Error($"Scan directory not loaded for image {id}");
+                return NotFound("Scan directory not found");
+            }
+
+            // Normalize the path to handle any path separator issues
+            var normalizedRelativePath = image.RelativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            var fullPath = Path.Combine(image.ScanDirectory.DirectoryPath, normalizedRelativePath);
+            
+            if (!System.IO.File.Exists(fullPath))
+            {
+                Logger.Error($"File not found at path: {fullPath}");
+                return NotFound("File not found");
+            }
+
+            // Check if this is a HEIC file and convert if necessary
+            var extension = (image.FileExtension ?? "").ToLowerInvariant();
+            var isHeicFile = extension == ".heic" || extension == ".heif";
+
+            if (isHeicFile && _pythonEnv != null)
+            {
+                try
+                {
+                    Logger.Info($"Converting HEIC file for full view: {image.FileName}");
+                    
+                    // Convert HEIC to JPEG for display
+                    var heicBytes = await _thumbnailCacheService.GetCachedHeicThumbnailAsync(fullPath, 2000); // Larger size for full view
+                    
+                    if (heicBytes != null)
+                    {
+                        Logger.Info($"Successfully converted HEIC file for {image.FileName}");
+                        return File(heicBytes, "image/jpeg");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"HEIC conversion failed for {image.FileName}: {ex.Message}");
+                }
+            }
+
+            // Return the original file
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+            var contentType = GetContentType(extension);
+            return File(fileBytes, contentType);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error serving photo {id}: {ex.Message}");
+            return StatusCode(500);
+        }
+    }
+
+    private string GetContentType(string extension)
+    {
+        return extension?.ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            ".heic" or ".heif" => "image/heic",
+            _ => "application/octet-stream"
+        };
+    }
+
     [HttpGet("{id}/thumbnail")]
     public async Task<IActionResult> GetThumbnail(int id)
     {
@@ -298,20 +382,5 @@ public class ImagesController : ControllerBase
             Logger.Error($"Error serving image {id}: {ex.Message}");
             return StatusCode(500);
         }
-    }
-
-    private string GetContentType(string extension)
-    {
-        return extension.ToLower() switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            ".bmp" => "image/bmp",
-            ".webp" => "image/webp",
-            ".heic" => "image/heic",
-            ".heif" => "image/heif",
-            _ => "application/octet-stream"
-        };
     }
 }
