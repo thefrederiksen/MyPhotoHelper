@@ -38,31 +38,27 @@
         </div>
         
         <!-- Navigation buttons -->
-        @if (ImageViewerService.CurrentImageIndex > 0)
-        {
-            <button class="viewer-nav-button viewer-nav-prev" 
-                    @onclick="NavigatePrevious" 
-                    @onclick:stopPropagation="true"
-                    @onmouseover="ShowControls"
-                    style="opacity: @(controlsVisible ? "1" : "0")"
-                    title="Previous (←)"
-                    aria-label="View previous image">
-                <span class="oi oi-chevron-left" aria-hidden="true"></span>
-            </button>
-        }
+        <button class="viewer-nav-button viewer-nav-prev" 
+                @onclick="NavigatePrevious" 
+                @onclick:stopPropagation="true"
+                @onmouseover="ShowControls"
+                style="opacity: @(controlsVisible ? "1" : "0"); @(ImageViewerService.CurrentImageIndex <= 0 ? "display: none;" : "")"
+                title="Previous (←)"
+                aria-label="View previous image"
+                disabled="@(ImageViewerService.CurrentImageIndex <= 0)">
+            <span class="oi oi-chevron-left" aria-hidden="true"></span>
+        </button>
         
-        @if (ImageViewerService.CurrentImageIndex < (ImageViewerService.PhotoCollection?.Count - 1))
-        {
-            <button class="viewer-nav-button viewer-nav-next" 
-                    @onclick="NavigateNext" 
-                    @onclick:stopPropagation="true"
-                    @onmouseover="ShowControls"
-                    style="opacity: @(controlsVisible ? "1" : "0")"
-                    title="Next (→)"
-                    aria-label="View next image">
-                <span class="oi oi-chevron-right" aria-hidden="true"></span>
-            </button>
-        }
+        <button class="viewer-nav-button viewer-nav-next" 
+                @onclick="NavigateNext" 
+                @onclick:stopPropagation="true"
+                @onmouseover="ShowControls"
+                style="opacity: @(controlsVisible ? "1" : "0"); @(ImageViewerService.CurrentImageIndex >= (ImageViewerService.PhotoCollection?.Count - 1) ? "display: none;" : "")"
+                title="Next (→)"
+                aria-label="View next image"
+                disabled="@(ImageViewerService.CurrentImageIndex >= (ImageViewerService.PhotoCollection?.Count - 1))">
+            <span class="oi oi-chevron-right" aria-hidden="true"></span>
+        </button>
         
         <!-- Bottom bar with photo information -->
         <div class="viewer-bottom-bar" @onmouseover="ShowControls" style="opacity: @(controlsVisible ? "1" : "0")">
@@ -101,13 +97,15 @@
         width: 100vw;
         height: 100vh;
         background-color: rgba(0, 0, 0, 0.95);
-        z-index: 9999;
+        z-index: 99999;
         display: flex;
         align-items: center;
         justify-content: center;
         animation: fadeIn 0.2s ease-in;
         outline: none;
         overflow: hidden;
+        pointer-events: auto;
+        isolation: isolate;
     }
     
     @@keyframes fadeIn {
@@ -126,7 +124,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 0 2rem;
-        z-index: 10001;
+        z-index: 100001;
         transition: opacity 0.3s ease;
     }
     
@@ -153,15 +151,16 @@
     
     .viewer-image-container {
         position: relative;
-        width: 100%;
-        height: 100%;
-        max-width: 100vw;
-        max-height: 100vh;
+        width: 90vw;
+        height: 90vh;
+        max-width: 90vw;
+        max-height: 90vh;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 60px 4rem 80px 4rem;
         box-sizing: border-box;
+        margin: 5vh 5vw;
     }
     
     .viewer-loading {
@@ -173,7 +172,7 @@
     
     .viewer-image {
         max-width: 100%;
-        max-height: calc(100vh - 140px); /* Account for top and bottom bars */
+        max-height: calc(90vh - 140px); /* Account for top and bottom bars within 90vh container */
         object-fit: contain;
         transition: opacity 0.3s ease;
     }
@@ -194,13 +193,18 @@
         padding: 1rem 0.75rem;
         opacity: 0.7;
         transition: all 0.2s ease;
-        z-index: 10001;
+        z-index: 100001;
         border-radius: 0.25rem;
     }
     
-    .viewer-nav-button:hover {
+    .viewer-nav-button:hover:not(:disabled) {
         background: rgba(255, 255, 255, 0.2);
         opacity: 1;
+    }
+    
+    .viewer-nav-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.3;
     }
     
     .viewer-nav-prev {
@@ -222,7 +226,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 1rem 2rem;
-        z-index: 10001;
+        z-index: 100001;
         transition: opacity 0.3s ease;
         flex-wrap: wrap;
         gap: 1rem;
