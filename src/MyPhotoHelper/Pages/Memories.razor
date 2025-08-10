@@ -1,9 +1,12 @@
 @page "/memories"
 @using MyPhotoHelper.Components.Shared
+@using MyPhotoHelper.Services
+@inject IImageViewerService ImageViewerService
 
 <PageTitle>Memories - @selectedDate.ToString("MMMM d") - MyPhotoHelper</PageTitle>
 
 <div class="w-full">
+    <FullScreenViewer />
     <div class="flex justify-between items-center mb-4">
         <div>
             <h1 class="text-4xl font-light">📸 Memories</h1>
@@ -84,7 +87,7 @@
                     <div class="photo-grid">
                         @foreach (var photo in yearGroup.Photos.Take(20))
                         {
-                            <ImageViewer Photo="photo" ShowTime="true" OnImageClick="HandleImageClick" />
+                            <ImageViewer Photo="photo" ShowTime="true" OnImageClick="HandleImageClick" UseFullScreenViewer="true" />
                         }
                     </div>
                     @if (yearGroup.PhotoCount > 20)
