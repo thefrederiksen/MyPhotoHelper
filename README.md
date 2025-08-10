@@ -20,7 +20,7 @@ MyPhotoHelper is a Windows application that helps you organize and manage your p
 - ✅ **One-Click Installer** - No admin rights required
 - ✅ **Auto-Updates** - Always get the latest features automatically
 - ✅ **Privacy First** - All processing happens locally on your computer
-- 📦 **Latest Version:** v1.3.2
+- 📦 **Latest Version:** v1.3.3
 
 ## ✨ Features
 
