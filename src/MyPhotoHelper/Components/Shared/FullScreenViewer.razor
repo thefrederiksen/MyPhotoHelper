@@ -155,12 +155,13 @@
         position: relative;
         width: 100%;
         height: 100%;
-        max-width: calc(100vw - 8rem);
-        max-height: calc(100vh - 140px);
+        max-width: 100vw;
+        max-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 60px 4rem 80px 4rem;
+        padding: 60px max(4rem, env(safe-area-inset-left)) 80px max(4rem, env(safe-area-inset-right));
+        box-sizing: border-box;
     }
     
     .viewer-loading {
@@ -301,6 +302,7 @@
     private bool controlsVisible = true;
     private System.Timers.Timer? hideControlsTimer;
     private CancellationTokenSource? loadingCts;
+    private CancellationTokenSource? preloadCts;
     private readonly SemaphoreSlim navigationSemaphore = new SemaphoreSlim(1, 1);
     
     protected override async Task OnInitializedAsync()
@@ -365,34 +367,61 @@
     {
         if (ImageViewerService.PhotoCollection == null)
             return;
-            
+        
+        // Cancel any previous preload operations
+        preloadCts?.Cancel();
+        preloadCts?.Dispose();
+        preloadCts = new CancellationTokenSource();
+        var cancellationToken = preloadCts.Token;
+        
         var tasks = new List<Task>();
         
-        // Preload next image
-        if (ImageViewerService.CurrentImageIndex < ImageViewerService.PhotoCollection.Count - 1)
+        try
         {
-            var nextImage = ImageViewerService.PhotoCollection[ImageViewerService.CurrentImageIndex + 1];
-            tasks.Add(PreloadImage($"/api/images/photo/{nextImage.ImageId}"));
+            // Check if cancelled before proceeding
+            if (cancellationToken.IsCancellationRequested)
+                return;
+            
+            // Preload next image
+            if (ImageViewerService.CurrentImageIndex < ImageViewerService.PhotoCollection.Count - 1)
+            {
+                var nextImage = ImageViewerService.PhotoCollection[ImageViewerService.CurrentImageIndex + 1];
+                tasks.Add(PreloadImage($"/api/images/photo/{nextImage.ImageId}", cancellationToken));
+            }
+            
+            // Preload previous image
+            if (ImageViewerService.CurrentImageIndex > 0)
+            {
+                var prevImage = ImageViewerService.PhotoCollection[ImageViewerService.CurrentImageIndex - 1];
+                tasks.Add(PreloadImage($"/api/images/photo/{prevImage.ImageId}", cancellationToken));
+            }
+            
+            await Task.WhenAll(tasks);
         }
-        
-        // Preload previous image
-        if (ImageViewerService.CurrentImageIndex > 0)
+        catch (OperationCanceledException)
         {
-            var prevImage = ImageViewerService.PhotoCollection[ImageViewerService.CurrentImageIndex - 1];
-            tasks.Add(PreloadImage($"/api/images/photo/{prevImage.ImageId}"));
+            // Preload was cancelled, this is expected behavior
         }
-        
-        await Task.WhenAll(tasks);
     }
     
-    private async Task PreloadImage(string url)
+    private async Task PreloadImage(string url, CancellationToken cancellationToken)
     {
         try
         {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+                
             // Use a safer method to preload images without eval
-            await JSRuntime.InvokeVoidAsync("preloadImage", url);
+            await JSRuntime.InvokeVoidAsync("preloadImage", cancellationToken, url);
         }
-        catch { }
+        catch (OperationCanceledException)
+        {
+            // Preload was cancelled, this is expected
+        }
+        catch 
+        { 
+            // Other errors in preloading should be ignored
+        }
     }
     
     private void OnImageLoaded()
@@ -572,6 +601,10 @@
         // Cancel any pending image loading
         loadingCts?.Cancel();
         loadingCts?.Dispose();
+        
+        // Cancel any pending preload operations
+        preloadCts?.Cancel();
+        preloadCts?.Dispose();
         
         // Properly dispose timer by unsubscribing from events first
         if (hideControlsTimer != null)

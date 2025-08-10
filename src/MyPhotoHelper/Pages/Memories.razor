@@ -85,9 +85,16 @@
                 </div>
                 <div class="p-4">
                     <div class="photo-grid">
-                        @foreach (var photo in yearGroup.Photos.Take(20))
+                        @for (int i = 0; i < Math.Min(yearGroup.Photos.Count, 20); i++)
                         {
-                            <ImageViewer Photo="photo" ShowTime="true" OnImageClick="HandleImageClick" UseFullScreenViewer="true" />
+                            var index = i; // Capture for closure
+                            var photo = yearGroup.Photos[index];
+                            <ImageViewer Photo="photo" 
+                                        ShowTime="true" 
+                                        OnImageClick="HandleImageClick" 
+                                        UseFullScreenViewer="true"
+                                        PhotoCollection="yearGroup.Photos"
+                                        PhotoIndex="index" />
                         }
                     </div>
                     @if (yearGroup.PhotoCount > 20)

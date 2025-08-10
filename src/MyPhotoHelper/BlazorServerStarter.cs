@@ -282,7 +282,8 @@ namespace MyPhotoHelper
             
             // Image viewer service for full-screen viewing
             // MUST be Singleton so all components share the same instance for state updates
-            builder.Services.AddSingleton<IImageViewerService, ImageViewerService>();
+            // Use Scoped for per-session state management to avoid thread-safety issues
+            builder.Services.AddScoped<IImageViewerService, ImageViewerService>();
             
             // Directory monitoring service
             builder.Services.AddSingleton<DirectoryMonitoringService>();
