@@ -42,7 +42,7 @@
                 @onclick="NavigatePrevious" 
                 @onclick:stopPropagation="true"
                 @onmouseover="ShowControls"
-                style="opacity: @(controlsVisible ? "1" : "0"); @(ImageViewerService.CurrentImageIndex <= 0 ? "display: none;" : "")"
+                style="opacity: @(controlsVisible ? "1" : "0")"
                 title="Previous (←)"
                 aria-label="View previous image"
                 disabled="@(ImageViewerService.CurrentImageIndex <= 0)">
@@ -53,7 +53,7 @@
                 @onclick="NavigateNext" 
                 @onclick:stopPropagation="true"
                 @onmouseover="ShowControls"
-                style="opacity: @(controlsVisible ? "1" : "0"); @(ImageViewerService.CurrentImageIndex >= (ImageViewerService.PhotoCollection?.Count - 1) ? "display: none;" : "")"
+                style="opacity: @(controlsVisible ? "1" : "0")"
                 title="Next (→)"
                 aria-label="View next image"
                 disabled="@(ImageViewerService.CurrentImageIndex >= (ImageViewerService.PhotoCollection?.Count - 1))">
@@ -97,7 +97,7 @@
         width: 100vw;
         height: 100vh;
         background-color: rgba(0, 0, 0, 0.95);
-        z-index: 99999;
+        z-index: 9999999;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -124,7 +124,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 0 2rem;
-        z-index: 100001;
+        z-index: 10000001;
         transition: opacity 0.3s ease;
     }
     
@@ -193,7 +193,7 @@
         padding: 1rem 0.75rem;
         opacity: 0.7;
         transition: all 0.2s ease;
-        z-index: 100001;
+        z-index: 10000001;
         border-radius: 0.25rem;
     }
     
@@ -203,16 +203,17 @@
     }
     
     .viewer-nav-button:disabled {
-        cursor: not-allowed;
-        opacity: 0.3;
+        display: none;
     }
     
     .viewer-nav-prev {
         left: 2rem;
+        z-index: 10000002;
     }
     
     .viewer-nav-next {
         right: 2rem;
+        z-index: 10000002;
     }
     
     .viewer-bottom-bar {
@@ -226,7 +227,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 1rem 2rem;
-        z-index: 100001;
+        z-index: 10000001;
         transition: opacity 0.3s ease;
         flex-wrap: wrap;
         gap: 1rem;
@@ -507,6 +508,7 @@
     {
         try
         {
+            await Task.Delay(100); // Allow DOM to settle
             await overlayElement.FocusAsync();
         }
         catch { }

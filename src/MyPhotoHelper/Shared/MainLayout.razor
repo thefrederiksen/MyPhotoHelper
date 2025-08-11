@@ -3,15 +3,19 @@
 @using MyPhotoHelper.Components
 @using MyPhotoHelper.Services
 @inject IImageDetailsService ImageDetailsService
+@inject IImageViewerService ImageViewerService
 @inject NavigationManager Navigation
 @implements IDisposable
 
 <PageTitle>MyPhotoHelper</PageTitle>
 
 <div class="app-container">
-    <div class="sidebar @(isSidebarOpen ? "open" : "")">
-        <NavMenu />
-    </div>
+    @if (!ImageViewerService.IsViewerOpen)
+    {
+        <div class="sidebar @(isSidebarOpen ? "open" : "")">
+            <NavMenu />
+        </div>
+    }
 
     <main class="main-content">
         <header class="app-header">
@@ -59,6 +63,12 @@
     protected override void OnInitialized()
     {
         ImageDetailsService.ShowImageDetailsRequested += OnShowImageDetailsRequested;
+        ImageViewerService.OnStateChanged += OnViewerStateChanged;
+    }
+    
+    private void OnViewerStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private async void OnShowImageDetailsRequested(object? sender, int imageId)
@@ -100,6 +110,7 @@
     public void Dispose()
     {
         ImageDetailsService.ShowImageDetailsRequested -= OnShowImageDetailsRequested;
+        ImageViewerService.OnStateChanged -= OnViewerStateChanged;
     }
 }
 
