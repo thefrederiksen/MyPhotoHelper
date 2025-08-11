@@ -5,6 +5,8 @@
 
 <AppErrorBoundary>
     <ChildContent>
+        <!-- Full-screen viewer component -->
+        <FullScreenViewer />
         <div class="w-full gallery-page">
             <div class="flex justify-between items-center mb-4">
                 <div>
@@ -180,11 +182,16 @@
                                     else
                                     {
                                         <div class="photo-grid">
-                                            @foreach (var photo in monthGroup.Photos)
+                                            @for (int i = 0; i < monthGroup.Photos.Count; i++)
                                             {
+                                                var index = i; // Capture for closure
+                                                var photo = monthGroup.Photos[index];
                                                 <ImageViewer Photo="photo" 
                                                            ContainerClass="@(isCompactView ? "thumbnail-container-compact" : "thumbnail-container")"
-                                                           ShowTime="true" />
+                                                           ShowTime="true"
+                                                           UseFullScreenViewer="true"
+                                                           PhotoCollection="monthGroup.Photos"
+                                                           PhotoIndex="index" />
                                             }
                                         </div>
                                     }

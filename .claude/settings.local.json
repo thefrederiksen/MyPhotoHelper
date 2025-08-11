@@ -3,7 +3,12 @@
   "permissions": {
     "allow": [
       "*",
-      "Bash(miscellaneous/start-app.bat)"
+      "Bash(miscellaneous/start-app.bat)",
+      "Bash(gh pr list:*)",
+      "Bash(git pull:*)",
+      "Bash(gh issue list:*)",
+      "Bash(git branch:*)",
+      "Bash(start cmd /c:*)"
     ],
     "deny": []
   }

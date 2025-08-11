@@ -16,6 +16,7 @@ namespace MyPhotoHelper.Pages
         [Inject] private IBackgroundPhotoLoader BackgroundPhotoLoader { get; set; } = null!;
         [Inject] private IGalleryStateService GalleryStateService { get; set; } = null!;
         [Inject] private IGalleryUpdateService GalleryUpdateService { get; set; } = null!;
+        [Inject] private IImageViewerService ImageViewerService { get; set; } = null!;
         [Inject] private ILogger<Gallery> _logger { get; set; } = null!;
 
         private class YearGroup

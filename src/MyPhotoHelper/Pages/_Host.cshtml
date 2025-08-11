@@ -130,6 +130,49 @@
                 document.body.removeChild(textarea);
             }
         };
+        
+        // Safe image preloading function (replaces eval usage)
+        window.preloadImage = (url) => {
+            if (url && typeof url === 'string') {
+                const img = new Image();
+                img.src = url;
+                // Store in cache for potential reuse
+                img.onload = () => {
+                    // Image loaded successfully
+                };
+                img.onerror = () => {
+                    console.warn('Failed to preload image:', url);
+                };
+            }
+        };
+        
+        // Full-screen viewer global key handler
+        let fullScreenKeyHandler = null;
+        
+        window.addFullScreenKeyListener = () => {
+            if (fullScreenKeyHandler) {
+                document.removeEventListener('keydown', fullScreenKeyHandler);
+            }
+            
+            fullScreenKeyHandler = (e) => {
+                const viewerOverlay = document.querySelector('.viewer-overlay');
+                if (viewerOverlay && e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Trigger click on overlay to close viewer
+                    viewerOverlay.click();
+                }
+            };
+            
+            document.addEventListener('keydown', fullScreenKeyHandler, { capture: true });
+        };
+        
+        window.removeFullScreenKeyListener = () => {
+            if (fullScreenKeyHandler) {
+                document.removeEventListener('keydown', fullScreenKeyHandler);
+                fullScreenKeyHandler = null;
+            }
+        };
     </script>
 </body>
 </html>
