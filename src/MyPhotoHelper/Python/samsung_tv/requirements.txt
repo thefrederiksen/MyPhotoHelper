@@ -1,0 +1,12 @@
+# Samsung Frame TV Upload Scripts - Requirements
+
+# Image processing
+Pillow>=10.0.0
+
+# WebSocket communication
+websocket-client>=1.6.0
+
+# Samsung TV WebSocket API
+# Install from GitHub as PyPI version may be outdated
+# pip install git+https://github.com/NickWaterton/samsung-tv-ws-api.git
+samsungtvws @ git+https://github.com/NickWaterton/samsung-tv-ws-api.git
