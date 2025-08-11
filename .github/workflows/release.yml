@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.RELEASE_PAT }}
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -93,7 +93,7 @@ jobs:
         prerelease: false
         files: |
           Output/MyPhotoHelper-Setup.exe
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.RELEASE_PAT }}
         body: |
           ## MyPhotoHelper v${{ steps.version.outputs.VERSION }}
           
@@ -175,25 +175,7 @@ jobs:
         Write-Host "✅ update.xml updated successfully"
       shell: pwsh
     
-    - name: Update README with latest version
-      if: success() && steps.verify_release.outputs.RELEASE_VERIFIED == 'true'
-      run: |
-        $version = "${{ steps.version.outputs.VERSION }}"
-        Write-Host "Updating README.md with version: v$version"
-        
-        $readme = Get-Content README.md -Raw
-        
-        # Remove any existing version line after Privacy First
-        $readme = $readme -replace '- ✅ \*\*Privacy First\*\* - All processing happens locally on your computer\r?\n- 📦 \*\*Latest Version:\*\* v[\d\.]+', '- ✅ **Privacy First** - All processing happens locally on your computer'
-        
-        # Add the new version line after Privacy First
-        $readme = $readme -replace '(- ✅ \*\*Privacy First\*\* - All processing happens locally on your computer)', "`$1`n- 📦 **Latest Version:** v$version"
-        
-        $readme | Set-Content README.md -NoNewline
-        Write-Host "✅ README.md updated with version v$version"
-      shell: pwsh
-    
-    - name: Update main branch with version, README and XML
+    - name: Update main branch with version and XML
       if: success() && steps.verify_release.outputs.RELEASE_VERIFIED == 'true'
       run: |
         git config user.name "github-actions[bot]"
@@ -203,10 +185,9 @@ jobs:
         # Add the updated files
         git add src/MyPhotoHelper/MyPhotoHelper.csproj
         git add update.xml
-        git add README.md
         
         # Commit all changes (fail if there's an error)
-        git commit -m "Update version to v${{ steps.version.outputs.VERSION }} in project, README and AutoUpdater XML [skip ci]"
+        git commit -m "Update version to v${{ steps.version.outputs.VERSION }} in project and AutoUpdater XML [skip ci]"
         if ($LASTEXITCODE -ne 0) {
           Write-Host "❌ Failed to commit version updates" -ForegroundColor Red
           exit 1
