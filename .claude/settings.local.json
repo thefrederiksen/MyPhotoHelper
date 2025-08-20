@@ -8,7 +8,10 @@
       "Bash(git pull:*)",
       "Bash(gh issue list:*)",
       "Bash(git branch:*)",
-      "Bash(start cmd /c:*)"
+      "Bash(start cmd /c:*)",
+      "Bash(python frame_uploader_test.py --continuous)",
+      "Bash(python:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
   }
