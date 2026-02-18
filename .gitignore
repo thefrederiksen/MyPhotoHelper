@@ -204,3 +204,4 @@ yarn-error.log*
 
 # Local settings
 .claude/settings.local.json
+.claude/sounds/
